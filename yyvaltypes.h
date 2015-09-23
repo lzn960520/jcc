@@ -4,6 +4,7 @@
 #include <string>
 #include <list>
 #include <json/json.h>
+#include <llvm/IR/IRBuilder.h>
 
 enum Visibility {
 	PRIVATE,
@@ -46,7 +47,7 @@ struct Expression : public ASTNode {
 	int val;
 	~Expression();
 	Json::Value json();
-	void gen();
+	void gen(llvm::IRBuilder<> &builder);
 };
 
 struct CompileUnit : public ASTNode {

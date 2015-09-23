@@ -1,5 +1,6 @@
 #include "jascal.tab.h"
 #include "yyvaltypes.h"
+#include <llvm/IR/IRBuilder.h>
 
 const char* Expression::OpNames(OpType op) {
 	switch (op) {
@@ -64,5 +65,6 @@ Expression::~Expression() {
 		delete right;
 }
 
-void Expression::gen() {
+void Expression::gen(llvm::IRBuilder<> &builder) {
+
 }

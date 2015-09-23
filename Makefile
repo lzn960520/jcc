@@ -1,14 +1,25 @@
 .PHONY: all clean test
 
 CCFLAGS ?= 
+OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
 # libjsoncpp
+ifeq ($(OS_NAME), cygwin)
+CCFLAGS += 
+LIBS += -ljsoncpp
+else
 CCFLAGS += `pkg-config --cflags jsoncpp`
 LIBS += `pkg-config --libs jsoncpp`
+endif
 
 # llvm
+ifeq ($(OS_NAME), cygwin)
+CCFLAGS +=
+LIBS += -lLLVM-3.5
+else
 CCFLAGS += -I/usr/include/llvm-3.6
 LIBS += -L/usr/lib/llvm-3.6/lib -lLLVM-3.6
+endif
 
 # jascal
 YYVAL_TYPES_H = yyvaltypes.h
@@ -17,7 +28,7 @@ YYVAL_TYPES_CPPS = CompileUnit.cpp Expression.cpp LiteralInt.cpp LiteralString.c
 all: jcc
 
 jcc: jascal.tab.c jascal.tab.h lex.yy.c main.cpp $(YYVAL_TYPES_H) $(YYVAL_TYPES_CPPS)
-	g++ $(CCFLAGS) -o $@ -x c++ jascal.tab.c -x c++ lex.yy.c main.cpp $(YYVAL_TYPES_CPPS) $(LIBS)
+	g++ $(CCFLAGS) -std=gnu++11 -o $@ -x c++ jascal.tab.c -x c++ lex.yy.c main.cpp $(YYVAL_TYPES_CPPS) $(LIBS)
 
 jascal.tab.h: jascal.y
 	bison -d jascal.y -v --report-file=bison-report.txt

@@ -5,7 +5,7 @@ VariableDefination::VariableDefination(ASTNode *type) :
 }
 
 void VariableDefination::push_back(ASTNode *identifier) {
-	list.push_back(std::make_pair<ASTNode*,ASTNode*>(identifier, NULL));
+	list.push_back(std::pair<ASTNode*,ASTNode*>(identifier, NULL));
 }
 
 void VariableDefination::push_back(ASTNode *identifier, ASTNode *expression) {
