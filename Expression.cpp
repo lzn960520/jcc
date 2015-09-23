@@ -63,3 +63,6 @@ Expression::~Expression() {
 	if (right)
 		delete right;
 }
+
+void Expression::gen() {
+}

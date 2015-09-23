@@ -42,6 +42,18 @@
 %token T_RIGHT_PARENTHESIS
 %token T_THEN
 %token T_ELSE
+%token T_WHILE
+%token T_DO
+%token T_COMMA
+%token T_ASSIGN
+%token T_UNSIGNED
+%token T_BYTE
+%token T_SHORT
+%token T_INT
+%token T_CHAR
+%token T_FLOAT
+%token T_DOUBLE
+%token visibility
 
 %left T_ADD T_SUB
 %left T_MUL T_DIV
@@ -51,8 +63,8 @@
 %%
 
 compile_unit:
-	statement {
-		root = $$; }
+	expression {
+		root = $1; }
 
 expression:
 	expression T_ADD expression {
@@ -74,7 +86,10 @@ statement:
 	T_SEMICOLON
 	| expression T_SEMICOLON {
 		$$ = $1; }
+	| variable_defination T_SEMICOLON {
+		$$ = $1; }
 	| if_statement
+	| while_statement
 	| T_BEGIN statements T_END {
 		$$ = $2; }
 	| T_BEGIN T_END {
@@ -91,6 +106,60 @@ if_statement:
 		$$ = new IfStatement($3, $6); }
 	| T_IF T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_THEN statement T_ELSE statement {
 		$$ = new IfStatement($3, $6, $8); }
+
+while_statement:
+	T_WHILE T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_DO statement {
+		$$ = new WhileStatement($3, $6); }
+
+variable_defination:
+	type_name {
+		$$ = $1 = new VariableDefination($1); } variable_defination_list
+
+variable_defination_list:
+	identifier {
+		((VariableDefination *) $0)->push_back($1); }
+	| identifier T_ASSIGN expression {
+		((VariableDefination *) $0)->push_back($1, $3); }
+	| variable_defination_list T_COMMA identifier {
+		((VariableDefination *) $0)->push_back($3); }
+	| variable_defination_list T_COMMA identifier T_ASSIGN expression {
+		((VariableDefination *) $0)->push_back($3, $5); }
+
+type_name:
+	base_type
+
+base_type:
+	T_UNSIGNED T_BYTE { 
+		$$ = new Type(Type::BYTE, true); }
+	| T_BYTE {
+		$$ = new Type(Type::BYTE, false); }
+	| T_UNSIGNED T_SHORT {
+		$$ = new Type(Type::SHORT, true); }
+	| T_SHORT {
+		$$ = new Type(Type::SHORT, false); }
+	| T_UNSIGNED T_INT {
+		$$ = new Type(Type::INT, true); }
+	| T_INT {
+		$$ = new Type(Type::INT, false); }
+	| T_CHAR {
+		$$ = new Type(Type::CHAR); }
+	| T_FLOAT {
+		$$ = new Type(Type::FLOAT); }
+	| T_DOUBLE {
+		$$ = new Type(Type::DOUBLE); }
+
+function_defination:
+	visibility type_name identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statements T_END {
+		$$ = new Function((Visibility) (long long) $1, $2, $3, $5, $8); }
+
+arg_list:
+	{ $$ = new ArgumentList(); }
+	| type_name identifier {
+		$$ = new ArgumentList($1, $2); }
+	| arg_list T_COMMA type_name identifier {
+		$$ = $1;
+		((ArgumentList *) $$)->push_back($3, $4); }
+
 %%
 
 void yyerror(const char *s) {
@@ -100,7 +169,13 @@ void yyerror(const char *s) {
 		for (int i = 0; i < yylloc.first_line; i++)
 			getline(ifs, line);
 		int len = printf("%s:%-5d", input_filename, yylloc.first_line);
-		printf("%s\n", line.c_str());
+		for (const char *p = line.c_str(), *base = line.c_str(); *p; p++)
+			if (*p == '\t')
+				for (int i = 0; i < 4 - (p - base) % 4; i++)
+					printf(" ");
+			else
+				printf("%c", *p);
+		printf("\n");
 		for (int i = -len; i < yylloc.first_column - 1; i++)
 			printf(" ");
 		for (int i = yylloc.first_column; i <= yylloc.last_column; i++)

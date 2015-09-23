@@ -3,10 +3,18 @@
 
 #include <string>
 #include <list>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
+
+enum Visibility {
+	PRIVATE,
+	PUBLIC,
+	PROTECTED
+};
+extern const char *VisibilityNames[];
 
 struct ASTNode {
 	virtual Json::Value json() = 0;
+	virtual void gen() {};
 	virtual ~ASTNode() {};
 };
 
@@ -38,6 +46,7 @@ struct Expression : public ASTNode {
 	int val;
 	~Expression();
 	Json::Value json();
+	void gen();
 };
 
 struct CompileUnit : public ASTNode {
@@ -81,6 +90,56 @@ struct IfStatement : public ASTNode {
 	IfStatement(ASTNode *test, ASTNode *then_st);
 	IfStatement(ASTNode *test, ASTNode *then_st, ASTNode *else_st);
 	~IfStatement();
+	Json::Value json();
+};
+
+struct WhileStatement : public ASTNode {
+	ASTNode *test, *body;
+	WhileStatement(ASTNode *test, ASTNode *body);
+	~WhileStatement();
+	Json::Value json();
+};
+
+struct VariableDefination : public ASTNode {
+	ASTNode *type;
+	std::list<std::pair<ASTNode*,ASTNode*> > list;
+	VariableDefination(ASTNode *type);
+	void push_back(ASTNode *identifier);
+	void push_back(ASTNode *identifier, ASTNode *init_value);
+	~VariableDefination();
+	Json::Value json();	
+};
+
+struct Type : public ASTNode {
+	enum BaseType {
+		BYTE,
+		SHORT,
+		INT,
+		CHAR,
+		FLOAT,
+		DOUBLE
+	} baseType;
+	static const char *BaseTypeNames[];
+	bool isUnsigned;
+	Type(BaseType baseType, bool isUnsigned = false);
+	~Type();
+	Json::Value json();
+};
+
+struct Function : public ASTNode {
+	Visibility visibility;
+	ASTNode *return_type, *identifier, *arg_list, *body;
+	Function(Visibility visibility, ASTNode *return_type, ASTNode *identifier, ASTNode *arg_list, ASTNode *body);
+	~Function();
+	Json::Value json();
+};
+
+struct ArgumentList : public ASTNode {
+	std::list<std::pair<ASTNode*,ASTNode*> > list;
+	ArgumentList();
+	ArgumentList(ASTNode *type, ASTNode *identifier);
+	void push_back(ASTNode *type, ASTNode *identifier);
+	~ArgumentList();
 	Json::Value json();
 };
 

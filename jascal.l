@@ -1,5 +1,4 @@
 %option noyywrap
-%option yylineno
 %{
 	#include "jascal.tab.h"
 	#include <stdio.h>
@@ -7,9 +6,9 @@
 	FILE *lex_output = NULL;
 
 	#define YY_USER_ACTION { \
-		yylloc.first_line = yylloc.last_line = yylineno; \
 		yylloc.first_column = yylloc.last_column + 1; \
 		yylloc.last_column = yylloc.first_column + yyleng - 1; \
+		yylval = NULL; \
 	}
 %}
 
@@ -55,6 +54,14 @@
 	if (lex_output)
 		fprintf(lex_output, "<ELSE>");
 	return T_ELSE; }
+"while"	{
+	if (lex_output)
+		fprintf(lex_output, "<WHILE>");
+	return T_WHILE; }
+"do"	{
+	if (lex_output)
+		fprintf(lex_output, "<DO>");
+	return T_DO; }
 "("	{
 	if (lex_output)
 		fprintf(lex_output, "<LEFT_PARENTHESIS>");
@@ -63,35 +70,93 @@
 	if (lex_output)
 		fprintf(lex_output, "<RIGHT_PARENTHESIS>");
 	return T_RIGHT_PARENTHESIS; }
+"unsigned"	{
+	if (lex_output)
+		fprintf(lex_output, "<UNSIGNED>");
+	return T_UNSIGNED; }
+"byte"	{
+	if (lex_output)
+		fprintf(lex_output, "<BYTE>");
+	return T_BYTE; }
+"short"	{
+	if (lex_output)
+		fprintf(lex_output, "<SHORT>");
+	return T_SHORT; }
+"int"	{
+	if (lex_output)
+		fprintf(lex_output, "<INT>");
+	return T_INT; }
+"char"	{
+	if (lex_output)
+		fprintf(lex_output, "<CHAR>");
+	return T_CHAR; }
+"float"	{
+	if (lex_output)
+		fprintf(lex_output, "<FLOAT>");
+	return T_FLOAT; }
+"double"	{
+	if (lex_output)
+		fprintf(lex_output, "<DOUBLE>");
+	return T_DOUBLE; }
+"="	{
+	if (lex_output)
+		fprintf(lex_output, "<ASSIGN>");
+	return T_ASSIGN; }
+","	{
+	if (lex_output)
+		fprintf(lex_output, "<COMMA>");
+	return T_COMMA; }
+"private"	{
+	if (lex_output)
+		fprintf(lex_output, "<PRIVATE>");
+	yylval = (ASTNode *) PRIVATE;
+	return visibility; }
+"public"	{
+	if (lex_output)
+		fprintf(lex_output, "<PUBLIC>");
+	yylval = (ASTNode *) PUBLIC;
+	return visibility; }
+"protected"	{
+	if (lex_output)
+		fprintf(lex_output, "<PROTECTED>");
+	yylval = (ASTNode *) PROTECTED;
+	return visibility; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);
 	yylval = new LiteralString(yytext);
 	return literal_string; }
-[ \n\t\r]+	{
+[ ]+	{
+	if (lex_output)
+		fprintf(lex_output, "<space \"%s\">", yytext);
+	return yylex(); }
+\t	{
+	if (lex_output)
+		fprintf(lex_output, "<space \"\\t\">");
+	while (yylloc.last_column % 4)
+		yylloc.last_column++;
+	return yylex(); }
+[\n\r]	{
 	if (lex_output) {
-		bool need_newline = false;
 		fprintf(lex_output, "<space \"");
-		for (char *p = yytext; *p; p++) {
-			switch (*p) {
-			case '\n':
-				fprintf(lex_output, "\\n");
-				need_newline = true;
-				break;
-			case '\t':
-				fprintf(lex_output, "\\t");
-				break;
-			case '\r':
-				fprintf(lex_output, "\\r");
-				break;
-			default:
-				fprintf(lex_output, "%c", *p);
-				break;
-			}
+		switch (*yytext) {
+		case '\n':
+			fprintf(lex_output, "\\n");
+			break;
+		case '\r':
+			fprintf(lex_output, "\\r");
+			break;
+		default:
+			fprintf(lex_output, "%c", *yytext);
+			break;
 		}
 		fprintf(lex_output, "\">");
-		if (need_newline)
+		if (*yytext == '\n') {
 			fprintf(lex_output, "\n");
+			yylloc.first_line++;
+			yylloc.last_line++;
+			yylloc.first_column = yylloc.last_column = 0;
+		}
 	}
 	return yylex(); }
 [0-9]+	{

@@ -1,13 +1,23 @@
 .PHONY: all clean test
 
 CCFLAGS ?= 
+
+# libjsoncpp
+CCFLAGS += `pkg-config --cflags jsoncpp`
+LIBS += `pkg-config --libs jsoncpp`
+
+# llvm
+CCFLAGS += -I/usr/include/llvm-3.6
+LIBS += -L/usr/lib/llvm-3.6/lib -lLLVM-3.6
+
+# jascal
 YYVAL_TYPES_H = yyvaltypes.h
-YYVAL_TYPES_CPPS = CompileUnit.cpp Expression.cpp LiteralInt.cpp LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp
+YYVAL_TYPES_CPPS = CompileUnit.cpp Expression.cpp LiteralInt.cpp LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp ArgumentList.cpp Visibility.cpp
 
 all: jcc
 
 jcc: jascal.tab.c jascal.tab.h lex.yy.c main.cpp $(YYVAL_TYPES_H) $(YYVAL_TYPES_CPPS)
-	g++ $(CCFLAGS) -o $@ -x c++ jascal.tab.c -x c++ lex.yy.c main.cpp $(YYVAL_TYPES_CPPS) -ljsoncpp
+	g++ $(CCFLAGS) -o $@ -x c++ jascal.tab.c -x c++ lex.yy.c main.cpp $(YYVAL_TYPES_CPPS) $(LIBS)
 
 jascal.tab.h: jascal.y
 	bison -d jascal.y -v --report-file=bison-report.txt
