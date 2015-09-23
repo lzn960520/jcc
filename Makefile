@@ -17,7 +17,7 @@ ifeq ($(OS_NAME), cygwin)
 CCFLAGS +=
 LIBS += -lLLVM-3.5
 else
-CCFLAGS += -I/usr/include/llvm-3.6
+CCFLAGS += -I/usr/include/llvm-3.6 -I/usr/include/llvm-c-3.6
 LIBS += -L/usr/lib/llvm-3.6/lib -lLLVM-3.6
 endif
 
