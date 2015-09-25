@@ -1,4 +1,4 @@
-#include "jascal.tab.h"
+#include "jascal.tab.hpp"
 #include "yyvaltypes.h"
 #include <llvm/IR/IRBuilder.h>
 

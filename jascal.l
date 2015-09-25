@@ -1,6 +1,6 @@
 %option noyywrap
 %{
-	#include "jascal.tab.h"
+	#include "jascal.tab.hpp"
 	#include <stdio.h>
 
 	FILE *lex_output = NULL;

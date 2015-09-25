@@ -1,49 +1,70 @@
-.PHONY: all clean test
+.PHONY: all clean test vars deps
 
+CPPFLAGS += -std=gnu++11
 OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
 # libjsoncpp
 ifeq ($(OS_NAME), cygwin)
-CCFLAGS += 
+CPPFLAGS += 
 LIBS += -ljsoncpp
 else
-CCFLAGS += `pkg-config --cflags jsoncpp`
+CPPFLAGS += `pkg-config --cflags jsoncpp`
 LIBS += `pkg-config --libs jsoncpp`
 endif
 
 # llvm
 ifeq ($(OS_NAME), cygwin)
-CCFLAGS +=
+CPPFLAGS +=
 LIBS += -lLLVM-3.5
 else
-CCFLAGS += -I/usr/include/llvm-3.6 -I/usr/include/llvm-c-3.6
-LIBS += -L/usr/lib/llvm-3.6/lib -lLLVM-3.6
+CPPFLAGS += -I/usr/include/llvm-3.6 -I/usr/include/llvm-c-3.6
+LDFLAGS += -L/usr/lib/llvm-3.6/lib
+LIBS += -lLLVM-3.6
 endif
 
 # jascal
-YYVAL_TYPES_H = yyvaltypes.h
-YYVAL_TYPES_CPPS = CompileUnit.cpp Expression.cpp LiteralInt.cpp \
+INCLUDES := jascal.tab.hpp
+SOURCES := main.cpp CompileUnit.cpp Expression.cpp LiteralInt.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
-	CallArgumentList.cpp
+	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp
+OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
+DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 
 all: jcc
 
-jcc: jascal.tab.c jascal.tab.h lex.yy.c main.cpp exception.h $(YYVAL_TYPES_H) $(YYVAL_TYPES_CPPS)
-	g++ $(CCFLAGS) -std=gnu++11 -o $@ -x c++ jascal.tab.c -x c++ lex.yy.c main.cpp $(YYVAL_TYPES_CPPS) $(LIBS)
+deps/%.d: %.cpp $(INCLUDES)
+	$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,objs/\1.o: $@ ,g' < $@.$$$$ > $@; \
+	$(RM) $@.$$$$
 
-jascal.tab.h: jascal.y
-	bison -d jascal.y -v --report-file=bison-report.txt
+objs/%.o:
+	$(CXX) $(CPPFLAGS) -c -o $@ $*.cpp
+	
+include $(DEPS)
 
-jascal.tab.c: jascal.y
-	bison -d jascal.y -v --report-file=bison-report.txt
+vars:
+	@echo $(SOURCES)
+	@echo $(DEPS)
+	@echo $(OBJS)
+	
+deps: $(DEPS)
 
-lex.yy.c: jascal.l
-	flex jascal.l
+jcc: $(OBJS)
+	g++ -o $@ $(LDFLAGS) $^ $(LIBS)
+	
+jascal.tab.hpp: jascal.y
+	bison -d jascal.y -v --report-file=bison-report.txt -o jascal.tab.cpp
+
+jascal.tab.cpp: jascal.y
+	bison -d jascal.y -v --report-file=bison-report.txt -o jascal.tab.cpp
+
+lex.yy.cpp: jascal.l
+	flex --outfile=lex.yy.cpp jascal.l
 
 clean:
-	rm -rf jascal.tab.c jascal.tab.h jascal.tab.cc lex.yy.c jcc lex.txt ast.json bison-report.txt test.exe
+	rm -rf jascal.tab.cpp jascal.tab.hpp lex.yy.cpp jcc $(OBJS) $(DEPS) lex.txt ast.json bison-report.txt test.exe
 
 test: jcc test.jas
 	./jcc --dump-lex --dump-ast --input test.jas --output test
