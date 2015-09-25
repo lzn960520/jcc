@@ -5,6 +5,19 @@
 #include <errno.h>
 #include "yyvaltypes.h"
 #include <fstream>
+#include <llvm/IR/Module.h>
+#include <llvm/Support/raw_os_ostream.h>
+#include <llvm/PassManager.h>
+#include <llvm/IR/IRPrintingPasses.h>
+#include "context.h"
+#include "exception.h"
+#include <llvm/MC/MCContext.h>
+#include <llvm/MC/MCAsmBackend.h>
+#include <llvm/MC/MCAssembler.h>
+#include <llvm/MC/MCAsmInfoELF.h>
+#include <llvm/MC/MCRegisterInfo.h>
+#include <llvm/MC/MCObjectFileInfo.h>
+#include <llvm/Target/TargetMachine.h>
 
 // global
 const char *input_filename = NULL;
@@ -98,10 +111,55 @@ int main(int argc, char * const argv[]) {
 	}
 
 	if (opt_lex_only)
-		lex_only();
-	if (opt_parse_only)
-		yyparse();
-	yyparse();
+		try {
+			lex_only(); // lex only
+		} catch (CompileException &e) {
+			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
+		}
+	else if (opt_parse_only)
+		try {
+			yyparse(); // parse only
+		} catch (CompileException &e) {
+			root = NULL;
+			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
+		}
+	else {
+		try {
+			// normal compile
+			yyparse();
+		} catch (CompileException &e) {
+			root = NULL;
+			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
+		}
+
+		try {
+			if (root) {
+				// call llvm to generate code
+				Context *context = new Context();
+				root->gen(*context);
+				context->getBuilder().CreateRetVoid();
+
+				// write out
+				llvm::PassManager passManager;
+				std::ofstream std_ofs("code.s");
+				llvm::raw_os_ostream ofs(std_ofs);
+				passManager.add(llvm::createPrintModulePass(ofs));
+				passManager.run(context->getModule());
+				ofs.flush();
+				std_ofs.close();
+
+				// exec llvm-as llc gcc to build executable binary
+				system("llvm-as code.s -o - | llc -filetype=obj -o tmp.o -");
+				system("gcc tmp.o");
+
+				// clean tmp files
+				unlink("code.s");
+				unlink("tmp.o");
+			}
+		} catch (CompileException &e) {
+			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
+		}
+	}
 
 	if (opt_dump_lex)
 		fclose(lex_output);

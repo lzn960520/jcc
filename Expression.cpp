@@ -65,6 +65,22 @@ Expression::~Expression() {
 		delete right;
 }
 
-void Expression::gen(llvm::IRBuilder<> &builder) {
-
+void* Expression::gen(Context &context) {
+	switch (type) {
+	case OP2:
+		llvm::Value *lhs = (llvm::Value *) left->gen(context);
+		llvm::Value *rhs = (llvm::Value *) right->gen(context);
+		switch (op) {
+		case ADD:
+			return context.getBuilder().CreateAdd(lhs, rhs);
+		case SUB:
+			return context.getBuilder().CreateSub(lhs, rhs);
+		case MUL:
+			return context.getBuilder().CreateMul(lhs, rhs);
+		case DIV:
+			return context.getBuilder().CreateSDiv(lhs, rhs);
+		}
+		break;
+	}
+	return NULL;
 }

@@ -26,3 +26,14 @@ Json::Value Type::json() {
 	root["is_unsigned"] = isUnsigned;
 	return root;
 }
+
+llvm::Type* Type::getType(Context &context) {
+	switch (baseType) {
+	case BYTE:
+		return context.getBuilder().getInt8Ty();
+	case SHORT:
+		return context.getBuilder().getInt16Ty();
+	case INT:
+		return context.getBuilder().getInt32Ty();
+	}
+}

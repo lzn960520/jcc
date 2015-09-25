@@ -13,3 +13,7 @@ Json::Value LiteralString::json() {
 
 LiteralString::~LiteralString() {
 }
+
+void* LiteralString::gen(Context &context) {
+	return context.getBuilder().CreatePointerCast(context.getBuilder().CreateGlobalString(text), llvm::Type::getInt8PtrTy(context.getContext()));
+}

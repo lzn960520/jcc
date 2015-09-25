@@ -23,3 +23,9 @@ Json::Value Statements::json() {
 		root["statements"][i] = (*it)->json();
 	return root;
 }
+
+void* Statements::gen(Context &context) {
+	for (std::list<ASTNode*>::iterator it = statements.begin(); it != statements.end(); it++)
+		(*it)->gen(context);
+	return NULL;
+}

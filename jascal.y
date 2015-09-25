@@ -63,7 +63,7 @@
 %%
 
 compile_unit:
-	expression {
+	statements {
 		root = $1; }
 
 expression:
@@ -77,6 +77,7 @@ expression:
 		$$ = new Expression($1, Expression::DIV, $3); }
 	| literal
 	| identifier
+	| function_call
 
 literal:
 	literal_int
@@ -159,6 +160,18 @@ arg_list:
 	| arg_list T_COMMA type_name identifier {
 		$$ = $1;
 		((ArgumentList *) $$)->push_back($3, $4); }
+		
+function_call:
+	identifier T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
+		$$ = new FunctionCall($1, $3); }
+	
+call_arg_list:
+	{ $$ = new CallArgumentList(); }
+	| expression {
+		$$ = new CallArgumentList($1); }
+	| call_arg_list T_COMMA expression {
+		$$ = $1;
+		((CallArgumentList *) $$)->push_back($3); }
 
 %%
 
@@ -182,5 +195,5 @@ void yyerror(const char *s) {
 			printf("^");
 		printf("\n");
 	}
-	printf("error: %s at %d:%d to %d:%d\n", s, yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column);
+	printf("error: %s at %d:%d\n", s, yylloc.first_line, yylloc.first_column);
 }

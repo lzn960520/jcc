@@ -1,6 +1,5 @@
 .PHONY: all clean test
 
-CCFLAGS ?= 
 OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
 # libjsoncpp
@@ -23,11 +22,15 @@ endif
 
 # jascal
 YYVAL_TYPES_H = yyvaltypes.h
-YYVAL_TYPES_CPPS = CompileUnit.cpp Expression.cpp LiteralInt.cpp LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp ArgumentList.cpp Visibility.cpp
+YYVAL_TYPES_CPPS = CompileUnit.cpp Expression.cpp LiteralInt.cpp \
+	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
+	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
+	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
+	CallArgumentList.cpp
 
 all: jcc
 
-jcc: jascal.tab.c jascal.tab.h lex.yy.c main.cpp $(YYVAL_TYPES_H) $(YYVAL_TYPES_CPPS)
+jcc: jascal.tab.c jascal.tab.h lex.yy.c main.cpp exception.h $(YYVAL_TYPES_H) $(YYVAL_TYPES_CPPS)
 	g++ $(CCFLAGS) -std=gnu++11 -o $@ -x c++ jascal.tab.c -x c++ lex.yy.c main.cpp $(YYVAL_TYPES_CPPS) $(LIBS)
 
 jascal.tab.h: jascal.y
@@ -40,7 +43,7 @@ lex.yy.c: jascal.l
 	flex jascal.l
 
 clean:
-	rm -rf jascal.tab.c jascal.tab.h jascal.tab.cc lex.yy.c jcc lex.txt ast.json bison-report.txt
+	rm -rf jascal.tab.c jascal.tab.h jascal.tab.cc lex.yy.c jcc lex.txt ast.json bison-report.txt code.s code.s.bc code.s.s
 
 test: jcc test.jas
 	./jcc --dump-lex --dump-ast --input test.jas

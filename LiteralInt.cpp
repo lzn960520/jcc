@@ -13,3 +13,7 @@ Json::Value LiteralInt::json() {
 
 LiteralInt::~LiteralInt() {
 }
+
+void *LiteralInt::gen(Context &context) {
+	return llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), val, false);
+}
