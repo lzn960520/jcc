@@ -8,4 +8,5 @@ jascal.tab.cpp
 jcc.*
 lex.txt
 lex.yy.cpp
-test.*
+test*
+!test.jas
