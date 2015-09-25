@@ -43,7 +43,7 @@ lex.yy.c: jascal.l
 	flex jascal.l
 
 clean:
-	rm -rf jascal.tab.c jascal.tab.h jascal.tab.cc lex.yy.c jcc lex.txt ast.json bison-report.txt code.s code.s.bc code.s.s
+	rm -rf jascal.tab.c jascal.tab.h jascal.tab.cc lex.yy.c jcc lex.txt ast.json bison-report.txt test.exe
 
 test: jcc test.jas
-	./jcc --dump-lex --dump-ast --input test.jas
+	./jcc --dump-lex --dump-ast --input test.jas --output test

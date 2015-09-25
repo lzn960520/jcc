@@ -4,8 +4,12 @@
 #include <string>
 
 class CompileException {
+	std::string msg;
 public:
-	virtual std::string message() = 0;
+	CompileException() {};
+	CompileException(std::string msg) : msg(msg) {};
+	CompileException(const char *msg) : msg(msg) {};
+	virtual std::string message() { return msg; }
 	virtual ~CompileException() {};
 };
 

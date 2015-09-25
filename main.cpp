@@ -18,6 +18,7 @@
 #include <llvm/MC/MCRegisterInfo.h>
 #include <llvm/MC/MCObjectFileInfo.h>
 #include <llvm/Target/TargetMachine.h>
+#include <wait.h>
 
 // global
 const char *input_filename = NULL;
@@ -39,18 +40,21 @@ extern ASTNode *root;
 #define DEFAULT_LEX_OUTPUT "lex.txt"
 #define OPT_DUMP_AST 5
 #define DEFAULT_AST_OUTPUT "ast.json"
+#define OPT_OUTPUT_FILE 6
 
 static struct option long_opts[] = {
 	{ "lex-only", no_argument, NULL, OPT_LEX_ONLY },
 	{ "parse-only", no_argument, NULL, OPT_PARSE_ONLY },
 	{ "dump-lex", optional_argument, NULL, OPT_DUMP_LEX},
 	{ "dump-ast", optional_argument, NULL, OPT_DUMP_AST},
-	{ "input", required_argument, NULL, OPT_INPUT_FILE }
+	{ "input", required_argument, NULL, OPT_INPUT_FILE },
+	{ "output", required_argument, NULL, OPT_OUTPUT_FILE }
 };
 
 int main(int argc, char * const argv[]) {
 	// process cmdline
 	const char *ast_output_filename = NULL;
+	const char *output_filename = NULL;
 	bool opt_lex_only = false, opt_parse_only = false, opt_dump_lex = false, opt_dump_ast = false;
 	{
 		int opt;
@@ -73,6 +77,13 @@ int main(int argc, char * const argv[]) {
 					exit(0);
 				}
 				input_filename = optarg;
+				break;
+			case OPT_OUTPUT_FILE:
+				if (output_filename != NULL) {
+					fprintf(stderr, "Can't specify two output files at the same time\n");
+					exit(0);
+				}
+				output_filename = optarg;
 				break;
 			case OPT_DUMP_LEX:
 				opt_dump_lex = true;
@@ -140,20 +151,55 @@ int main(int argc, char * const argv[]) {
 				context->getBuilder().CreateRetVoid();
 
 				// write out
-				llvm::PassManager passManager;
-				std::ofstream std_ofs("code.s");
-				llvm::raw_os_ostream ofs(std_ofs);
-				passManager.add(llvm::createPrintModulePass(ofs));
-				passManager.run(context->getModule());
-				ofs.flush();
-				std_ofs.close();
+				int pipe_me_llvm_as[2], pipe_llvm_as_llc[2];
+				pipe(pipe_me_llvm_as);
+				pipe(pipe_llvm_as_llc);
+				int pid;
+				if ((pid = fork()) < 0)
+					throw CompileException("Can't fork");
+				else if (pid == 0) {
+					dup2(pipe_me_llvm_as[0], 0);
+					dup2(pipe_llvm_as_llc[1], 1);
+					close(pipe_me_llvm_as[0]);
+					close(pipe_me_llvm_as[1]);
+					close(pipe_llvm_as_llc[0]);
+					close(pipe_llvm_as_llc[1]);
+					execlp("llvm-as", "llvm-as", "-", NULL);
+				}
+				if ((pid = fork()) < 0)
+					throw CompileException("Can't fork");
+				else if (pid == 0) {
+					dup2(pipe_llvm_as_llc[0], 0);
+					close(pipe_me_llvm_as[0]);
+					close(pipe_me_llvm_as[1]);
+					close(pipe_llvm_as_llc[0]);
+					close(pipe_llvm_as_llc[1]);
+					execlp("llc", "llc", "-filetype=obj", "-o", "tmp.o", "-", NULL);
+				}
+				close(pipe_me_llvm_as[0]);
+				close(pipe_llvm_as_llc[0]);
+				close(pipe_llvm_as_llc[1]);
+				{
+					llvm::PassManager passManager;
+					llvm::raw_fd_ostream ofs(pipe_me_llvm_as[1], false);
+					passManager.add(llvm::createPrintModulePass(ofs));
+					passManager.run(context->getModule());
+					ofs.flush();
+					ofs.close();
+				}
 
-				// exec llvm-as llc gcc to build executable binary
-				system("llvm-as code.s -o - | llc -filetype=obj -o tmp.o -");
-				system("gcc tmp.o");
+				// wait for llc terminate
+				waitpid(pid, NULL, 0);
 
-				// clean tmp files
-				unlink("code.s");
+				// exec gcc to build executable
+				std::string cmdline = "gcc";
+				if (output_filename) {
+					cmdline += " -o ";
+					cmdline += output_filename;
+				}
+				cmdline += " tmp.o";
+				system(cmdline.c_str());
+
 				unlink("tmp.o");
 			}
 		} catch (CompileException &e) {
