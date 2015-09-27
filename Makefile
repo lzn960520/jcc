@@ -28,7 +28,7 @@ SOURCES := main.cpp CompileUnit.cpp Expression.cpp LiteralInt.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
-	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp
+	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 

@@ -4,30 +4,38 @@
 #include <string>
 
 class CompileException {
+protected:
 	std::string msg;
 public:
-	CompileException() {};
-	CompileException(std::string msg) : msg(msg) {};
-	CompileException(const char *msg) : msg(msg) {};
-	virtual std::string message() { return msg; }
-	virtual ~CompileException() {};
+	CompileException();
+	CompileException(const std::string &msg);
+	CompileException(const char *msg);
+	virtual std::string message() const;
+	virtual ~CompileException();
+};
+
+class InvalidString : public CompileException {
+public:
+	InvalidString();
+	InvalidString(const std::string &msg);
+	InvalidString(const char *msg);
+	std::string message() const;
 };
 
 class InvalidType : public CompileException {
-	std::string msg;
 public:
-	InvalidType() {};
-	InvalidType(const char *msg) : msg(msg) {};
-	std::string message() { return "Invalid type: " + msg; }
+	InvalidType();
+	InvalidType(const char *msg);
+	InvalidType(const std::string &msg);
+	std::string message() const;
 };
 
 class FunctionNotFound : public CompileException {
-	std::string msg;
 public:
-	FunctionNotFound() {};
-	FunctionNotFound(const char *msg) : msg(msg) {};
-	FunctionNotFound(std::string msg) : msg(msg) {};
-	std::string message() { return "Function not found: " + msg; }
+	FunctionNotFound();
+	FunctionNotFound(const char *msg);
+	FunctionNotFound(const std::string &msg);
+	std::string message() const;
 };
 
 #endif
