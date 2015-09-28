@@ -68,13 +68,13 @@ compile_unit:
 
 expression:
 	expression T_ADD expression {
-		$$ = new Expression($1, Expression::ADD, $3); }
+		$$ = new Op2($1, Op2::ADD, $3); }
 	| expression T_SUB expression {
-		$$ = new Expression($1, Expression::SUB, $3); }
+		$$ = new Op2($1, Op2::SUB, $3); }
 	| expression T_MUL expression {
-		$$ = new Expression($1, Expression::MUL, $3); }
+		$$ = new Op2($1, Op2::MUL, $3); }
 	| expression T_DIV expression {
-		$$ = new Expression($1, Expression::DIV, $3); }
+		$$ = new Op2($1, Op2::DIV, $3); }
 	| literal
 	| identifier
 	| function_call
@@ -181,19 +181,19 @@ void yyerror(const char *s) {
 		std::string line;
 		for (int i = 0; i < yylloc.first_line; i++)
 			getline(ifs, line);
-		int len = printf("%s:%-5d", input_filename, yylloc.first_line);
+		int len = fprintf(stderr, "%s:%-5d", input_filename, yylloc.first_line);
 		for (const char *p = line.c_str(), *base = line.c_str(); *p; p++)
 			if (*p == '\t')
 				for (int i = 0; i < 4 - (p - base) % 4; i++)
-					printf(" ");
+					fprintf(stderr, " ");
 			else
-				printf("%c", *p);
-		printf("\n");
+				fprintf(stderr, "%c", *p);
+		fprintf(stderr, "\n");
 		for (int i = -len; i < yylloc.first_column - 1; i++)
-			printf(" ");
+			fprintf(stderr, " ");
 		for (int i = yylloc.first_column; i <= yylloc.last_column; i++)
-			printf("^");
-		printf("\n");
+			fprintf(stderr, "^");
+		fprintf(stderr, "\n");
 	}
-	printf("error: %s at %d:%d\n", s, yylloc.first_line, yylloc.first_column);
+	fprintf(stderr, "error: %s at %d:%d\n", s, yylloc.first_line, yylloc.first_column);
 }

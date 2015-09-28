@@ -20,20 +20,8 @@ struct ASTNode {
 	virtual ~ASTNode() {};
 };
 
-struct Expression : public ASTNode {
-	enum Type {
-		OP2,
-		OP1,
-		LITERAL,
-		ENCLOSED,
-		IDENTIFIER,
-		FUNCTION_CALL,
-		NEW,
-		DELETE
-	} type;
-	static const char *TypeNames[];
-	Expression(ASTNode *single, Type type);
-	ASTNode *left, *right, *args;
+struct Op2 : public ASTNode {
+	ASTNode *left, *right;
 	enum OpType {
 		ADD,
 		SUB,
@@ -42,11 +30,9 @@ struct Expression : public ASTNode {
 		MOD,
 		PWR
 	} op;
-	Expression(ASTNode *left, OpType op, ASTNode *right);
+	Op2(ASTNode *left, OpType op, ASTNode *right);
 	static const char *OpNames(OpType op);
-	int assignable:1;
-	int val;
-	~Expression();
+	~Op2();
 	Json::Value json();
 	void* gen(Context &context) override;
 };

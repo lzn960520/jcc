@@ -33,14 +33,14 @@ extern void yyparse();
 extern ASTNode *root;
 
 // for cmdline process
-#define OPT_LEX_ONLY 1
-#define OPT_PARSE_ONLY 2
-#define OPT_INPUT_FILE 3
-#define OPT_DUMP_LEX 4
+#define OPT_LEX_ONLY 256
+#define OPT_PARSE_ONLY 257
+#define OPT_INPUT_FILE 258
+#define OPT_DUMP_LEX 259
 #define DEFAULT_LEX_OUTPUT "lex.txt"
-#define OPT_DUMP_AST 5
+#define OPT_DUMP_AST 260
 #define DEFAULT_AST_OUTPUT "ast.json"
-#define OPT_OUTPUT_FILE 6
+#define OPT_OUTPUT_FILE 261
 
 static struct option long_opts[] = {
 	{ "lex-only", no_argument, NULL, OPT_LEX_ONLY },
@@ -55,16 +55,24 @@ int main(int argc, char * const argv[]) {
 	// process cmdline
 	const char *ast_output_filename = NULL;
 	const char *output_filename = NULL;
-	bool opt_lex_only = false, opt_parse_only = false, opt_dump_lex = false, opt_dump_ast = false;
+	bool opt_lex_only = false, opt_parse_only = false,
+			opt_dump_lex = false, opt_dump_ast = false,
+			opt_asm_only = false, opt_compile_only = false;
 	{
 		int opt;
-		while ((opt = getopt_long(argc, argv, "", long_opts, NULL)) != -1) {
+		while ((opt = getopt_long(argc, argv, "cS", long_opts, NULL)) != -1) {
 			switch (opt) {
 			case OPT_LEX_ONLY:
 				opt_lex_only = true;
 				break;
 			case OPT_PARSE_ONLY:
 				opt_parse_only = true;
+				break;
+			case 'c':
+				opt_compile_only = true;
+				break;
+			case 'S':
+				opt_asm_only = true;
 				break;
 			case OPT_INPUT_FILE:
 				if (yyin != NULL) {
@@ -116,96 +124,91 @@ int main(int argc, char * const argv[]) {
 		}
 	}
 
-	if (opt_lex_only + opt_parse_only > 1) {
+	if (opt_lex_only + opt_parse_only + opt_asm_only + opt_compile_only > 1) {
 		fprintf(stderr, "You can't specify two --xxx-only options at the same time\n");
 		exit(0);
 	}
 
-	if (opt_lex_only)
+	do {
 		try {
-			lex_only(); // lex only
-		} catch (CompileException &e) {
-			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
-		}
-	else if (opt_parse_only)
-		try {
-			yyparse(); // parse only
-		} catch (CompileException &e) {
-			root = NULL;
-			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
-		}
-	else {
-		try {
-			// normal compile
+			if (opt_lex_only) {
+				lex_only();
+				break;
+			}
 			yyparse();
-		} catch (CompileException &e) {
-			root = NULL;
-			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
-		}
+			if (opt_parse_only)
+				break;
+			if (!root)
+				throw CompileException("No compile unit found");
 
-		try {
-			if (root) {
-				// call llvm to generate code
-				Context *context = new Context();
-				root->gen(*context);
-				context->getBuilder().CreateRetVoid();
+			// call llvm to generate code
+			Context *context = new Context();
+			root->gen(*context);
+			context->getBuilder().CreateRetVoid();
 
-				// write out
-				int pipe_me_llvm_as[2], pipe_llvm_as_llc[2];
-				pipe(pipe_me_llvm_as);
-				pipe(pipe_llvm_as_llc);
-				int pid;
-				if ((pid = fork()) < 0)
-					throw CompileException("Can't fork");
-				else if (pid == 0) {
-					dup2(pipe_me_llvm_as[0], 0);
-					dup2(pipe_llvm_as_llc[1], 1);
-					close(pipe_me_llvm_as[0]);
-					close(pipe_me_llvm_as[1]);
-					close(pipe_llvm_as_llc[0]);
-					close(pipe_llvm_as_llc[1]);
-					execlp("llvm-as", "llvm-as", "-", NULL);
-				}
-				if ((pid = fork()) < 0)
-					throw CompileException("Can't fork");
-				else if (pid == 0) {
-					dup2(pipe_llvm_as_llc[0], 0);
-					close(pipe_me_llvm_as[0]);
-					close(pipe_me_llvm_as[1]);
-					close(pipe_llvm_as_llc[0]);
-					close(pipe_llvm_as_llc[1]);
-					execlp("llc", "llc", "-filetype=obj", "-o", "tmp.o", "-", NULL);
-				}
+			// write out
+			int pipe_me_llvm_as[2], pipe_llvm_as_llc[2];
+			pipe(pipe_me_llvm_as);
+			pipe(pipe_llvm_as_llc);
+			int pid;
+			if ((pid = fork()) < 0)
+				throw CompileException("Can't fork");
+			else if (pid == 0) {
+				dup2(pipe_me_llvm_as[0], 0);
+				dup2(pipe_llvm_as_llc[1], 1);
 				close(pipe_me_llvm_as[0]);
+				close(pipe_me_llvm_as[1]);
 				close(pipe_llvm_as_llc[0]);
 				close(pipe_llvm_as_llc[1]);
-				{
-					llvm::PassManager passManager;
-					llvm::raw_fd_ostream ofs(pipe_me_llvm_as[1], false);
-					passManager.add(llvm::createPrintModulePass(ofs));
-					passManager.run(context->getModule());
-					ofs.flush();
-					ofs.close();
-				}
-
-				// wait for llc terminate
-				waitpid(pid, NULL, 0);
-
-				// exec gcc to build executable
-				std::string cmdline = "gcc";
-				if (output_filename) {
-					cmdline += " -o ";
-					cmdline += output_filename;
-				}
-				cmdline += " tmp.o";
-				system(cmdline.c_str());
-
-				unlink("tmp.o");
+				execlp("llvm-as", "llvm-as", "-", NULL);
 			}
+			if ((pid = fork()) < 0)
+				throw CompileException("Can't fork");
+			else if (pid == 0) {
+				dup2(pipe_llvm_as_llc[0], 0);
+				close(pipe_me_llvm_as[0]);
+				close(pipe_me_llvm_as[1]);
+				close(pipe_llvm_as_llc[0]);
+				close(pipe_llvm_as_llc[1]);
+				if (opt_asm_only)
+					execlp("llc", "llc", "-filetype=asm" , "-o", output_filename, "-", NULL);
+				else if (opt_compile_only)
+					execlp("llc", "llc", "-filetype=obj", "-o", output_filename, "-", NULL);
+				else
+					execlp("llc", "llc", "-filetype=obj", "-o", "tmp.o", "-", NULL);
+			}
+			close(pipe_me_llvm_as[0]);
+			close(pipe_llvm_as_llc[0]);
+			close(pipe_llvm_as_llc[1]);
+			{
+				llvm::PassManager passManager;
+				llvm::raw_fd_ostream ofs(pipe_me_llvm_as[1], false);
+				passManager.add(llvm::createPrintModulePass(ofs));
+				passManager.run(context->getModule());
+				ofs.flush();
+				ofs.close();
+			}
+
+			// wait for llc terminate
+			waitpid(pid, NULL, 0);
+
+			if (opt_asm_only || opt_compile_only)
+				break;
+
+			// exec gcc to build executable
+			std::string cmdline = "gcc";
+			if (output_filename) {
+				cmdline += " -o ";
+				cmdline += output_filename;
+			}
+			cmdline += " tmp.o";
+			system(cmdline.c_str());
+
+			unlink("tmp.o");
 		} catch (CompileException &e) {
 			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
 		}
-	}
+	} while(0);
 
 	if (opt_dump_lex)
 		fclose(lex_output);

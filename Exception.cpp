@@ -30,3 +30,10 @@ FunctionNotFound::FunctionNotFound(const string &msg) : CompileException(msg) {}
 string FunctionNotFound::message() const {
 	return "Function not found: " + msg;
 }
+
+NotImplemented::NotImplemented() {}
+NotImplemented::NotImplemented(const char *msg) : CompileException(msg) {}
+NotImplemented::NotImplemented(const string &msg) : CompileException(msg) {}
+string NotImplemented::message() const {
+	return "Not implemented: " + msg;
+}

@@ -38,4 +38,11 @@ public:
 	std::string message() const;
 };
 
+class NotImplemented : public CompileException {
+public:
+	NotImplemented();
+	NotImplemented(const char *msg);
+	NotImplemented(const std::string &msg);
+	std::string message() const;
+};
 #endif
