@@ -3,11 +3,19 @@
 
 #include <string>
 
+class ArgumentException {
+protected:
+	std::string msg;
+public:
+	ArgumentException(const std::string &msg);
+	virtual std::string message() const;
+	virtual ~ArgumentException();
+};
+
 class CompileException {
 protected:
 	std::string msg;
 public:
-	CompileException();
 	CompileException(const std::string &msg);
 	CompileException(const char *msg);
 	virtual std::string message() const;
@@ -16,7 +24,6 @@ public:
 
 class InvalidString : public CompileException {
 public:
-	InvalidString();
 	InvalidString(const std::string &msg);
 	InvalidString(const char *msg);
 	std::string message() const;
@@ -24,7 +31,6 @@ public:
 
 class InvalidType : public CompileException {
 public:
-	InvalidType();
 	InvalidType(const char *msg);
 	InvalidType(const std::string &msg);
 	std::string message() const;
@@ -32,7 +38,6 @@ public:
 
 class FunctionNotFound : public CompileException {
 public:
-	FunctionNotFound();
 	FunctionNotFound(const char *msg);
 	FunctionNotFound(const std::string &msg);
 	std::string message() const;
@@ -40,7 +45,6 @@ public:
 
 class NotImplemented : public CompileException {
 public:
-	NotImplemented();
 	NotImplemented(const char *msg);
 	NotImplemented(const std::string &msg);
 	std::string message() const;

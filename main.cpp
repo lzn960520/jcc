@@ -1,6 +1,5 @@
 #include <unistd.h>
 #include <stdio.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <errno.h>
 #include "yyvaltypes.h"
@@ -11,17 +10,11 @@
 #include <llvm/IR/IRPrintingPasses.h>
 #include "context.h"
 #include "exception.h"
-#include <llvm/MC/MCContext.h>
-#include <llvm/MC/MCAsmBackend.h>
-#include <llvm/MC/MCAssembler.h>
-#include <llvm/MC/MCAsmInfoELF.h>
-#include <llvm/MC/MCRegisterInfo.h>
-#include <llvm/MC/MCObjectFileInfo.h>
-#include <llvm/Target/TargetMachine.h>
 #include <wait.h>
+#include "cmdline.h"
 
 // global
-const char *input_filename = NULL;
+std::string input_filename;
 
 // from flex
 extern FILE *yyin;
@@ -41,90 +34,93 @@ extern ASTNode *root;
 #define OPT_DUMP_AST 260
 #define DEFAULT_AST_OUTPUT "ast.json"
 #define OPT_OUTPUT_FILE 261
-
-static struct option long_opts[] = {
-	{ "lex-only", no_argument, NULL, OPT_LEX_ONLY },
-	{ "parse-only", no_argument, NULL, OPT_PARSE_ONLY },
-	{ "dump-lex", optional_argument, NULL, OPT_DUMP_LEX},
-	{ "dump-ast", optional_argument, NULL, OPT_DUMP_AST},
-	{ "input", required_argument, NULL, OPT_INPUT_FILE },
-	{ "output", required_argument, NULL, OPT_OUTPUT_FILE }
-};
+#define OPT_COMPILE_ONLY 262
+#define OPT_AS_ONLY 263
+#define OPT_LLVM_ONLY 264
 
 int main(int argc, char * const argv[]) {
 	// process cmdline
-	const char *ast_output_filename = NULL;
-	const char *output_filename = NULL;
+	CmdLine cmdline(argc, argv);
+	cmdline.registerOpt(OPT_DUMP_AST, "--dump-ast", CmdLine::OPT_ARG);
+	cmdline.registerOpt(OPT_DUMP_LEX, "--dump-lex", CmdLine::OPT_ARG);
+	cmdline.registerOpt(OPT_LEX_ONLY, "--lex", CmdLine::NO_ARG);
+	cmdline.registerOpt(OPT_PARSE_ONLY, "--parse", CmdLine::NO_ARG);
+	cmdline.registerOpt(OPT_OUTPUT_FILE, "-o", CmdLine::REQUIRE_ARG);
+	cmdline.registerOpt(OPT_COMPILE_ONLY, "-S", CmdLine::NO_ARG);
+	cmdline.registerOpt(OPT_AS_ONLY, "-c", CmdLine::NO_ARG);
+	cmdline.registerOpt(OPT_LLVM_ONLY, "--llvm", CmdLine::NO_ARG);
+
 	bool opt_lex_only = false, opt_parse_only = false,
-			opt_dump_lex = false, opt_dump_ast = false,
-			opt_asm_only = false, opt_compile_only = false;
-	{
-		int opt;
-		while ((opt = getopt_long(argc, argv, "cS", long_opts, NULL)) != -1) {
-			switch (opt) {
-			case OPT_LEX_ONLY:
-				opt_lex_only = true;
-				break;
-			case OPT_PARSE_ONLY:
-				opt_parse_only = true;
-				break;
-			case 'c':
-				opt_compile_only = true;
-				break;
-			case 'S':
-				opt_asm_only = true;
-				break;
-			case OPT_INPUT_FILE:
-				if (yyin != NULL) {
-					fprintf(stderr, "Can't specify two input files at the same time\n");
-					exit(0);
-				}
-				yyin = fopen(optarg, "r");
-				if (yyin == NULL) {
-					fprintf(stderr, "Can't open input file \"%s\", errno %d\n", optarg, errno);
-					exit(0);
-				}
-				input_filename = optarg;
-				break;
-			case OPT_OUTPUT_FILE:
-				if (output_filename != NULL) {
-					fprintf(stderr, "Can't specify two output files at the same time\n");
-					exit(0);
-				}
-				output_filename = optarg;
-				break;
-			case OPT_DUMP_LEX:
-				opt_dump_lex = true;
-				if (lex_output != NULL) {
-					fprintf(stderr, "Can't specify two lex output file\n");
-					exit(0);
-				}
-				if (optarg == NULL)
-					lex_output = fopen(DEFAULT_LEX_OUTPUT, "w");
-				else
-					lex_output = fopen(optarg, "w");
-				if (lex_output == NULL) {
-					fprintf(stderr, "Can't open lex output file \"%s\"\n", optarg == NULL ? DEFAULT_LEX_OUTPUT : optarg);
-					exit(0);
-				}
-				break;
-			case OPT_DUMP_AST:
-				opt_dump_ast = true;
-				if (ast_output_filename != NULL) {
-					fprintf(stderr, "Can't specify two ast output file\n");
-					exit(0);
-				}
-				ast_output_filename = optarg == NULL ? DEFAULT_AST_OUTPUT : optarg;
-				break;
-			default:
-				fprintf(stderr, "Unknown option %s\n", argv[optind - 1]);
+				opt_dump_lex = false, opt_dump_ast = false,
+				opt_as_only = false, opt_compile_only = false, opt_llvm_only = false;
+	std::string ast_filename, output_filename;
+	for (CmdLine::Option opt; cmdline.next(opt) != -2;) {
+		switch (opt.id) {
+		case OPT_LEX_ONLY:
+			opt_lex_only = true;
+			break;
+		case OPT_PARSE_ONLY:
+			opt_parse_only = true;
+			break;
+		case OPT_LLVM_ONLY:
+			opt_llvm_only = true;
+			break;
+		case OPT_COMPILE_ONLY:
+			opt_compile_only = true;
+			break;
+		case OPT_AS_ONLY:
+			opt_as_only = true;
+			break;
+		case -1:
+			if (yyin != NULL) {
+				fprintf(stderr, "Can't specify two input files at the same time\n");
 				exit(0);
-				break;
 			}
+			yyin = fopen(opt.arg.c_str(), "r");
+			if (yyin == NULL) {
+				fprintf(stderr, "Can't open input file \"%s\", errno %d\n", optarg, errno);
+				exit(0);
+			}
+			input_filename = opt.arg.c_str();
+			break;
+		case OPT_OUTPUT_FILE:
+			if (!output_filename.empty()) {
+				fprintf(stderr, "Can't specify two output files at the same time\n");
+				exit(0);
+			}
+			output_filename = opt.arg;
+			break;
+		case OPT_DUMP_LEX:
+			opt_dump_lex = true;
+			if (lex_output != NULL) {
+				fprintf(stderr, "Can't specify two lex output file\n");
+				exit(0);
+			}
+			if (opt.arg.empty())
+				lex_output = fopen(DEFAULT_LEX_OUTPUT, "w");
+			else
+				lex_output = fopen(opt.arg.c_str(), "w");
+			if (lex_output == NULL) {
+				fprintf(stderr, "Can't open lex output file \"%s\"\n", opt.arg.empty() ? DEFAULT_LEX_OUTPUT : opt.arg.c_str());
+				exit(0);
+			}
+			break;
+		case OPT_DUMP_AST:
+			opt_dump_ast = true;
+			if (ast_filename != "") {
+				fprintf(stderr, "Can't specify two ast output file\n");
+				exit(0);
+			}
+			ast_filename = opt.arg.empty() ? DEFAULT_AST_OUTPUT : opt.arg.c_str();
+			break;
+		default:
+			fprintf(stderr, "Unknown option %s\n", opt.opt.c_str());
+			exit(0);
+			break;
 		}
 	}
 
-	if (opt_lex_only + opt_parse_only + opt_asm_only + opt_compile_only > 1) {
+	if (opt_lex_only + opt_parse_only + opt_llvm_only + opt_as_only + opt_compile_only > 1) {
 		fprintf(stderr, "You can't specify two --xxx-only options at the same time\n");
 		exit(0);
 	}
@@ -146,6 +142,31 @@ int main(int argc, char * const argv[]) {
 			root->gen(*context);
 			context->getBuilder().CreateRetVoid();
 
+			if (opt_llvm_only) {
+				llvm::PassManager passManager;
+				if (output_filename.empty() && input_filename.empty()) {
+					llvm::raw_fd_ostream ofs(1, false);
+					passManager.add(llvm::createPrintModulePass(ofs));
+					passManager.run(context->getModule());
+					ofs.close();
+				} else if (output_filename.empty()) {
+					std::string oname = input_filename.substr(0, input_filename.rfind('.')) + ".llvm";
+					std::ofstream sys_ofs(oname);
+					llvm::raw_os_ostream ofs(sys_ofs);
+					passManager.add(llvm::createPrintModulePass(ofs));
+					passManager.run(context->getModule());
+					ofs.flush();
+					sys_ofs.close();
+				} else {
+					std::ofstream sys_ofs(output_filename);
+					llvm::raw_os_ostream ofs(sys_ofs);
+					passManager.add(llvm::createPrintModulePass(ofs));
+					passManager.run(context->getModule());
+					ofs.flush();
+					sys_ofs.close();
+				}
+				break;
+			}
 			// write out
 			int pipe_me_llvm_as[2], pipe_llvm_as_llc[2];
 			pipe(pipe_me_llvm_as);
@@ -170,10 +191,10 @@ int main(int argc, char * const argv[]) {
 				close(pipe_me_llvm_as[1]);
 				close(pipe_llvm_as_llc[0]);
 				close(pipe_llvm_as_llc[1]);
-				if (opt_asm_only)
-					execlp("llc", "llc", "-filetype=asm" , "-o", output_filename, "-", NULL);
-				else if (opt_compile_only)
-					execlp("llc", "llc", "-filetype=obj", "-o", output_filename, "-", NULL);
+				if (opt_compile_only)
+					execlp("llc", "llc", "-filetype=asm" , "-o", output_filename.c_str(), "-", NULL);
+				else if (opt_as_only)
+					execlp("llc", "llc", "-filetype=obj", "-o", output_filename.c_str(), "-", NULL);
 				else
 					execlp("llc", "llc", "-filetype=obj", "-o", "tmp.o", "-", NULL);
 			}
@@ -192,12 +213,12 @@ int main(int argc, char * const argv[]) {
 			// wait for llc terminate
 			waitpid(pid, NULL, 0);
 
-			if (opt_asm_only || opt_compile_only)
+			if (opt_as_only || opt_compile_only)
 				break;
 
 			// exec gcc to build executable
 			std::string cmdline = "gcc";
-			if (output_filename) {
+			if (!output_filename.empty()) {
 				cmdline += " -o ";
 				cmdline += output_filename;
 			}
@@ -214,9 +235,9 @@ int main(int argc, char * const argv[]) {
 		fclose(lex_output);
 	if (opt_dump_ast && root) {
 		Json::Value json_root = root->json();
-		std::ofstream ofs(ast_output_filename);
+		std::ofstream ofs(ast_filename);
 		if (!ofs) {
-			fprintf(stderr, "Can't open ast output file \"%s\"\n", ast_output_filename);
+			fprintf(stderr, "Can't open ast output file \"%s\"\n", ast_filename.c_str());
 			exit(0);
 		}
 		ofs << json_root << std::endl;

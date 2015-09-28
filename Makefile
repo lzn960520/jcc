@@ -24,7 +24,7 @@ endif
 
 # jascal
 INCLUDES := jascal.tab.hpp
-SOURCES := main.cpp CompileUnit.cpp Op2.cpp LiteralInt.cpp \
+SOURCES := main.cpp CompileUnit.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
@@ -52,7 +52,7 @@ vars:
 deps: $(DEPS)
 
 jcc: $(OBJS)
-	g++ -o $@ $(LDFLAGS) $^ $(LIBS)
+	g++ $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
 	
 jascal.tab.hpp: jascal.y
 	bison -d jascal.y -v --report-file=bison-report.txt -o jascal.tab.cpp
@@ -67,4 +67,4 @@ clean:
 	rm -rf jascal.tab.cpp jascal.tab.hpp lex.yy.cpp jcc $(OBJS) $(DEPS) lex.txt ast.json bison-report.txt test.exe
 
 test: jcc test.jas
-	./jcc --dump-lex --dump-ast -S --input test.jas --output test
+	./jcc --dump-lex --dump-ast --llvm -o test.llvm test.jas
