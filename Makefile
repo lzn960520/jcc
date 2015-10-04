@@ -1,6 +1,9 @@
-.PHONY: all clean test vars deps
+.PHONY: all clean test vars deps flex bison
+
+LEX := flex
 
 CPPFLAGS ?=
+CPPFLAGS += -Iinclude
 ifeq ($(DEBUG), 1)
 CPPFLAGS += -g
 endif
@@ -27,25 +30,25 @@ LIBS += -lLLVM-3.6
 endif
 
 # jascal
-INCLUDES := jascal.tab.hpp
-SOURCES := main.cpp CompileUnit.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
+SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
-	Block.cpp ASTNode.cpp Return.cpp
+	Block.cpp ASTNode.cpp 
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
+PROG := jcc
 
-all: jcc
+all: $(PROG)
 
-deps/%.d: %.cpp $(INCLUDES)
+deps/%.d: src/%.cpp | flex bison
 	$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,objs/\1.o: $@ ,g' < $@.$$$$ > $@; \
 	$(RM) $@.$$$$
 
 objs/%.o:
-	$(CXX) $(CPPFLAGS) -c -o $@ $*.cpp
+	$(CXX) $(CPPFLAGS) -c -o $@ src/$*.cpp
 	
 include $(DEPS)
 
@@ -56,20 +59,27 @@ vars:
 	
 deps: $(DEPS)
 
-jcc: $(OBJS)
+$(PROG): $(OBJS)
 	g++ $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
 	
-jascal.tab.hpp: jascal.y
-	bison -d jascal.y -v --report-file=bison-report.txt -o jascal.tab.cpp
+include/jascal.tab.hpp: src/jascal.y
+	$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
+	mv src/jascal.tab.hpp include/
 
-jascal.tab.cpp: jascal.y
-	bison -d jascal.y -v --report-file=bison-report.txt -o jascal.tab.cpp
+src/jascal.tab.cpp: src/jascal.y
+	$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
 
-lex.yy.cpp: jascal.l
-	flex --outfile=lex.yy.cpp jascal.l
+bison: include/jascal.tab.hpp src/jascal.tab.cpp 
+
+src/lex.yy.cpp: src/jascal.l
+	$(LEX) --outfile=src/lex.yy.cpp src/jascal.l
+	
+flex: src/lex.yy.cpp
 
 clean:
-	rm -rf jascal.tab.cpp jascal.tab.hpp lex.yy.cpp jcc $(OBJS) $(DEPS) lex.txt ast.json bison-report.txt test.exe
+	$(RM) -rf src/jascal.tab.cpp include/jascal.tab.hpp src/lex.yy.cpp \
+		 $(PROG) $(OBJS) $(DEPS) lex.txt bison-report.txt test.llvm test.llvm.s \
+		 test.o test.exe test ast/ast.json
 
 test: jcc test.jas
-	./jcc --dump-lex --dump-ast --llvm -o test.llvm test.jas
+	./$(PROG) --dump-lex --dump-ast=ast/ast.json --llvm -o test.llvm test.jas
