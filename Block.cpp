@@ -1,6 +1,6 @@
 #include "yyvaltypes.h"
 
-Block::Block(Statements *body):
+Block::Block(ASTNode *body):
 	body(body) {}
 
 Block::~Block() {

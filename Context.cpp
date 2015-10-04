@@ -34,14 +34,16 @@ void Context::endFunction() {
 	contextStack.pop_back();
 }
 
-void Context::newBlock() {
+llvm::BasicBlock* Context::newBlock() {
 	llvm::BasicBlock *block = llvm::BasicBlock::Create(*currentContext, "", currentFunction);
 	builder->SetInsertPoint(block);
+	return block;
 }
 
-void Context::newBlock(const std::string &name) {
+llvm::BasicBlock* Context::newBlock(const std::string &name) {
 	llvm::BasicBlock *block = llvm::BasicBlock::Create(*currentContext, currentFunction->getName() + "@" + name, currentFunction);
 	builder->SetInsertPoint(block);
+	return block;
 }
 
 void Context::pushContext() {
@@ -65,4 +67,11 @@ llvm::Value* Context::findSymbol(const std::string &name) {
 		if ((*it)->count(name))
 			return (**it)[name];
 	return NULL;
+}
+
+std::string Context::getFunctionName() {
+	if (currentFunction)
+		return currentFunction->getName();
+	else
+		return "";
 }

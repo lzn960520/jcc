@@ -95,6 +95,7 @@ struct IfStatement : public ASTNode {
 	IfStatement(ASTNode *test, ASTNode *then_st, ASTNode *else_st);
 	~IfStatement();
 	Json::Value json() override;
+	void* gen(Context &context);
 };
 
 struct WhileStatement : public ASTNode {
@@ -173,8 +174,8 @@ struct FunctionCall : public ASTNode {
 };
 
 struct Block : public ASTNode {
-	Statements *body;
-	Block(Statements *body);
+	ASTNode *body;
+	Block(ASTNode *body);
 	~Block();
 	Json::Value json() override;
 	void* gen(Context &context) override;

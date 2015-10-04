@@ -1,5 +1,10 @@
 public int main() begin
+if (0) then begin
+int x=3;
 puts("123");
-return 0;
+end else begin
+int x=4;
 puts("456");
+end
+return 0;
 end

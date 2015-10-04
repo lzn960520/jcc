@@ -27,8 +27,9 @@ public:
 	void addSymbol(const std::string &name, llvm::Value *value);
 	llvm::Value* findSymbol(const std::string &name);
 	void removeSymbol(const std::string &name);
-	void newBlock();
-	void newBlock(const std::string &name);
+	llvm::BasicBlock* newBlock();
+	llvm::BasicBlock* newBlock(const std::string &name);
+	std::string getFunctionName();
 };
 
 #endif
