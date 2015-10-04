@@ -45,6 +45,7 @@ void *VariableDefination::gen(Context &context) {
 		llvm::AllocaInst *tmp = context.getBuilder().CreateAlloca(type, NULL, it->first->getName());
 		if (it->second)
 			context.getBuilder().CreateStore((llvm::Value *) it->second->gen(context), tmp, false);
+		context.addSymbol(it->first->getName(), tmp);
 	}
 	return NULL;
 }

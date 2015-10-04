@@ -1,5 +1,6 @@
 #include "yyvaltypes.h"
 #include <llvm/IR/ValueSymbolTable.h>
+#include "exception.h"
 
 Identifier::Identifier(const char *name) :
 	text(name) {
@@ -15,10 +16,13 @@ Json::Value Identifier::json() {
 Identifier::~Identifier() {
 }
 
-std::string Identifier::getName() {
+const std::string& Identifier::getName() const {
 	return text;
 }
 
 void* Identifier::gen(Context &context) {
-	return context.getBuilder().GetInsertBlock()->getValueSymbolTable()->lookup(text);
+	llvm::Value *ans = context.findSymbol(text);
+	if (ans == NULL)
+		throw SymbolNotFound(text, loc);
+	return ans;
 }

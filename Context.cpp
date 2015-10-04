@@ -1,5 +1,6 @@
 #include "context.h"
 #include <llvm/IR/Module.h>
+#include "exception.h"
 
 Context::Context() {
 	currentContext = &llvm::getGlobalContext();
@@ -9,7 +10,59 @@ Context::Context() {
 	std::vector<llvm::Type*> arg;
 	arg.push_back(llvm::Type::getInt8PtrTy(*currentContext));
 	llvm::Function::Create(llvm::FunctionType::get(builder->getInt32Ty(), llvm::ArrayRef<llvm::Type*>(arg), false), llvm::Function::ExternalLinkage, "puts", module);
-	llvm::Function *mainFunc = llvm::Function::Create(llvm::FunctionType::get(builder->getVoidTy(), false), llvm::Function::ExternalLinkage, "main", module); // main function
-	llvm::BasicBlock *topBlock = llvm::BasicBlock::Create(*currentContext, "", mainFunc);
-	builder->SetInsertPoint(topBlock);
+	currentFunction = NULL;
+}
+
+llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType) {
+	assert(contextStack.empty());
+	SymbolContext *cxt = new SymbolContext();
+	contextStack.push_back(cxt);
+	llvm::Function *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
+	llvm::BasicBlock *block = llvm::BasicBlock::Create(*currentContext, name + "@entry", function);
+	builder->SetInsertPoint(block);
+	currentFunction = function;
+	return function;
+}
+
+void Context::endFunction() {
+	assert(contextStack.size() == 1);
+	builder->ClearInsertionPoint();
+	for (llvm::Function::iterator it = currentFunction->begin(); it != currentFunction->end(); it++)
+		if ((*it).hasOneUse() && (*it).getTerminator() == NULL)
+			throw NoReturn(currentFunction->getName().str());
+	currentFunction = NULL;
+	contextStack.pop_back();
+}
+
+void Context::newBlock() {
+	llvm::BasicBlock *block = llvm::BasicBlock::Create(*currentContext, "", currentFunction);
+	builder->SetInsertPoint(block);
+}
+
+void Context::newBlock(const std::string &name) {
+	llvm::BasicBlock *block = llvm::BasicBlock::Create(*currentContext, currentFunction->getName() + "@" + name, currentFunction);
+	builder->SetInsertPoint(block);
+}
+
+void Context::pushContext() {
+	contextStack.push_back(new SymbolContext());
+}
+
+void Context::popContext() {
+	assert(contextStack.size() > 1);
+	delete contextStack.back();
+	contextStack.pop_back();
+}
+
+void Context::addSymbol(const std::string &name, llvm::Value *value) {
+	if (contextStack.back()->count(name))
+		throw Redefination(name);
+	contextStack.back()->insert(std::make_pair(name, value));
+}
+
+llvm::Value* Context::findSymbol(const std::string &name) {
+	for (SymbolContextStack::reverse_iterator it = contextStack.rbegin(); it != contextStack.rend(); it++)
+		if ((*it)->count(name))
+			return (**it)[name];
+	return NULL;
 }

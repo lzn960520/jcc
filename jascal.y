@@ -8,6 +8,7 @@
 }
 
 %initial-action {
+	yylloc.first_line = 1;
 	yylloc.last_column = 0;
 }
 
@@ -54,6 +55,7 @@
 %token T_FLOAT
 %token T_DOUBLE
 %token visibility
+%token T_RETURN
 
 %left T_ADD T_SUB
 %left T_MUL T_DIV
@@ -63,7 +65,7 @@
 %%
 
 compile_unit:
-	statements {
+	function_defination {
 		root = $1; }
 
 expression:
@@ -91,8 +93,12 @@ statement:
 		$$ = $1; }
 	| if_statement
 	| while_statement
+	| T_RETURN expression T_SEMICOLON {
+		$$ = new Return($2); }
+	| T_RETURN T_SEMICOLON {
+		$$ = new Return(); }
 	| T_BEGIN statements T_END {
-		$$ = $2; }
+		$$ = new Block((Statements *) $2); }
 	| T_BEGIN T_END {
 		$$ = new Statements(NULL); }
 
@@ -151,15 +157,15 @@ base_type:
 
 function_defination:
 	visibility type_name identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statements T_END {
-		$$ = new Function((Visibility) (long long) $1, $2, $3, $5, $8); }
+		$$ = new Function((Visibility) (long long) $1, (Type*) $2, (Identifier*) $3, (ArgumentList*) $5, (Statements*) $8); }
 
 arg_list:
 	{ $$ = new ArgumentList(); }
 	| type_name identifier {
-		$$ = new ArgumentList($1, $2); }
+		$$ = new ArgumentList((Type*) $1, (Identifier*) $2); }
 	| arg_list T_COMMA type_name identifier {
 		$$ = $1;
-		((ArgumentList *) $$)->push_back($3, $4); }
+		((ArgumentList *) $$)->push_back((Type*) $3, (Identifier*) $4); }
 		
 function_call:
 	identifier T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {

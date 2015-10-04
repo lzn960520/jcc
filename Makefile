@@ -1,5 +1,9 @@
 .PHONY: all clean test vars deps
 
+CPPFLAGS ?=
+ifeq ($(DEBUG), 1)
+CPPFLAGS += -g
+endif
 CPPFLAGS += -std=gnu++11
 OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
@@ -28,7 +32,8 @@ SOURCES := main.cpp CompileUnit.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
-	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp
+	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
+	Block.cpp ASTNode.cpp Return.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 

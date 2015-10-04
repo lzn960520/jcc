@@ -1,1 +1,5 @@
-puts("\x30\60");
+public int main() begin
+puts("123");
+return 0;
+puts("456");
+end

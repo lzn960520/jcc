@@ -8,6 +8,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/PassManager.h>
 #include <llvm/IR/IRPrintingPasses.h>
+#include <llvm/LinkAllPasses.h>
 #include "context.h"
 #include "exception.h"
 #include <wait.h>
@@ -140,10 +141,14 @@ int main(int argc, char * const argv[]) {
 			// call llvm to generate code
 			Context *context = new Context();
 			root->gen(*context);
-			context->getBuilder().CreateRetVoid();
+
+			llvm::PassManager passManager;
+			passManager.add(llvm::createDeadInstEliminationPass());
+			passManager.add(llvm::createDeadCodeEliminationPass());
+			passManager.add(llvm::createUnreachableBlockEliminationPass());
+			passManager.add(llvm::createGlobalDCEPass());
 
 			if (opt_llvm_only) {
-				llvm::PassManager passManager;
 				if (output_filename.empty() && input_filename.empty()) {
 					llvm::raw_fd_ostream ofs(1, false);
 					passManager.add(llvm::createPrintModulePass(ofs));
@@ -167,6 +172,7 @@ int main(int argc, char * const argv[]) {
 				}
 				break;
 			}
+
 			// write out
 			int pipe_me_llvm_as[2], pipe_llvm_as_llc[2];
 			pipe(pipe_me_llvm_as);
@@ -202,7 +208,6 @@ int main(int argc, char * const argv[]) {
 			close(pipe_llvm_as_llc[0]);
 			close(pipe_llvm_as_llc[1]);
 			{
-				llvm::PassManager passManager;
 				llvm::raw_fd_ostream ofs(pipe_me_llvm_as[1], false);
 				passManager.add(llvm::createPrintModulePass(ofs));
 				passManager.run(context->getModule());

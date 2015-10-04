@@ -2,6 +2,7 @@
 #define _EXCEPTION_H_
 
 #include <string>
+#include "yyvaltypes.h"
 
 class ArgumentException {
 protected:
@@ -43,10 +44,35 @@ public:
 	std::string message() const;
 };
 
+class SymbolNotFound : public CompileException {
+	YYLTYPE loc;
+	bool has_loc;
+public:
+	SymbolNotFound(const char *msg);
+	SymbolNotFound(const std::string &msg);
+	SymbolNotFound(const std::string &msg, YYLTYPE loc);
+	std::string message() const;
+};
+
 class NotImplemented : public CompileException {
 public:
 	NotImplemented(const char *msg);
 	NotImplemented(const std::string &msg);
 	std::string message() const;
 };
+
+class Redefination : public CompileException {
+public:
+	Redefination(const char *msg);
+	Redefination(const std::string &msg);
+	std::string message() const;
+};
+
+class NoReturn : public CompileException {
+public:
+	NoReturn(const char *msg);
+	NoReturn(const std::string &msg);
+	std::string message() const;
+};
+
 #endif

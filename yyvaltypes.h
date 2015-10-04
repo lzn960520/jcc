@@ -7,6 +7,15 @@
 #include <llvm/IR/IRBuilder.h>
 #include "context.h"
 
+struct YYLTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+};
+#define YYLTYPE_IS_DECLARED
+
 enum Visibility {
 	PRIVATE,
 	PUBLIC,
@@ -15,6 +24,8 @@ enum Visibility {
 extern const char *VisibilityNames[];
 
 struct ASTNode {
+	YYLTYPE loc;
+	ASTNode();
 	virtual Json::Value json() = 0;
 	virtual void* gen(Context &context) { return NULL; };
 	virtual ~ASTNode() {};
@@ -33,7 +44,7 @@ struct Op2 : public ASTNode {
 	Op2(ASTNode *left, OpType op, ASTNode *right);
 	static const char *OpNames(OpType op);
 	~Op2();
-	Json::Value json();
+	Json::Value json() override;
 	void* gen(Context &context) override;
 };
 
@@ -41,32 +52,32 @@ struct CompileUnit : public ASTNode {
 	ASTNode *body;
 	CompileUnit(ASTNode *body);
 	~CompileUnit();
-	Json::Value json();
+	Json::Value json() override;
 };
 
 struct LiteralInt : public ASTNode {
 	int val;
 	LiteralInt(int val);
 	~LiteralInt();
-	Json::Value json();
-	void *gen(Context &context);
+	Json::Value json() override;
+	void *gen(Context &context) override;
 };
 
 struct LiteralString : public ASTNode {
 	std::string text;
 	LiteralString(const char *text);
 	~LiteralString();
-	Json::Value json();
-	void *gen(Context &context);
+	Json::Value json() override;
+	void *gen(Context &context) override;
 };
 
 struct Identifier : public ASTNode {
 	std::string text;
 	Identifier(const char *name);
 	~Identifier();
-	Json::Value json();
-	std::string getName();
-	void* gen(Context &context);
+	Json::Value json() override;
+	const std::string& getName() const;
+	void* gen(Context &context) override;
 };
 
 struct Statements : public ASTNode {
@@ -74,8 +85,8 @@ struct Statements : public ASTNode {
 	Statements(ASTNode *statement);
 	void push_back(ASTNode *statement);
 	~Statements();
-	Json::Value json();
-	void* gen(Context &context);
+	Json::Value json() override;
+	void* gen(Context &context) override;
 };
 
 struct IfStatement : public ASTNode {
@@ -83,14 +94,14 @@ struct IfStatement : public ASTNode {
 	IfStatement(ASTNode *test, ASTNode *then_st);
 	IfStatement(ASTNode *test, ASTNode *then_st, ASTNode *else_st);
 	~IfStatement();
-	Json::Value json();
+	Json::Value json() override;
 };
 
 struct WhileStatement : public ASTNode {
 	ASTNode *test, *body;
 	WhileStatement(ASTNode *test, ASTNode *body);
 	~WhileStatement();
-	Json::Value json();
+	Json::Value json() override;
 };
 
 struct Type : public ASTNode {
@@ -106,7 +117,7 @@ struct Type : public ASTNode {
 	bool isUnsigned;
 	Type(BaseType baseType, bool isUnsigned = false);
 	~Type();
-	Json::Value json();
+	Json::Value json() override;
 	llvm::Type *getType(Context &context);
 };
 
@@ -117,25 +128,30 @@ struct VariableDefination : public ASTNode {
 	void push_back(ASTNode *identifier);
 	void push_back(ASTNode *identifier, ASTNode *init_value);
 	~VariableDefination();
-	Json::Value json();
+	Json::Value json() override;
 	void *gen(Context &context) override;
+};
+
+struct ArgumentList : public ASTNode {
+	typedef std::list<std::pair<Type*, Identifier*> > ListType;
+	ListType list;
+	ArgumentList();
+	ArgumentList(Type *type, Identifier *identifier);
+	void push_back(Type *type, Identifier *identifier);
+	~ArgumentList();
+	Json::Value json() override;
 };
 
 struct Function : public ASTNode {
 	Visibility visibility;
-	ASTNode *return_type, *identifier, *arg_list, *body;
-	Function(Visibility visibility, ASTNode *return_type, ASTNode *identifier, ASTNode *arg_list, ASTNode *body);
+	Type *return_type;
+	Identifier *identifier;
+	ArgumentList *arg_list;
+	ASTNode *body;
+	Function(Visibility visibility, Type *return_type, Identifier *identifier, ArgumentList *arg_list, ASTNode *body);
 	~Function();
-	Json::Value json();
-};
-
-struct ArgumentList : public ASTNode {
-	std::list<std::pair<ASTNode*,ASTNode*> > list;
-	ArgumentList();
-	ArgumentList(ASTNode *type, ASTNode *identifier);
-	void push_back(ASTNode *type, ASTNode *identifier);
-	~ArgumentList();
-	Json::Value json();
+	Json::Value json() override;
+	void *gen(Context &context) override;
 };
 
 struct CallArgumentList : public ASTNode {
@@ -144,7 +160,7 @@ struct CallArgumentList : public ASTNode {
 	CallArgumentList(ASTNode *expression);
 	void push_back(ASTNode *expression);
 	~CallArgumentList();
-	Json::Value json();
+	Json::Value json() override;
 };
 
 struct FunctionCall : public ASTNode {
@@ -152,8 +168,25 @@ struct FunctionCall : public ASTNode {
 	CallArgumentList *arg_list;
 	FunctionCall(ASTNode *identifier, ASTNode *arg_list);
 	~FunctionCall();
-	Json::Value json();
-	void* gen(Context &context);
+	Json::Value json() override;
+	void* gen(Context &context) override;
+};
+
+struct Block : public ASTNode {
+	Statements *body;
+	Block(Statements *body);
+	~Block();
+	Json::Value json() override;
+	void* gen(Context &context) override;
+};
+
+struct Return : public ASTNode {
+	ASTNode *expression;
+	Return();
+	Return(ASTNode *expression);
+	~Return();
+	Json::Value json() override;
+	void* gen(Context &context) override;
 };
 
 #endif

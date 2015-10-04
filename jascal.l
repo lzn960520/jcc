@@ -121,6 +121,10 @@
 		fprintf(lex_output, "<PROTECTED>");
 	yylval = (ASTNode *) PROTECTED;
 	return visibility; }
+"return" {
+	if (lex_output)
+		fprintf(lex_output, "<RETURN>");
+	return T_RETURN; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);
