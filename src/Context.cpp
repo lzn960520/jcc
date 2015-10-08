@@ -76,3 +76,11 @@ std::string Context::getFunctionName() {
 	else
 		return "";
 }
+
+void Context::setBlock(llvm::BasicBlock *targetBlock) {
+	builder->SetInsertPoint(targetBlock);
+}
+
+llvm::BasicBlock* Context::currentBlock() {
+	return builder->GetInsertBlock();
+}

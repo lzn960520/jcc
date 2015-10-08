@@ -31,6 +31,8 @@ public:
 	llvm::BasicBlock* newBlock();
 	llvm::BasicBlock* newBlock(const std::string &name);
 	std::string getFunctionName();
+	void setBlock(llvm::BasicBlock *targetBlock);
+	llvm::BasicBlock* currentBlock();
 };
 
 #endif

@@ -137,11 +137,17 @@ int main(int argc, char * const argv[]) {
 			if (!root)
 				throw CompileException("No compile unit found");
 
-			// call llvm to generate code
+			// call gen to generate llvm code
 			Context *context = new Context();
 			root->gen(*context);
 
+			// optimization
 			llvm::PassManager passManager;
+			passManager.add(llvm::createConstantMergePass());
+			passManager.add(llvm::createConstantPropagationPass());
+			passManager.add(llvm::createLoopSimplifyPass());
+			passManager.add(llvm::createCFGSimplificationPass());
+			passManager.add(llvm::createInstructionSimplifierPass());
 			passManager.add(llvm::createDeadInstEliminationPass());
 			passManager.add(llvm::createDeadCodeEliminationPass());
 			passManager.add(llvm::createUnreachableBlockEliminationPass());

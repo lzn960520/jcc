@@ -8,6 +8,7 @@ struct WhileStatement : public ASTNode {
 	WhileStatement(ASTNode *test, ASTNode *body);
 	~WhileStatement();
 	Json::Value json() override;
+	void* gen(Context &context) override;
 };
 
 #endif
