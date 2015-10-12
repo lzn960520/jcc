@@ -12,40 +12,10 @@ var AST;
 		}
 		return this;
 	};
-	function Op(data, parent) {
+	function Op2(data, parent) {
 		this.parent = parent;
 		this.name = data.op;
-		this.getChildren = function() {
-			return null;
-		}
-		this.getTips = function() {
-			return null;
-		}
-		return this;
-	}
-	function Expression(data, parent) {
-		this.parent = parent;
-		this.name = data.name;
-		this.type = data.type;
-		var children;
-		switch (this.type) {
-		case "op2":
-			this.name = data.op;
-			this.op = data.op;
-			this.left = AST(data.left, this);
-			this.right = AST(data.right, this);
-			this.op = AST({ name: "op", op: this.op }, this);
-			children = [ this.left, this.right ];
-			break;
-		case "literal":
-			this.literal = AST(data.literal, this);
-			children = [ this.literal ];
-			break;
-		case "identifier":
-			this.identifier = AST(data.identifier, this);
-			children = [ this.identifier ];
-			break;
-		}
+		var children = [ AST(data.left, this), AST(data.right, this) ];
 		this.getChildren = function() {
 			return children;
 		}
@@ -235,7 +205,7 @@ var AST;
 	function Call(data, parent) {
 		this.parent = parent;
 		this.name = "call";
-		var children = [ AST(data.identifier, this), AST(data.arg_list) ];
+		var children = [ AST(data.identifier, this), AST(data.arg_list, this) ];
 		this.getChildren = function() {
 			return children;
 		}
@@ -269,10 +239,56 @@ var AST;
 			return null;
 		}
 	}
+	function ArrayAccess(data, parent) {
+		this.parent = parent;
+		this.name = "array";
+		var children = [ AST(data.array, this), AST(data.accessor, this) ];
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
+	function ArrayAccessor(data, parent) {
+		this.parent = parent;
+		this.name = "accessor";
+		var children = [];
+		for (i in data.list)
+			children.push(AST(data.list[i], this));
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
+	function Repeat(data, parent) {
+		this.parent = parent;
+		this.name = "repeat";
+		var children = [ AST(data.body, this), AST(data.until, this) ];
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
+	function Op1(data, parent) {
+		this.parent = parent;
+		this.name = data.op;
+		var children = [ AST(data.operand, this) ];
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+		return this;
+	}
 	var ASTtypes = {
 		"compile_unit": CompileUnit,
-		"expression": Expression,
-		"op": Op,
+		"op2": Op2,
 		"literal": Literal,
 		"literal_int": LiteralInt,
 		"literal_string": LiteralString,
@@ -289,7 +305,11 @@ var AST;
 		"block": Block,
 		"call": Call,
 		"call_arg_list": CallArgumentList,
-		"return": Return
+		"return": Return,
+		"array_access": ArrayAccess,
+		"array_accessor": ArrayAccessor,
+		"repeat_statement": Repeat,
+		"op1": Op1
 	};
 	AST = function(data, parent) {
 		if (!parent)

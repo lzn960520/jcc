@@ -11,10 +11,15 @@ struct Op2 : public ASTNode {
 		MUL,
 		DIV,
 		MOD,
-		PWR
+		PWR,
+		LT,
+		GT,
+		LEQ,
+		GEQ,
+		ASSIGN
 	} op;
 	Op2(ASTNode *left, OpType op, ASTNode *right);
-	static const char *OpNames(OpType op);
+	static const char *OpNames[];
 	~Op2();
 	Json::Value json() override;
 	void* gen(Context &context) override;

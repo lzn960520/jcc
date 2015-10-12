@@ -1,5 +1,8 @@
 #include "Statements.h"
 
+Statements::Statements() {
+}
+
 Statements::Statements(ASTNode *statement) {
 	push_back(statement);
 }

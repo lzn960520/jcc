@@ -250,7 +250,7 @@ int main(int argc, char * const argv[]) {
 			fprintf(stderr, "Can't open ast output file \"%s\"\n", ast_filename.c_str());
 			exit(0);
 		}
-		ofs << json_root << std::endl;
+		ofs << "var ast = " << json_root << std::endl;
 		ofs.close();
 		exit(0);
 	}

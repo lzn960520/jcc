@@ -17,6 +17,10 @@
 	#include "Op2.h"
 	#include "Return.h"
 	#include "Block.h"
+	#include "RepeatStatement.h"
+	#include "Op1.h"
+	#include "ArrayAccess.h"
+	#include "ArrayAccessor.h"
 	#define YYSTYPE ASTNode*
 }
 
@@ -54,8 +58,6 @@
 %token T_RIGHT_CURLY
 %token T_SEMICOLON
 %token T_IF
-%token T_LEFT_PARENTHESIS
-%token T_RIGHT_PARENTHESIS
 %token T_THEN
 %token T_ELSE
 %token T_WHILE
@@ -71,11 +73,25 @@
 %token T_DOUBLE
 %token visibility
 %token T_RETURN
+%token T_REPEAT
+%token T_UNTIL
+%token T_COLON
+%token T_FUNCTION
+%token T_PROCEDURE
 
+%right T_ASSIGN
+%left T_LT T_GT T_LEQ T_GEQ T_NEQ
 %left T_ADD T_SUB
 %left T_MUL T_DIV
 %left T_MOD
 %left T_PWR
+%right T_BIT_OR_ASSIGN
+%right T_BIT_AND_ASSIGN
+%right T_BIT_XOR_ASSIGN
+%left T_SELF_INC T_SELF_DEC
+%left T_LEFT_SQUARE T_RIGHT_SQUARE
+%left T_DOT
+%left T_LEFT_PARENTHESIS T_RIGHT_PARENTHESIS
 
 %%
 
@@ -92,37 +108,67 @@ expression:
 		$$ = new Op2($1, Op2::MUL, $3); }
 	| expression T_DIV expression {
 		$$ = new Op2($1, Op2::DIV, $3); }
+	| expression T_LT expression {
+		$$ = new Op2($1, Op2::LT, $3); }
+	| expression T_GT expression {
+		$$ = new Op2($1, Op2::GT, $3); }
+	| expression T_LEQ expression {
+		$$ = new Op2($1, Op2::LEQ, $3); }
+	| expression T_GEQ expression {
+		$$ = new Op2($1, Op2::GEQ, $3); }
+	| expression T_SELF_INC {
+		$$ = new Op1($1, Op1::SELF_INC); }
+	| expression T_SELF_DEC {
+		$$ = new Op1($1, Op1::SELF_DEC); }
+	| expression T_ASSIGN expression {
+		$$ = new Op2($1, Op2::ASSIGN, $3); }
+	| T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS {
+		$$ = $2; }
 	| literal
 	| identifier
 	| function_call
+	| expression T_LEFT_SQUARE array_accessor T_RIGHT_SQUARE {
+		$$ = new ArrayAccess($1, $3); }
+	
+array_accessor:
+	expression {
+		$$ = new ArrayAccessor($1); }
+	| array_accessor T_COMMA expression {
+		$$ = $1;
+		((ArrayAccessor *) $1)->push_back($3); }
 
 literal:
 	literal_int
 	| literal_string
 
 statement:
-	T_SEMICOLON
-	| expression T_SEMICOLON {
+	expression {
 		$$ = $1; }
-	| variable_defination T_SEMICOLON {
-		$$ = $1; }
-	| if_statement
 	| while_statement
-	| T_RETURN expression T_SEMICOLON {
+	| variable_defination {
+		$$ = $1; }
+	| T_RETURN expression {
 		$$ = new Return($2); }
-	| T_RETURN T_SEMICOLON {
+	| T_RETURN {
 		$$ = new Return(); }
-	| T_BEGIN statements T_END {
+	| repeat_statement
+	| if_statement
+	| T_BEGIN statement_list T_END {
 		$$ = new Block((Statements *) $2); }
-	| T_BEGIN T_END {
-		$$ = new Statements(NULL); }
 
-statements:
-	statement {
-		$$ = new Statements($1); }
-	| statements statement {
+statement_list_head:
+	{
+		$$ = new Statements(); }
+	| statement_list_head statement T_SEMICOLON {
 		((Statements*) $1)->push_back($2);
 		$$ = $1; }
+		
+statement_list:
+	statement_list_head
+	| statement_list_head statement {
+		((Statements*) $1)->push_back($2);
+		$$ = $1; }
+		
 if_statement:
 	T_IF T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_THEN statement {
 		$$ = new IfStatement($3, $6); }
@@ -133,6 +179,10 @@ while_statement:
 	T_WHILE T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_DO statement {
 		$$ = new WhileStatement($3, $6); }
 
+repeat_statement:
+	T_REPEAT statement_list T_UNTIL expression {
+		$$ = new RepeatStatement($4, $2); }
+		
 variable_defination:
 	type_name {
 		$$ = $1 = new VariableDefination($1); } variable_defination_list
@@ -171,8 +221,10 @@ base_type:
 		$$ = new Type(Type::DOUBLE); }
 
 function_defination:
-	visibility type_name identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statements T_END {
-		$$ = new Function((Visibility) (long long) $1, (Type*) $2, (Identifier*) $3, (ArgumentList*) $5, (Statements*) $8); }
+	visibility T_FUNCTION identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name T_BEGIN statement_list T_END {
+		$$ = new Function((Visibility) (long long) $1, (Type*) $8, (Identifier*) $3, (ArgumentList*) $5, (Statements*) $10); }
+	| visibility T_PROCEDURE identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statement_list T_END {
+		$$ = new Function((Visibility) (long long) $1, NULL, (Identifier*) $3, (ArgumentList*) $5, (Statements*) $8); }
 
 arg_list:
 	{ $$ = new ArgumentList(); }
@@ -203,14 +255,26 @@ void yyerror(const char *s) {
 		for (int i = 0; i < yylloc.first_line; i++)
 			getline(ifs, line);
 		int len = fprintf(stderr, "%s:%-5d", input_filename, yylloc.first_line);
-		for (const char *p = line.c_str(), *base = line.c_str(); *p; p++)
+		int real_len = 0;
+		const char *p, *base;
+		for (p = line.c_str(), base = line.c_str(); p - base < yylloc.first_column - 1; p++)
+			if (*p == '\t')
+				for (int i = 0; i < 4 - (p - base) % 4; i++) {
+					fprintf(stderr, " ");
+					real_len++;
+				}
+			else {
+				fprintf(stderr, "%c", *p);
+				real_len++;
+			}
+		for (; *p; p++)
 			if (*p == '\t')
 				for (int i = 0; i < 4 - (p - base) % 4; i++)
 					fprintf(stderr, " ");
 			else
 				fprintf(stderr, "%c", *p);
 		fprintf(stderr, "\n");
-		for (int i = -len; i < yylloc.first_column - 1; i++)
+		for (int i = -len; i < real_len; i++)
 			fprintf(stderr, " ");
 		for (int i = yylloc.first_column; i <= yylloc.last_column; i++)
 			fprintf(stderr, "^");

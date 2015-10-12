@@ -27,12 +27,16 @@ llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionT
 
 void Context::endFunction() {
 	assert(contextStack.size() == 1);
-	builder->ClearInsertionPoint();
 	for (llvm::Function::iterator it = currentFunction->begin(); it != currentFunction->end(); it++)
 		if ((*it).hasOneUse() && (*it).getTerminator() == NULL)
-			throw NoReturn(currentFunction->getName().str());
+			if (currentFunction->getType()->isVoidTy()) {
+				builder->SetInsertPoint(&(*it));
+				builder->CreateRetVoid();
+			} else
+				throw NoReturn(currentFunction->getName().str());
 	currentFunction = NULL;
 	contextStack.pop_back();
+	builder->ClearInsertionPoint();
 }
 
 llvm::BasicBlock* Context::newBlock() {

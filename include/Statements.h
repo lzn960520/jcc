@@ -7,6 +7,7 @@
 
 struct Statements : public ASTNode {
 	std::list<ASTNode*> statements;
+	Statements();
 	Statements(ASTNode *statement);
 	void push_back(ASTNode *statement);
 	~Statements();

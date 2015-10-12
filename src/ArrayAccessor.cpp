@@ -1,27 +1,24 @@
-#include "CallArgumentList.h"
+#include "ArrayAccessor.h"
 
-CallArgumentList::CallArgumentList() {
-}
-
-CallArgumentList::CallArgumentList(ASTNode *expression) {
+ArrayAccessor::ArrayAccessor(ASTNode *expression) {
 	push_back(expression);
 }
 
-void CallArgumentList::push_back(ASTNode *expression) {
+void ArrayAccessor::push_back(ASTNode *expression) {
 	if (expression)
 		list.push_back(expression);
 }
 
-CallArgumentList::~CallArgumentList() {
+ArrayAccessor::~ArrayAccessor() {
 	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++) {
 		if (*it)
 			delete *it;
 	}
 }
 
-Json::Value CallArgumentList::json() {
+Json::Value ArrayAccessor::json() {
 	Json::Value root;
-	root["name"] = "call_arg_list";
+	root["name"] = "array_accessor";
 	root["list"] = Json::Value(Json::arrayValue);
 	int i = 0;
 	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++, i++)

@@ -35,7 +35,8 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
-	Block.cpp ASTNode.cpp 
+	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
+	ArrayAccessor.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 PROG := jcc
@@ -82,4 +83,4 @@ clean:
 		 test.o test.exe test ast/ast.json
 
 test: jcc test.jas
-	./$(PROG) --dump-lex --dump-ast=ast/ast.json --llvm -o test.llvm test.jas
+	./$(PROG) --parse --dump-lex --dump-ast=ast/ast.json -o test.llvm test.jas

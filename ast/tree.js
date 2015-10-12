@@ -1,6 +1,4 @@
-// Get JSON data
-treeJSON = d3.json("ast.json", function(error, treeData) {
-
+function drawTree(treeData) {
     // Calculate total nodes, max label length
     var totalNodes = 0;
     var maxLabelLength = 0;
@@ -343,4 +341,12 @@ treeJSON = d3.json("ast.json", function(error, treeData) {
     // Layout the tree initially and center on the root node.
     update(root);
     centerNode(root);
-});
+}
+
+// Get JSON data
+//treeJSON = d3.json("ast.json", function(error, treeData) {
+//    drawTree(treeData);    
+//});
+$(function() {
+    drawTree(ast);
+})

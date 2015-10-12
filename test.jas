@@ -1,7 +1,22 @@
-public int main() begin
-puts("test before\n");
-while (1) do begin
-puts("test\n");
-end
-return 0;
+public procedure sort(int l, int r)
+begin
+	int i = l;
+	int j = r;
+	int mid = a[(l + r) / 2];
+	repeat
+		while (a[i] < mid) do i++;
+		while (a[j] > mid) do j--;
+		if (i < j) then
+		begin
+			int temp = a[i];
+			a[i] = a[j];
+			a[j] = temp;
+			i++;
+			j--;
+		end
+	until i >= j;
+	if (i < r) then
+		sort(i, r);
+	if (l < j) then
+		sort(l, j);
 end

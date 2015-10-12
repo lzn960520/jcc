@@ -4,22 +4,19 @@
 #include "Context.h"
 #include "exception.h"
 
-const char* Op2::OpNames(OpType op) {
-	switch (op) {
-	case ADD:
-		return "ADD";
-	case SUB:
-		return "SUB";
-	case MUL:
-		return "MUL";
-	case DIV:
-		return "DIV";
-	case PWR:
-		return "PWR";
-	case MOD:
-		return "MOD";
-	}
-}
+const char* Op2::OpNames[] = {
+	"+",
+	"-",
+	"*",
+	"/",
+	"%",
+	"**",
+	"<",
+	">",
+	"<=",
+	">=",
+	"="
+};
 
 Op2::Op2(ASTNode *left, OpType op, ASTNode *right) :
 	left(left), right(right), op(op) {
@@ -30,7 +27,7 @@ Json::Value Op2::json() {
 	root["name"] = "op2";
 	root["left"] = left->json();
 	root["right"] = right->json();
-	root["op"] = OpNames(op);
+	root["op"] = OpNames[op];
 	return root;
 }
 
@@ -54,7 +51,7 @@ void* Op2::gen(Context &context) {
 	case DIV:
 		return context.getBuilder().CreateSDiv(lhs, rhs);
 	default:
-		throw NotImplemented(std::string("operator ") + OpNames(op) + " not implemented");
+		throw NotImplemented(std::string("operator ") + OpNames[op] + " not implemented");
 	}
 	return NULL;
 }
