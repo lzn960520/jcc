@@ -8,7 +8,7 @@ struct Block : public ASTNode {
 	Block(ASTNode *body);
 	~Block();
 	Json::Value json() override;
-	void* gen(Context &context) override;
+	void gen(Context &context) override;
 };
 
 #endif

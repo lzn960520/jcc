@@ -11,7 +11,7 @@ struct IfStatement : public ASTNode {
 	IfStatement(Expression *test, ASTNode *then_st, ASTNode *else_st);
 	~IfStatement();
 	Json::Value json() override;
-	void* gen(Context &context);
+	void gen(Context &context);
 };
 
 #endif

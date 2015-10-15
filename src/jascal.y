@@ -1,12 +1,32 @@
 %code requires {
-	#include "yyvaltypes.h"
+	#include <list>
 	
-	#include "LiteralString.h"
-	#include "LiteralInt.h"
+	#include "yyvaltypes.h"
+	#include "Visibility.h"
+
+	class ASTNode;
+	class Expression;
+	class Statements;
+	class Type;
+	class CallArgumentList;
+	class ArgumentList;
+	class Identifier;
+	class Function;
+	class VariableDefination;
+	class ArrayDefinator;
+	class ArrayAccessor;
+	class Namespace;
+	class Module;
+	class Class;
+	class Interface;
+}
+
+%code top {
+	#define YYERROR_VERBOSE 1
+	
 	#include "Type.h"
 	#include "CallArgumentList.h"
 	#include "Visibility.h"
-	#include "Identifier.h"
 	#include "ArgumentList.h"
 	#include "VariableDefination.h"
 	#include "FunctionCall.h"
@@ -22,11 +42,9 @@
 	#include "ArrayAccess.h"
 	#include "ArrayAccessor.h"
 	#include "ArrayDefinator.h"
-	#include "VariableDefinationList.h"
-}
-
-%code top {
-	#define YYERROR_VERBOSE 1
+	#include "Namespace.h"
+	#include "Module.h"
+	#include "Class.h"
 }
 
 %initial-action {
@@ -45,19 +63,25 @@
 	Function *function;
 	Visibility visibility;
 	VariableDefination *var_def;
-	VariableDefinationList *var_def_list;
 	ArrayDefinator *arr_def;
 	ArrayAccessor *arr_acc;
+	Namespace *ns;
+	Module *module;
+	std::list<ASTNode*> *list;
+	std::list<std::pair<Identifier*,Expression*> > *var_entry_list;
+	Class *cls;
+	Interface *interface;
 }
 
 %code {
 	#include <fstream>
+	#include <list>
 
 	int yylex (void);
 	void yyerror (const char *);
 
 	// global
-	ASTNode *root = NULL;
+	std::list<Module*> modules;
 
 	// from main
 	extern const char *input_filename;
@@ -67,7 +91,7 @@
 
 %type <arr_def> array_definator
 %type <arr_acc> array_accessor
-%type <var_def_list> variable_defination_list
+%type <var_entry_list> variable_defination_list
 %type <var_def> variable_defination
 %type <function> function_defination
 %type <ast> while_statement if_statement repeat_statement statement
@@ -76,6 +100,13 @@
 %type <type> type_name base_type
 %type <call_arg_list> call_arg_list
 %type <arg_list> arg_list
+%type <ns> ns_identifier
+%type <module> module_defination
+%type <list> inmodule_definations
+%type <cls> class_defination
+%type <interface> interface_defination
+%type <list> inclass_definations
+%type <list> ininterface_definations
 
 %token <expression> T_LITERAL_INT
 %token <expression> T_LITERAL_STRING
@@ -109,6 +140,9 @@
 %token T_PROCEDURE
 %token T_DOTDOT
 %token T_STRING
+%token T_CLASS
+%token T_NS
+%token T_INTERFACE
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -130,9 +164,63 @@
 %%
 
 compile_unit:
-	function_defination {
-		root = $1; }
+	module_defination T_SEMICOLON {
+		modules.push_back($1); }
+	
+module_defination:
+	T_MODULE ns_identifier T_BEGIN inmodule_definations T_END {
+		$$ = new Module($2, $4); }
 
+ns_identifier:
+	T_IDENTIFIER {
+		$$ = new Namespace($1); }
+	| ns_identifier T_NS T_IDENTIFIER {
+		$$ = $1;
+		$1->push_back($3); }
+		
+inmodule_definations:
+	class_defination T_SEMICOLON {
+		$$ = new std::list<ASTNode*>();
+		$$->push_back((ASTNode *) $1); }
+	| interface_defination T_SEMICOLON {
+		$$ = new std::list<ASTNode*>();
+		$$->push_back((ASTNode *) $1); }
+	| inmodule_definations class_defination T_SEMICOLON {
+		$$ = $1;
+		$1->push_back((ASTNode *) $2); }
+	| inmodule_definations interface_defination T_SEMICOLON  {
+		$$ = $1;
+		$1->push_back((ASTNode *) $2); }
+	
+class_defination:
+	T_CLASS T_IDENTIFIER T_BEGIN inclass_definations T_END {
+		$$ = new Class($2, $4); }
+	
+inclass_definations:
+	function_defination T_SEMICOLON {
+		$$ = new std::list<ASTNode*>();
+		$$->push_back((ASTNode *) $1); }
+	| T_VISIBILITY variable_defination T_SEMICOLON {
+		$$ = new std::list<ASTNode*>();
+		$$->push_back((ASTNode *) $2); }
+	| inclass_definations function_defination T_SEMICOLON {
+		$$ = $1;
+		$1->push_back((ASTNode *) $2); }
+	| inclass_definations T_VISIBILITY variable_defination T_SEMICOLON {
+		$$ = $1;
+		$1->push_back((ASTNode *) $3); }
+	
+interface_defination:
+	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END
+	
+ininterface_definations:
+	function_declaration T_SEMICOLON
+	| ininterface_definations function_declaration T_SEMICOLON
+	
+function_declaration:
+	T_VISIBILITY T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name
+	| T_VISIBILITY T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS
+		
 expression:
 	expression T_ADD expression {
 		$$ = new Op2($1, Op2::ADD, $3); }
@@ -255,15 +343,17 @@ variable_defination:
 
 variable_defination_list:
 	T_IDENTIFIER {
-		$$ = new VariableDefinationList($1); }
+		$$ = new std::list<std::pair<Identifier*, Expression*> >();
+		$$->push_back(std::pair<Identifier*, Expression*>($1, NULL)); }
 	| T_IDENTIFIER T_ASSIGN expression {
-		$$ = new VariableDefinationList($1, $3); }
+		$$ = new std::list<std::pair<Identifier*, Expression*> >();
+		$$->push_back(std::pair<Identifier*, Expression*>($1, $3)); }
 	| variable_defination_list T_COMMA T_IDENTIFIER {
 		$$ = $1;
-		$$->push_back($3); }
+		$$->push_back(std::pair<Identifier*, Expression*>($3, NULL)); }
 	| variable_defination_list T_COMMA T_IDENTIFIER T_ASSIGN expression {
 		$$ = $1;
-		$$->push_back($3, $5); }
+		$$->push_back(std::pair<Identifier*, Expression*>($3, $5)); }
 
 type_name:
 	base_type
@@ -308,7 +398,9 @@ arg_list:
 		
 function_call:
 	T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
-		$$ = new FunctionCall($1, $3); }
+		$$ = new FunctionCall(NULL, $1, $3); }
+	| expression T_DOT T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
+		$$ = new FunctionCall($1, $3, $5); }
 	
 call_arg_list:
 	{ $$ = new CallArgumentList(); }

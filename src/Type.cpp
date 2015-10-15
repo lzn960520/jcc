@@ -1,8 +1,11 @@
+#include <llvm/IR/Type.h>
+
 #include "Type.h"
 #include "exception.h"
 #include "Context.h"
 #include "ArrayDefinator.h"
 #include "Expression.h"
+#include "Class.h"
 
 const char *Type::BaseTypeNames[] = {
 	"byte",
@@ -13,7 +16,8 @@ const char *Type::BaseTypeNames[] = {
 	"double",
 	"array",
 	"bool",
-	"string"
+	"string",
+	"object"
 };
 
 Type Type::Bool(Type::BOOL);
@@ -22,14 +26,14 @@ Type Type::Int32(Type::INT);
 Type Type::UInt32(Type::INT, true);
 
 Type::Type(BaseType baseType, bool isUnsigned) :
-	baseType(baseType), isUnsigned(isUnsigned), internal(NULL) {
+	baseType(baseType), isUnsigned(isUnsigned), internal(NULL), cls(NULL) {
 	assert(baseType != ARRAY);
 	if ((baseType == CHAR || baseType == FLOAT || baseType == DOUBLE) && isUnsigned)
 		throw InvalidType("Can't set char, float or double to unsigned");
 }
 
 Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
-	baseType(array), isUnsigned(false), internal(baseType) {
+	baseType(array), isUnsigned(false), internal(baseType), cls(NULL) {
 	assert(array == ARRAY);
 	for (std::vector<std::pair<Expression *, Expression *> >::iterator it = definator->list.begin(); it != definator->list.end(); it++) {
 		if (it->first && !it->first->isConstant())
@@ -44,6 +48,9 @@ Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
 			throw InvalidType("Dim expression must be integer");
 		arrayDim.push_back(std::pair<unsigned int, unsigned int>(it->first->loadConstant()._uint64, it->second->loadConstant()._uint64));
 	}
+}
+
+Type::Type(Class *cls) : baseType(OBJECT), cls(cls), internal(NULL), isUnsigned(false) {
 }
 
 Type::~Type() {
@@ -73,7 +80,12 @@ Json::Value Type::json() {
 		}
 		break;
 	}
-	default:
+	case OBJECT:
+		root["class"] = cls->getPrefix().substr(0, cls->getPrefix().length() - 1);
+		break;
+	case BYTE:
+	case SHORT:
+	case INT:
 		root["is_unsigned"] = isUnsigned;
 		break;
 	}
@@ -88,6 +100,19 @@ llvm::Type* Type::getType(Context &context) {
 		return context.getBuilder().getInt16Ty();
 	case INT:
 		return context.getBuilder().getInt32Ty();
+	case ARRAY:
+		{
+			size_t totalSize = 1;
+			for (std::vector<std::pair<int, int> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
+				if (it->first >= it->second)
+					throw NotImplemented("dynamic array");
+				totalSize *= it->second - it->first;
+			}
+			return llvm::ArrayType::get(internal->getType(context), totalSize);
+		}
+		break;
+	case OBJECT:
+		return cls->getLLVMType();
 	}
 }
 

@@ -23,7 +23,7 @@ Json::Value WhileStatement::json() {
 	return root;
 }
 
-void* WhileStatement::gen(Context &context) {
+void WhileStatement::gen(Context &context) {
 	llvm::BasicBlock *oriBlock = context.currentBlock();
 	llvm::BasicBlock *loopBlock = context.newBlock("while_" + itos(loc.first_line) + "@loop");
 	llvm::BasicBlock *bodyBlock = context.newBlock("while_" + itos(loc.first_line) + "@body");
@@ -46,5 +46,4 @@ void* WhileStatement::gen(Context &context) {
 	context.getBuilder().CreateBr(loopBlock);
 
 	context.setBlock(afterBlock);
-	return NULL;
 }

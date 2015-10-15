@@ -15,7 +15,7 @@ public:
 		const char *_string;
 		bool _bool;
 	} Constant;
-	void* gen(Context &context) override final { this->load(context); return NULL; };
+	void gen(Context &context) override final { this->load(context); };
 	virtual Type* getType(Context &context) = 0;
 	virtual llvm::Value* load(Context &context) = 0;
 	virtual void store(Context &context, llvm::Value *value) = 0;

@@ -27,35 +27,72 @@ llvm::Value* Identifier::load(Context &context) {
 	Symbol *ans = context.findSymbol(text);
 	if (ans == NULL)
 		throw SymbolNotFound(text, loc);
-	if (ans->type == Symbol::IDENTIFIER) {
-		if (ans->data.identifier.type->isArray())
-			return ans->data.identifier.value;
-		else if (ans->data.identifier.value->getType()->isPointerTy())
-			return context.getBuilder().CreateLoad(ans->data.identifier.value);
+	switch (ans->type) {
+	case Symbol::ARGUMENT:
+		return ans->data.identifier.value;
+	case Symbol::LOCAL_VAR:
+		return context.getBuilder().CreateLoad(ans->data.identifier.value);
+	case Symbol::MEMBER_VAR: {
+		llvm::Value *index[2];
+		index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
+		index[1] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), ans->data.member.index, false);
+		llvm::Value *tmp = llvm::GetElementPtrInst::Create(
+				context.findSymbol("this")->data.identifier.value,
+				llvm::ArrayRef<llvm::Value*>(index, 2),
+				"",
+				context.currentBlock()
+		);
+		if (tmp->getType()->getPointerElementType()->isArrayTy())
+			return tmp;
 		else
-			return ans->data.identifier.value;
-	} else
-		throw NotImplemented("function pointer");
+			return context.getBuilder().CreateLoad(tmp);
+	}
+	}
 }
 
 void Identifier::store(Context &context, llvm::Value *value) {
 	Symbol *ans = context.findSymbol(text);
 	if (ans == NULL)
 		throw SymbolNotFound(text, loc);
-	if (ans->type == Symbol::IDENTIFIER)
+	switch (ans->type) {
+	case Symbol::ARGUMENT:
 		context.getBuilder().CreateStore(value, ans->data.identifier.value);
-	else
-		throw NotAssignable("function pointer");
+		break;
+	case Symbol::LOCAL_VAR:
+		context.getBuilder().CreateStore(value, ans->data.identifier.value);
+		break;
+	case Symbol::MEMBER_VAR: {
+		llvm::Value *index = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), ans->data.member.index, false);
+		context.getBuilder().CreateStore(
+				value,
+				llvm::GetElementPtrInst::Create(
+						context.findSymbol("this")->data.identifier.value,
+						llvm::ArrayRef<llvm::Value*>(&index, 1),
+						"",
+						context.currentBlock()
+				)
+		);
+		break;
+	}
+	case Symbol::FUNCTION:
+		throw NotImplemented("function pointer");
+	}
 }
 
 Type* Identifier::getType(Context &context) {
 	Symbol *ans = context.findSymbol(text);
 	if (ans == NULL)
 		throw SymbolNotFound(text, loc);
-	if (ans->type == Symbol::IDENTIFIER)
+	switch (ans->type) {
+	case Symbol::LOCAL_VAR:
 		return ans->data.identifier.type;
-	else
+	case Symbol::ARGUMENT:
+		return ans->data.identifier.type;
+	case Symbol::MEMBER_VAR:
+		return ans->data.member.type;
+	case Symbol::FUNCTION:
 		throw NotImplemented("function pointer");
+	}
 }
 
 Expression::Constant Identifier::loadConstant() {

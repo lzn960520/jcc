@@ -10,7 +10,7 @@ struct WhileStatement : public ASTNode {
 	WhileStatement(Expression *test, ASTNode *body);
 	~WhileStatement();
 	Json::Value json() override;
-	void* gen(Context &context) override;
+	void gen(Context &context) override;
 };
 
 #endif

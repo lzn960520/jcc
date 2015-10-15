@@ -3,7 +3,7 @@
 LEX := flex
 
 CPPFLAGS ?=
-CPPFLAGS += -Iinclude
+CPPFLAGS += -Iinclude -frtti
 ifeq ($(DEBUG), 1)
 CPPFLAGS += -g
 endif
@@ -36,8 +36,8 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
-	ArrayAccessor.cpp VariableDefinationList.cpp Symbol.cpp \
-	ArrayDefinator.cpp
+	ArrayAccessor.cpp Symbol.cpp \
+	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 PROG := jcc

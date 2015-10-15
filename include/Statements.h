@@ -12,7 +12,7 @@ struct Statements : public ASTNode {
 	void push_back(ASTNode *statement);
 	~Statements();
 	Json::Value json() override;
-	void* gen(Context &context) override;
+	void gen(Context &context) override;
 };
 
 #endif

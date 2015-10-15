@@ -54,15 +54,15 @@ llvm::Value* ArrayAccess::load(Context &context) {
 	offset = context.getBuilder().CreateMul(
 			offset,
 			llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), array->getType(context)->internal->getSize(), false));
+	llvm::Value *index[2];
+	index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
+	index[1] = offset;
 	return context.getBuilder().CreateLoad(
-			context.getBuilder().CreateIntToPtr(
-					context.getBuilder().CreateAdd(
-							context.getBuilder().CreatePointerCast(
-									array->load(context),
-									context.getBuilder().getInt32Ty()
-							),
-							offset),
-					llvm::Type::getInt32PtrTy(context.getContext())
+			llvm::GetElementPtrInst::Create(
+					array->load(context),
+					llvm::ArrayRef<llvm::Value*>(index, 2),
+					"",
+					context.currentBlock()
 			)
 	);
 }
@@ -96,16 +96,16 @@ void ArrayAccess::store(Context &context, llvm::Value *value) {
 	offset = context.getBuilder().CreateMul(
 			offset,
 			llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), array->getType(context)->internal->getSize(), false));
+	llvm::Value *index[2];
+	index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
+	index[1] = offset;
 	context.getBuilder().CreateStore(
 			value,
-			context.getBuilder().CreateIntToPtr(
-				context.getBuilder().CreateAdd(
-						context.getBuilder().CreatePointerCast(
-								array->load(context),
-								context.getBuilder().getInt32Ty()
-						),
-						offset),
-				llvm::Type::getInt32PtrTy(context.getContext())
+			llvm::GetElementPtrInst::Create(
+					array->load(context),
+					llvm::ArrayRef<llvm::Value*>(index, 2),
+					"",
+					context.currentBlock()
 			)
 	);
 }

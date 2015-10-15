@@ -1,11 +1,12 @@
 #include "Return.h"
 #include "Context.h"
+#include "Expression.h"
 
 Return::Return() :
 	expression(NULL) {
 }
 
-Return::Return(ASTNode *expression) :
+Return::Return(Expression *expression) :
 	expression(expression) {
 }
 
@@ -22,11 +23,10 @@ Json::Value Return::json() {
 	return root;
 }
 
-void* Return::gen(Context &context) {
+void Return::gen(Context &context) {
 	if (expression)
-		context.getBuilder().CreateRet((llvm::Value *) expression->gen(context));
+		context.getBuilder().CreateRet(expression->load(context));
 	else
 		context.getBuilder().CreateRetVoid();
 	context.newBlock();
-	return NULL;
 }

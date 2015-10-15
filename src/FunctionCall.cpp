@@ -5,9 +5,11 @@
 #include "CallArgumentList.h"
 #include "Function.h"
 #include "Symbol.h"
+#include "Type.h"
+#include "Class.h"
 
-FunctionCall::FunctionCall(Identifier *identifier, CallArgumentList *arg_list) :
-	identifier(identifier), arg_list(arg_list) {
+FunctionCall::FunctionCall(Expression *target, Identifier *identifier, CallArgumentList *arg_list) :
+	target(target), identifier(identifier), arg_list(arg_list) {
 }
 
 FunctionCall::~FunctionCall() {
@@ -26,7 +28,14 @@ Json::Value FunctionCall::json() {
 }
 
 llvm::Value* FunctionCall::load(Context &context) {
-	Symbol *symbol = context.findSymbol(identifier->getName());
+	Expression *tmpTarget = target;
+	if (tmpTarget == NULL)
+		tmpTarget = new Identifier("this");
+	if (!tmpTarget->getType(context)->isObject())
+		throw InvalidType(std::string("calling a function of ") + tmpTarget->getType(context)->getName());
+	Symbol *symbol = tmpTarget->getType(context)->getClass()->findSymbol(identifier->getName());
+	if (!symbol)
+		throw FunctionNotFound(identifier->getName());
 	if (symbol->type != Symbol::FUNCTION)
 		throw InvalidType("calling a symbol which is not a function");
 	llvm::Function *function = symbol->data.function.function->getLLVMFunction(context);
@@ -36,7 +45,10 @@ llvm::Value* FunctionCall::load(Context &context) {
 	std::list<Expression*> &arg_list = this->arg_list->list;
 	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_code.push_back((*it)->load(context));
-	return context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code));
+	llvm::Value *ans = context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code));
+	if (target == NULL)
+		delete tmpTarget;
+	return ans;
 }
 
 void FunctionCall::store(Context &context, llvm::Value *value) {

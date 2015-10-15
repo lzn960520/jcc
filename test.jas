@@ -4,6 +4,10 @@ class Main
 begin
 	private int[0..10] a;
 	
+	private procedure writeInt(int a)
+	begin
+	end;
+	
 	private procedure sort(int l, int r)
 	begin
 		int i = l;
@@ -12,7 +16,7 @@ begin
 		repeat
 			while (a[i] < mid) do i++;
 			while (a[j] > mid) do j--;
-			if (i < j) then
+			if (i <= j) then
 			begin
 				int temp = a[i];
 				a[i] = a[j];
@@ -20,7 +24,7 @@ begin
 				i++;
 				j--;
 			end
-		until i >= j;
+		until i > j;
 		if (i < r) then
 			sort(i, r);
 		if (l < j) then
@@ -43,4 +47,6 @@ begin
 		writeInt(a[4]);
 		writeInt(a[5]);
 	end;
+end;
+
 end;

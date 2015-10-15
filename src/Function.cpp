@@ -7,13 +7,14 @@
 #include "Context.h"
 #include "ArgumentList.h"
 #include "Symbol.h"
+#include "Class.h"
 
 Function::Function(Visibility visibility, Type *return_type, Identifier *identifier, ArgumentList *arg_list, ASTNode *body) :
-	visibility(visibility), return_type(return_type), identifier(identifier), arg_list(arg_list), body(body), llvmFunction(NULL) {
+	visibility(visibility), return_type(return_type), identifier(identifier), arg_list(arg_list), body(body), llvmFunction(NULL), cls(NULL) {
 }
 
 Function::Function(Visibility visibility, Type *return_type, Identifier *identifier, ArgumentList *arg_list, llvm::Function *function) :
-	visibility(visibility), return_type(return_type), identifier(identifier), arg_list(arg_list), body(NULL), llvmFunction(function) {
+	visibility(visibility), return_type(return_type), identifier(identifier), arg_list(arg_list), body(NULL), llvmFunction(function), cls(NULL) {
 }
 
 Function::~Function() {
@@ -37,15 +38,13 @@ Json::Value Function::json() {
 	return root;
 }
 
-void* Function::gen(Context &context) {
-	if (llvmFunction)
-		return llvmFunction;
-	context.addSymbol(new Symbol(identifier->getName(), this));
+void Function::gen(Context &context) {
 	std::vector<llvm::Type*> arg_type;
+	arg_type.push_back(llvm::PointerType::get(cls->getLLVMType(), 0));
 	for (ArgumentList::ListType::iterator it = arg_list->list.begin(); it != arg_list->list.end(); it++)
 		arg_type.push_back(it->first->getType(context));
 	llvmFunction = context.createFunction(
-			identifier->getName(),
+			cls->getPrefix() + identifier->getName(),
 			llvm::FunctionType::get(
 					return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
 					llvm::ArrayRef<llvm::Type*>(arg_type),
@@ -53,23 +52,35 @@ void* Function::gen(Context &context) {
 	);
 	ArgumentList::ListType::iterator it = arg_list->list.begin();
 	llvm::Function::arg_iterator it2 = llvmFunction->arg_begin();
+	it2->setName("this");
+	context.addSymbol(new Symbol("this", Symbol::ARGUMENT, cls->getType(), &(*it2)));
+	it2++;
 	for (; it != arg_list->list.end(); it++, it2++) {
 		assert(it2 != llvmFunction->arg_end());
-		context.addSymbol(new Symbol(it->second->getName(), it->second, it->first, &(*it2)));
+		context.addSymbol(new Symbol(it->second->getName(), Symbol::ARGUMENT, it->first, &(*it2)));
 		it2->setName(it->second->getName());
 	}
 	body->gen(context);
 	context.endFunction();
-	return llvmFunction;
 }
 
 llvm::Function* Function::getLLVMFunction(Context &context) {
 	if (!llvmFunction)
-		return (llvm::Function *) gen(context);
-	else
-		return llvmFunction;
+		gen(context);
+	return llvmFunction;
 }
 
 const std::string& Function::getName() {
 	return identifier->getName();
+}
+
+llvm::FunctionType* Function::getLLVMType(Context &context) {
+	std::vector<llvm::Type*> arg_type;
+	arg_type.push_back(llvm::PointerType::get(cls->getLLVMType(), 0));
+	for (ArgumentList::ListType::iterator it = arg_list->list.begin(); it != arg_list->list.end(); it++)
+		arg_type.push_back(it->first->getType(context));
+	return llvm::FunctionType::get(
+			return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
+			llvm::ArrayRef<llvm::Type*>(arg_type),
+			false);
 }

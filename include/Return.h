@@ -3,13 +3,14 @@
 
 #include "ASTNode.h"
 
+class Expression;
 struct Return : public ASTNode {
-	ASTNode *expression;
+	Expression *expression;
 	Return();
-	Return(ASTNode *expression);
+	Return(Expression *expression);
 	~Return();
 	Json::Value json() override;
-	void* gen(Context &context) override;
+	void gen(Context &context) override;
 };
 
 #endif

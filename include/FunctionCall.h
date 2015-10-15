@@ -5,10 +5,12 @@
 
 class Identifier;
 class CallArgumentList;
+class Expression;
 struct FunctionCall : public Expression {
 	Identifier *identifier;
 	CallArgumentList *arg_list;
-	FunctionCall(Identifier *identifier, CallArgumentList *arg_list);
+	Expression *target;
+	FunctionCall(Expression *target, Identifier *identifier, CallArgumentList *arg_list);
 	~FunctionCall();
 	Json::Value json() override;
 	llvm::Value* load(Context &context) override;

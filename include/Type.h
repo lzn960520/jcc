@@ -7,6 +7,7 @@
 #include "ASTNode.h"
 
 class ArrayDefinator;
+class Class;
 struct Type : public ASTNode {
 	enum BaseType {
 		BYTE,
@@ -17,7 +18,8 @@ struct Type : public ASTNode {
 		DOUBLE,
 		ARRAY,
 		BOOL,
-		STRING
+		STRING,
+		OBJECT
 	} baseType;
 	static const char *BaseTypeNames[];
 	static Type Bool;
@@ -27,8 +29,10 @@ struct Type : public ASTNode {
 	bool isUnsigned;
 	std::vector<std::pair<int, int> > arrayDim;
 	Type *internal;
+	Class *cls;
 	Type(BaseType baseType, bool isUnsigned = false);
 	Type(BaseType array, Type *baseType, ArrayDefinator *definator);
+	Type(Class *cls);
 	~Type();
 	Json::Value json() override;
 	llvm::Type *getType(Context &context);
@@ -40,6 +44,8 @@ struct Type : public ASTNode {
 	bool isChar() { return baseType == CHAR; }
 	bool isArray() { return baseType == ARRAY; }
 	bool isString() { return baseType == STRING; }
+	bool isObject() { return baseType == OBJECT; }
+	Class* getClass() { return cls; }
 	static Type* higherType(Type *a, Type *b);
 	const char *getName() { return BaseTypeNames[baseType]; }
 };

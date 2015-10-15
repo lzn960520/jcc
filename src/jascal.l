@@ -1,6 +1,10 @@
 %option noyywrap
 %{
 	#include "jascal.tab.hpp"
+	#include "Identifier.h"
+	#include "LiteralString.h"
+	#include "LiteralInt.h"
+	#include "Visibility.h"
 	#include <stdio.h>
 
 	FILE *lex_output = NULL;
@@ -208,6 +212,22 @@
 	if (lex_output)
 		fprintf(lex_output, "<LOGIC_XOR>");
 	return T_LOG_XOR; }
+"module" {
+	if (lex_output)
+		fprintf(lex_output, "<MODULE>");
+	return T_MODULE; }
+"class" {
+	if (lex_output)
+		fprintf(lex_output, "<CLASS>");
+	return T_CLASS; }
+"::" {
+	if (lex_output)
+		fprintf(lex_output, "<COLON_COLON>");
+	return T_NS; }
+"interface" {
+	if (lex_output)
+		fprintf(lex_output, "<INTERFACE>");
+	return T_INTERFACE; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);

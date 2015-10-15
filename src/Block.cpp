@@ -16,9 +16,8 @@ Json::Value Block::json() {
 	return root;
 }
 
-void* Block::gen(Context &context) {
+void Block::gen(Context &context) {
 	context.pushContext();
 	body->gen(context);
 	context.popContext();
-	return NULL;
 }

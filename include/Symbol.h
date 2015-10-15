@@ -7,25 +7,32 @@ class Function;
 class Identifier;
 class Type;
 struct Symbol {
-	enum {
-		IDENTIFIER,
+	enum SymbolType {
+		LOCAL_VAR,
+		MEMBER_VAR,
+		ARGUMENT,
 		FUNCTION
 	} type;
 	std::string name;
 	union {
 		struct {
 			Function *function;
+			size_t index;
 			Symbol *next;
 		} function;
 		struct {
-			Identifier *identifier;
 			Type *type;
 			llvm::Value *value;
 		} identifier;
+		struct {
+			Type *type;
+			size_t index;
+		} member;
 	} data;
 public:
-	Symbol(const std::string &name, Function *function);
-	Symbol(const std::string &name, Identifier *identifier, Type *type, llvm::Value *value);
+	Symbol(const std::string &name, Function *function, size_t index);
+	Symbol(const std::string &name, SymbolType st, Type *type, llvm::Value *value);
+	Symbol(const std::string &name, Type *type, size_t index);
 };
 
 #endif

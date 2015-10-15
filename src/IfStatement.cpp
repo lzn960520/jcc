@@ -32,7 +32,7 @@ Json::Value IfStatement::json() {
 	return root;
 }
 
-void* IfStatement::gen(Context &context) {
+void IfStatement::gen(Context &context) {
 	if (!test->getType(context)->isBool())
 		throw InvalidType("test expression of if must be bool");
 	llvm::BasicBlock *ori_block = context.currentBlock(), *true_b, *false_b;
@@ -59,5 +59,4 @@ void* IfStatement::gen(Context &context) {
 	llvm::Value *cond = test->load(context);
 	context.getBuilder().CreateCondBr(cond, true_b, false_b);
 	context.setBlock(after);
-	return NULL;
 }

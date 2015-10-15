@@ -10,7 +10,7 @@ struct ASTNode {
 	YYLTYPE loc;
 	ASTNode();
 	virtual Json::Value json() = 0;
-	virtual void* gen(Context &context) { return NULL; };
+	virtual void gen(Context &context) {};
 	virtual ~ASTNode() {};
 };
 

@@ -11,7 +11,7 @@
 #include "exception.h"
 #include <wait.h>
 #include "cmdline.h"
-#include "ASTNode.h"
+#include "Module.h"
 
 // global
 std::string input_filename;
@@ -23,7 +23,7 @@ extern void lex_only();
 
 // from bison
 extern void yyparse();
-extern ASTNode *root;
+extern std::list<Module*> modules;
 
 // for cmdline process
 #define OPT_LEX_ONLY 256
@@ -134,12 +134,15 @@ int main(int argc, char * const argv[]) {
 			yyparse();
 			if (opt_parse_only)
 				break;
-			if (!root)
-				throw CompileException("No compile unit found");
 
-			// call gen to generate llvm code
 			Context *context = new Context();
-			root->gen(*context);
+
+			// generate struct type
+			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
+				(*it)->genStruct(*context);
+
+			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
+				(*it)->gen(*context);
 
 			// optimization
 			llvm::PassManager passManager;
@@ -243,14 +246,19 @@ int main(int argc, char * const argv[]) {
 
 	if (opt_dump_lex)
 		fclose(lex_output);
-	if (opt_dump_ast && root) {
-		Json::Value json_root = root->json();
+	if (opt_dump_ast) {
 		std::ofstream ofs(ast_filename);
 		if (!ofs) {
 			fprintf(stderr, "Can't open ast output file \"%s\"\n", ast_filename.c_str());
 			exit(0);
 		}
-		ofs << "var ast = " << json_root << std::endl;
+		Json::Value tmp;
+		tmp["name"] = "file";
+		tmp["modules"] = Json::Value(Json::arrayValue);
+		int i = 0;
+		for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); i++, it++)
+			tmp["modules"][i] = (*it)->json();
+		ofs << "var ast = " << tmp << std::endl;
 		ofs.close();
 		exit(0);
 	}

@@ -24,7 +24,7 @@ Json::Value RepeatStatement::json() {
 	return root;
 }
 
-void* RepeatStatement::gen(Context &context) {
+void RepeatStatement::gen(Context &context) {
 	if (!until->getType(context)->isBool())
 		throw InvalidType("test expression of repeat must be bool");
 	llvm::BasicBlock *oriBlock = context.currentBlock();
@@ -40,5 +40,4 @@ void* RepeatStatement::gen(Context &context) {
 	context.getBuilder().CreateCondBr(cond, afterBlock, loopBlock);
 
 	context.setBlock(afterBlock);
-	return NULL;
 }
