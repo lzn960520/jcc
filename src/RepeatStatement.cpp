@@ -2,8 +2,10 @@
 #include "Context.h"
 #include "util.h"
 #include "exception.h"
+#include "Expression.h"
+#include "Type.h"
 
-RepeatStatement::RepeatStatement(ASTNode *body, ASTNode *until) :
+RepeatStatement::RepeatStatement(ASTNode *body, Expression *until) :
 	body(body), until(until) {
 }
 
@@ -23,6 +25,8 @@ Json::Value RepeatStatement::json() {
 }
 
 void* RepeatStatement::gen(Context &context) {
+	if (!until->getType(context)->isBool())
+		throw InvalidType("test expression of repeat must be bool");
 	llvm::BasicBlock *oriBlock = context.currentBlock();
 	llvm::BasicBlock *loopBlock = context.newBlock("repeat_" + itos(loc.first_line) + "@loop");
 	llvm::BasicBlock *afterBlock = context.newBlock("repeat_" + itos(loc.first_line) + "@after");
@@ -32,12 +36,7 @@ void* RepeatStatement::gen(Context &context) {
 
 	context.setBlock(loopBlock);
 	body->gen(context);
-	llvm::Value *cond = (llvm::Value *) until->gen(context);
-	if (!cond->getType()->isIntegerTy(1))
-		if (cond->getType()->isIntegerTy())
-			cond = context.getBuilder().CreateCast(llvm::Instruction::Trunc, cond, context.getBuilder().getInt1Ty());
-		else
-			throw CompileException("The expression can't be converted to boolean");
+	llvm::Value *cond = until->load(context);
 	context.getBuilder().CreateCondBr(cond, afterBlock, loopBlock);
 
 	context.setBlock(afterBlock);

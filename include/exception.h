@@ -75,4 +75,38 @@ public:
 	std::string message() const;
 };
 
+class NotAssignable : public CompileException {
+public:
+	NotAssignable(const char *msg);
+	NotAssignable(const std::string &msg);
+	std::string message() const;
+};
+
+class NotArray : public CompileException {
+public:
+	NotArray(const char *msg);
+	NotArray(const std::string &msg);
+	std::string message() const;
+};
+
+class DimMismatch : public CompileException {
+public:
+	DimMismatch(const char *msg);
+	DimMismatch(const std::string &msg);
+	std::string message() const;
+};
+
+class IncompatibleType : public CompileException {
+public:
+	IncompatibleType(const std::string &type1, const std::string &type2);
+	std::string message() const;
+};
+
+class NotConstant : public CompileException {
+public:
+	NotConstant(const char *msg);
+	NotConstant(const std::string &msg);
+	std::string message() const;
+};
+
 #endif

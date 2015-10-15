@@ -6,13 +6,11 @@
 #include "ASTNode.h"
 
 class Type;
-class Identifier;
+class VariableDefinationList;
 struct VariableDefination : public ASTNode {
 	Type *type;
-	std::list<std::pair<Identifier*,ASTNode*> > list;
-	VariableDefination(ASTNode *type);
-	void push_back(ASTNode *identifier);
-	void push_back(ASTNode *identifier, ASTNode *init_value);
+	VariableDefinationList *list;
+	VariableDefination(Type *type, VariableDefinationList *list);
 	~VariableDefination();
 	Json::Value json() override;
 	void *gen(Context &context) override;

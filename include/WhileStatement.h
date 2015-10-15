@@ -3,9 +3,11 @@
 
 #include "ASTNode.h"
 
+class Expression;
 struct WhileStatement : public ASTNode {
-	ASTNode *test, *body;
-	WhileStatement(ASTNode *test, ASTNode *body);
+	Expression *test;
+	ASTNode *body;
+	WhileStatement(Expression *test, ASTNode *body);
 	~WhileStatement();
 	Json::Value json() override;
 	void* gen(Context &context) override;

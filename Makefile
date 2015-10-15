@@ -36,7 +36,8 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
-	ArrayAccessor.cpp
+	ArrayAccessor.cpp VariableDefinationList.cpp Symbol.cpp \
+	ArrayDefinator.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 PROG := jcc
@@ -67,8 +68,7 @@ include/jascal.tab.hpp: src/jascal.y
 	$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
 	mv src/jascal.tab.hpp include/
 
-src/jascal.tab.cpp: src/jascal.y
-	$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
+src/jascal.tab.cpp: include/jascal.tab.hpp
 
 bison: include/jascal.tab.hpp src/jascal.tab.cpp 
 
@@ -83,4 +83,4 @@ clean:
 		 test.o test.exe test ast/ast.json
 
 test: jcc test.jas
-	./$(PROG) --parse --dump-lex --dump-ast=ast/ast.json -o test.llvm test.jas
+	./$(PROG) --llvm --dump-lex --dump-ast=ast/ast.json -o test.llvm test.jas

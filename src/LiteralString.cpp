@@ -1,6 +1,7 @@
 #include "LiteralString.h"
 #include "exception.h"
 #include "Context.h"
+#include "Type.h"
 
 static inline int char2hex(const char a) {
 	switch (a) {
@@ -121,6 +122,18 @@ Json::Value LiteralString::json() {
 LiteralString::~LiteralString() {
 }
 
-void* LiteralString::gen(Context &context) {
+llvm::Value* LiteralString::load(Context &context) {
 	return context.getBuilder().CreatePointerCast(context.getBuilder().CreateGlobalString(text), llvm::Type::getInt8PtrTy(context.getContext()));
+}
+
+void LiteralString::store(Context &context, llvm::Value *value) {
+	throw NotAssignable("literal string");
+}
+
+Type* LiteralString::getType(Context &context) {
+	return &Type::String;
+}
+
+Type* LiteralString::getTypeConstant() {
+	return &Type::String;
 }

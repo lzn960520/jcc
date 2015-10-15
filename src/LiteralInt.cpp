@@ -2,21 +2,52 @@
 
 #include "LiteralInt.h"
 #include "Context.h"
+#include "Type.h"
+#include "exception.h"
 
-LiteralInt::LiteralInt(int val) :
-	val(val) {
+LiteralInt::LiteralInt(int val, bool isUnsigned) {
+	if (isUnsigned) {
+		type = &Type::UInt32;
+		this->val._uint32 = val;
+	} else {
+		type = &Type::Int32;
+		this->val._int32 = val;
+	}
 }
 
 Json::Value LiteralInt::json() {
 	Json::Value root;
 	root["name"] = "literal_int";
-	root["val"] = Json::Value(val);
+	root["is_unsigned"] = type->isUnsigned;
+	if (type->isUnsigned)
+		root["val"] = Json::Value(val._uint32);
+	else
+		root["val"] = Json::Value(val._int32);
 	return root;
 }
 
 LiteralInt::~LiteralInt() {
+	if (type)
+		delete type;
 }
 
-void *LiteralInt::gen(Context &context) {
-	return llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), val, false);
+llvm::Value* LiteralInt::load(Context &context) {
+	return llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), val._uint32, type->isUnsigned);
+}
+
+void LiteralInt::store(Context &context, llvm::Value *value) {
+	throw NotAssignable("literal integer");
+}
+
+Type* LiteralInt::getType(Context &context) {
+	return type;
+}
+
+Expression::Constant LiteralInt::loadConstant() {
+	Expression::Constant ans;
+	if (type->isUnsigned)
+		ans._uint64 = val._uint32;
+	else
+		ans._int64 = val._int32;
+	return ans;
 }

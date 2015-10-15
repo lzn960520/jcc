@@ -3,9 +3,11 @@
 
 #include "ASTNode.h"
 
+class Expression;
 struct RepeatStatement : public ASTNode {
-	ASTNode *body, *until;
-	RepeatStatement(ASTNode *body, ASTNode *until);
+	ASTNode *body;
+	Expression *until;
+	RepeatStatement(ASTNode *body, Expression *until);
 	~RepeatStatement();
 	Json::Value json() override;
 	void* gen(Context &context);

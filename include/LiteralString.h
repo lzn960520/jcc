@@ -3,14 +3,23 @@
 
 #include <string>
 
-#include "ASTNode.h"
+#include "Expression.h"
 
-struct LiteralString : public ASTNode {
+struct LiteralString : public Expression {
 	std::string text;
 	LiteralString(const char *text);
 	~LiteralString();
 	Json::Value json() override;
-	void *gen(Context &context) override;
+	llvm::Value* load(Context &context) override;
+	void store(Context &context, llvm::Value *value) override;
+	Type* getType(Context &context) override;
+	bool isConstant() override { return true; }
+	Constant loadConstant() override {
+		Constant ans;
+		ans._string = text.c_str();
+		return ans;
+	}
+	Type* getTypeConstant() override;
 };
 
 #endif

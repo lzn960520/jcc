@@ -8,7 +8,6 @@
 	#define YY_USER_ACTION { \
 		yylloc.first_column = yylloc.last_column + 1; \
 		yylloc.last_column = yylloc.first_column + yyleng - 1; \
-		yylval = NULL; \
 	}
 %}
 
@@ -133,18 +132,18 @@
 "private"	{
 	if (lex_output)
 		fprintf(lex_output, "<PRIVATE>");
-	yylval = (ASTNode *) PRIVATE;
-	return visibility; }
+	yylval.visibility = PRIVATE;
+	return T_VISIBILITY; }
 "public"	{
 	if (lex_output)
 		fprintf(lex_output, "<PUBLIC>");
-	yylval = (ASTNode *) PUBLIC;
-	return visibility; }
+	yylval.visibility = PUBLIC;
+	return T_VISIBILITY; }
 "protected"	{
 	if (lex_output)
 		fprintf(lex_output, "<PROTECTED>");
-	yylval = (ASTNode *) PROTECTED;
-	return visibility; }
+	yylval.visibility = PROTECTED;
+	return T_VISIBILITY; }
 "return" {
 	if (lex_output)
 		fprintf(lex_output, "<RETURN>");
@@ -177,11 +176,43 @@
 	if (lex_output)
 		fprintf(lex_output, "<RIGHT_SQUARE>");
 	return T_RIGHT_SQUARE; }
+".." {
+	if (lex_output)
+		fprintf(lex_output, "<DOT_DOT>");
+	return T_DOTDOT; }
+"string" {
+	if (lex_output)
+		fprintf(lex_output, "<STRING>");
+	return T_STRING; }
+"==" {
+	if (lex_output)
+		fprintf(lex_output, "<EQUAL>");
+	return T_EQ; }
+"!=" {
+	if (lex_output)
+		fprintf(lex_output, "<NOT_EQUAL>");
+	return T_NEQ; }
+"<>" {
+	if (lex_output)
+		fprintf(lex_output, "<NOT_EQUAL>");
+	return T_NEQ; }
+"&&" {
+	if (lex_output)
+		fprintf(lex_output, "<LOGIC_AND>");
+	return T_LOG_AND; }
+"||" {
+	if (lex_output)
+		fprintf(lex_output, "<LOGIC_OR>");
+	return T_LOG_OR; }
+"^^" {
+	if (lex_output)
+		fprintf(lex_output, "<LOGIC_XOR>");
+	return T_LOG_XOR; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);
-	yylval = new LiteralString(yytext);
-	return literal_string; }
+	yylval.expression = new LiteralString(yytext);
+	return T_LITERAL_STRING; }
 [ ]+	{
 	if (lex_output)
 		fprintf(lex_output, "<space \"%s\">", yytext);
@@ -214,15 +245,20 @@
 	}
 	return yylex(); }
 [0-9]+	{
-	yylval = new LiteralInt(atoi(yytext));
+	yylval.expression = new LiteralInt(atoi(yytext), false);
 	if (lex_output)
 		fprintf(lex_output, "<literal_int %s>", yytext);
-	return literal_int; }
+	return T_LITERAL_INT; }
+[0-9]+(u|U) {
+	yylval.expression = new LiteralInt(atoi(yytext), true);
+	if (lex_output)
+		fprintf(lex_output, "<literal_int %s>", yytext);
+	return T_LITERAL_INT; }
 [a-zA-Z_][a-zA-Z_0-9]*	{
-	yylval = new Identifier(yytext);
+	yylval.identifier = new Identifier(yytext);
 	if (lex_output)
 		fprintf(lex_output, "<identifier %s>", yytext);
-	return identifier; }
+	return T_IDENTIFIER; }
 . {
 	fprintf(stderr, "Unknown token %s\n", yytext);
 	return yylex(); }

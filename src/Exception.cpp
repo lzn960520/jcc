@@ -61,3 +61,32 @@ NoReturn::NoReturn(const string &msg) : CompileException(msg) {}
 string NoReturn::message() const {
 	return "Not all branches of " + msg + " have return";
 }
+
+NotAssignable::NotAssignable(const char *msg) : CompileException(msg) {}
+NotAssignable::NotAssignable(const string &msg) : CompileException(msg) {}
+string NotAssignable::message() const {
+	return "Can't assign value to " + msg;
+}
+
+NotArray::NotArray(const char *msg) : CompileException(msg) {}
+NotArray::NotArray(const string &msg) : CompileException(msg) {}
+string NotArray::message() const {
+	return msg + " isn't an array";
+}
+
+DimMismatch::DimMismatch(const char *msg) : CompileException(msg) {}
+DimMismatch::DimMismatch(const string &msg) : CompileException(msg) {}
+string DimMismatch::message() const {
+	return "Dim mismatch between array " + msg + " and accessor";
+}
+
+IncompatibleType::IncompatibleType(const string &type1, const string &type2) : CompileException("Incompatible type " + type1 + " and " + type2) {}
+string IncompatibleType::message() const {
+	return msg;
+}
+
+NotConstant::NotConstant(const char *msg) : CompileException(msg) {}
+NotConstant::NotConstant(const string &msg) : CompileException(msg) {}
+string NotConstant::message() const {
+	return msg + " is not constant";
+}

@@ -5,11 +5,12 @@
 
 #include "ASTNode.h"
 
+class Expression;
 struct CallArgumentList : public ASTNode {
-	std::list<ASTNode*> list;
+	std::list<Expression*> list;
 	CallArgumentList();
-	CallArgumentList(ASTNode *expression);
-	void push_back(ASTNode *expression);
+	CallArgumentList(Expression *expression);
+	void push_back(Expression *expression);
 	~CallArgumentList();
 	Json::Value json() override;
 };

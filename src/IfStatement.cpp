@@ -1,12 +1,15 @@
 #include "IfStatement.h"
 #include "Context.h"
 #include "util.h"
+#include "Expression.h"
+#include "exception.h"
+#include "Type.h"
 
-IfStatement::IfStatement(ASTNode *test, ASTNode *then_st) :
+IfStatement::IfStatement(Expression *test, ASTNode *then_st) :
 	test(test), then_st(then_st), else_st(NULL) {
 }
 
-IfStatement::IfStatement(ASTNode *test, ASTNode *then_st, ASTNode *else_st) :
+IfStatement::IfStatement(Expression *test, ASTNode *then_st, ASTNode *else_st) :
 	test(test), then_st(then_st), else_st(else_st) {
 }
 
@@ -30,35 +33,31 @@ Json::Value IfStatement::json() {
 }
 
 void* IfStatement::gen(Context &context) {
-	llvm::IRBuilderBase::InsertPoint condIP = context.getBuilder().saveAndClearIP(), afterThenIP, afterElseIP;
-	llvm::BasicBlock *true_b, *false_b;
+	if (!test->getType(context)->isBool())
+		throw InvalidType("test expression of if must be bool");
+	llvm::BasicBlock *ori_block = context.currentBlock(), *true_b, *false_b;
 	if (then_st) {
 		true_b = context.newBlock("if_" + itos(then_st->loc.first_line) + "@true");
 		then_st->gen(context);
-		afterThenIP = context.getBuilder().saveAndClearIP();
 	}
 	if (else_st) {
 		false_b = context.newBlock("if_" + itos(else_st->loc.first_line) + "@false");
 		else_st->gen(context);
-		afterElseIP = context.getBuilder().saveAndClearIP();
 	}
 	llvm::BasicBlock *after = context.newBlock("if_" + itos(then_st->loc.first_line) + "@after");
-	llvm::IRBuilderBase::InsertPoint afterIP = context.getBuilder().saveIP();
 	if (then_st) {
-		context.getBuilder().restoreIP(afterThenIP);
+		context.setBlock(true_b);
 		context.getBuilder().CreateBr(after);
 	}
 	if (else_st) {
-		context.getBuilder().restoreIP(afterElseIP);
+		context.setBlock(false_b);
 		context.getBuilder().CreateBr(after);
 	}
 	if (!else_st)
 		false_b = after;
-	context.getBuilder().restoreIP(condIP);
-	llvm::Value *cond = (llvm::Value *) test->gen(context);
-	if (!cond->getType()->isIntegerTy(1) && cond->getType()->isIntegerTy())
-		cond = context.getBuilder().CreateCast(llvm::Instruction::Trunc, cond, context.getBuilder().getInt1Ty());
+	context.setBlock(ori_block);
+	llvm::Value *cond = test->load(context);
 	context.getBuilder().CreateCondBr(cond, true_b, false_b);
-	context.getBuilder().restoreIP(afterIP);
+	context.setBlock(after);
 	return NULL;
 }

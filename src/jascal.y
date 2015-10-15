@@ -21,7 +21,8 @@
 	#include "Op1.h"
 	#include "ArrayAccess.h"
 	#include "ArrayAccessor.h"
-	#define YYSTYPE ASTNode*
+	#include "ArrayDefinator.h"
+	#include "VariableDefinationList.h"
 }
 
 %code top {
@@ -31,6 +32,22 @@
 %initial-action {
 	yylloc.first_line = 1;
 	yylloc.last_column = 0;
+}
+
+%union {
+	ASTNode *ast;
+	Expression *expression;
+	Statements *statements;
+	Type *type;
+	CallArgumentList *call_arg_list;
+	ArgumentList *arg_list;
+	Identifier *identifier;
+	Function *function;
+	Visibility visibility;
+	VariableDefination *var_def;
+	VariableDefinationList *var_def_list;
+	ArrayDefinator *arr_def;
+	ArrayAccessor *arr_acc;
 }
 
 %code {
@@ -47,10 +64,22 @@
 }
 
 %locations
-	
-%token literal_int
-%token literal_string
-%token identifier
+
+%type <arr_def> array_definator
+%type <arr_acc> array_accessor
+%type <var_def_list> variable_defination_list
+%type <var_def> variable_defination
+%type <function> function_defination
+%type <ast> while_statement if_statement repeat_statement statement
+%type <statements> statement_list_head statement_list
+%type <expression> expression literal function_call
+%type <type> type_name base_type
+%type <call_arg_list> call_arg_list
+%type <arg_list> arg_list
+
+%token <expression> T_LITERAL_INT
+%token <expression> T_LITERAL_STRING
+%token <identifier> T_IDENTIFIER
 %token T_MODULE
 %token T_BEGIN
 %token T_END
@@ -71,16 +100,21 @@
 %token T_CHAR
 %token T_FLOAT
 %token T_DOUBLE
-%token visibility
+%token <visibility> T_VISIBILITY
 %token T_RETURN
 %token T_REPEAT
 %token T_UNTIL
 %token T_COLON
 %token T_FUNCTION
 %token T_PROCEDURE
+%token T_DOTDOT
+%token T_STRING
 
 %right T_ASSIGN
-%left T_LT T_GT T_LEQ T_GEQ T_NEQ
+%left T_LOG_OR
+%left T_LOG_AND
+%left T_LOG_XOR
+%left T_LT T_GT T_LEQ T_GEQ T_EQ T_NEQ
 %left T_ADD T_SUB
 %left T_MUL T_DIV
 %left T_MOD
@@ -122,24 +156,56 @@ expression:
 		$$ = new Op1($1, Op1::SELF_DEC); }
 	| expression T_ASSIGN expression {
 		$$ = new Op2($1, Op2::ASSIGN, $3); }
+	| expression T_EQ expression {
+		$$ = new Op2($1, Op2::EQ, $3); }
+	| expression T_NEQ expression {
+		$$ = new Op2($1, Op2::NEQ, $3); }
+	| expression T_LOG_AND expression {
+		$$ = new Op2($1, Op2::LOG_AND, $3); }
+	| expression T_LOG_OR expression {
+		$$ = new Op2($1, Op2::LOG_OR, $3); }
+	| expression T_LOG_XOR expression {
+		$$ = new Op2($1, Op2::LOG_XOR, $3); }
 	| T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS {
 		$$ = $2; }
 	| literal
-	| identifier
+	| T_IDENTIFIER
 	| function_call
 	| expression T_LEFT_SQUARE array_accessor T_RIGHT_SQUARE {
-		$$ = new ArrayAccess($1, $3); }
+		$$ = new ArrayAccess((Expression *) $1, (ArrayAccessor *) $3); }
 	
 array_accessor:
-	expression {
+	{
+		$$ = new ArrayAccessor(NULL); }
+	| expression {
 		$$ = new ArrayAccessor($1); }
+	| array_accessor T_COMMA {
+		$$ = $1;
+		((ArrayAccessor *) $1)->push_back(NULL); }
 	| array_accessor T_COMMA expression {
 		$$ = $1;
 		((ArrayAccessor *) $1)->push_back($3); }
+		
+array_definator:
+	{
+		$$ = new ArrayDefinator(NULL, NULL); }
+	| expression T_DOTDOT expression {
+		$$ = new ArrayDefinator($1, $3); }
+	| expression T_DOTDOT {
+		$$ = new ArrayDefinator($1, NULL); }
+	| array_definator T_COMMA {
+		$$ = $1;
+		((ArrayDefinator *) $1)->push_back(NULL, NULL); }
+	| array_definator T_COMMA expression T_DOTDOT expression {
+		$$ = $1;
+		((ArrayDefinator *) $1)->push_back($3, $5); }
+	| array_definator T_COMMA expression T_DOTDOT {
+		$$ = $1;
+		((ArrayDefinator *) $1)->push_back($3, NULL); }
 
 literal:
-	literal_int
-	| literal_string
+	T_LITERAL_INT
+	| T_LITERAL_STRING
 
 statement:
 	expression {
@@ -181,24 +247,28 @@ while_statement:
 
 repeat_statement:
 	T_REPEAT statement_list T_UNTIL expression {
-		$$ = new RepeatStatement($4, $2); }
+		$$ = new RepeatStatement($2, $4); }
 		
 variable_defination:
-	type_name {
-		$$ = $1 = new VariableDefination($1); } variable_defination_list
+	type_name variable_defination_list {
+		$$ = new VariableDefination($1, $2); }
 
 variable_defination_list:
-	identifier {
-		((VariableDefination *) $0)->push_back($1); }
-	| identifier T_ASSIGN expression {
-		((VariableDefination *) $0)->push_back($1, $3); }
-	| variable_defination_list T_COMMA identifier {
-		((VariableDefination *) $0)->push_back($3); }
-	| variable_defination_list T_COMMA identifier T_ASSIGN expression {
-		((VariableDefination *) $0)->push_back($3, $5); }
+	T_IDENTIFIER {
+		$$ = new VariableDefinationList($1); }
+	| T_IDENTIFIER T_ASSIGN expression {
+		$$ = new VariableDefinationList($1, $3); }
+	| variable_defination_list T_COMMA T_IDENTIFIER {
+		$$ = $1;
+		$$->push_back($3); }
+	| variable_defination_list T_COMMA T_IDENTIFIER T_ASSIGN expression {
+		$$ = $1;
+		$$->push_back($3, $5); }
 
 type_name:
 	base_type
+	| type_name T_LEFT_SQUARE array_definator T_RIGHT_SQUARE {
+		$$ = new Type(Type::ARRAY, $1, $3); }
 
 base_type:
 	T_UNSIGNED T_BYTE { 
@@ -219,23 +289,25 @@ base_type:
 		$$ = new Type(Type::FLOAT); }
 	| T_DOUBLE {
 		$$ = new Type(Type::DOUBLE); }
+	| T_STRING {
+		$$ = new Type(Type::STRING); }
 
 function_defination:
-	visibility T_FUNCTION identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name T_BEGIN statement_list T_END {
-		$$ = new Function((Visibility) (long long) $1, (Type*) $8, (Identifier*) $3, (ArgumentList*) $5, (Statements*) $10); }
-	| visibility T_PROCEDURE identifier T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statement_list T_END {
-		$$ = new Function((Visibility) (long long) $1, NULL, (Identifier*) $3, (ArgumentList*) $5, (Statements*) $8); }
+	T_VISIBILITY T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name T_BEGIN statement_list T_END {
+		$$ = new Function($1, $8, $3, $5, $10); }
+	| T_VISIBILITY T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statement_list T_END {
+		$$ = new Function($1, NULL, $3, $5, $8); }
 
 arg_list:
 	{ $$ = new ArgumentList(); }
-	| type_name identifier {
+	| type_name T_IDENTIFIER {
 		$$ = new ArgumentList((Type*) $1, (Identifier*) $2); }
-	| arg_list T_COMMA type_name identifier {
+	| arg_list T_COMMA type_name T_IDENTIFIER {
 		$$ = $1;
 		((ArgumentList *) $$)->push_back((Type*) $3, (Identifier*) $4); }
 		
 function_call:
-	identifier T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
+	T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
 		$$ = new FunctionCall($1, $3); }
 	
 call_arg_list:

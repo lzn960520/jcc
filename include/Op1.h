@@ -1,21 +1,26 @@
 #ifndef _OP1_H_
 #define _OP1_H_
 
-#include "ASTNode.h"
+#include "Expression.h"
 
-struct Op1 : public ASTNode {
-	ASTNode *operand;
+struct Op1 : public Expression {
+	Expression *operand;
 	enum OpType {
 		SELF_INC,
 		SELF_DEC,
 		BIT_NOT,
 		LOGIC_NOT
 	} op;
-	Op1(ASTNode *operand, OpType op);
+	Op1(Expression *operand, OpType op);
 	static const char *OpNames[];
 	~Op1();
 	Json::Value json() override;
-	void* gen(Context &context) override;
+	llvm::Value* load(Context &context) override;
+	void store(Context &context, llvm::Value *value) override;
+	Type* getType(Context &context) override;
+	bool isConstant() override;
+	Constant loadConstant() override;
+	Type* getTypeConstant() override;
 };
 
 #endif

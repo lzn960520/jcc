@@ -1,22 +1,46 @@
-public procedure sort(int l, int r)
+module sort begin
+
+class Main
 begin
-	int i = l;
-	int j = r;
-	int mid = a[(l + r) / 2];
-	repeat
-		while (a[i] < mid) do i++;
-		while (a[j] > mid) do j--;
-		if (i < j) then
-		begin
-			int temp = a[i];
-			a[i] = a[j];
-			a[j] = temp;
-			i++;
-			j--;
-		end
-	until i >= j;
-	if (i < r) then
-		sort(i, r);
-	if (l < j) then
-		sort(l, j);
-end
+	private int[0..10] a;
+	
+	private procedure sort(int l, int r)
+	begin
+		int i = l;
+		int j = r;
+		int mid = a[(l + r) / 2];
+		repeat
+			while (a[i] < mid) do i++;
+			while (a[j] > mid) do j--;
+			if (i < j) then
+			begin
+				int temp = a[i];
+				a[i] = a[j];
+				a[j] = temp;
+				i++;
+				j--;
+			end
+		until i >= j;
+		if (i < r) then
+			sort(i, r);
+		if (l < j) then
+			sort(l, j);
+	end;
+	
+	public procedure main()
+	begin
+		a[0] = 1;
+		a[1] = 5;
+		a[2] = 4;
+		a[3] = 7;
+		a[4] = 10;
+		a[5] = 8;
+		sort(0, 5);
+		writeInt(a[0]);
+		writeInt(a[1]);
+		writeInt(a[2]);
+		writeInt(a[3]);
+		writeInt(a[4]);
+		writeInt(a[5]);
+	end;
+end;

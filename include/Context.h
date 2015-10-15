@@ -7,15 +7,20 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 
+class Function;
+class Symbol;
 class Context {
 	llvm::LLVMContext *currentContext;
-	typedef std::map<std::string, llvm::Value*> SymbolContext;
+	typedef std::map<std::string, Symbol*> SymbolContext;
 	typedef std::list<SymbolContext*> SymbolContextStack;
 	SymbolContextStack contextStack;
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
 	llvm::Function *currentFunction;
+
+	typedef std::map<std::string, Function*> FunctionContext;
+	FunctionContext functions;
 public:
 	Context();
 	llvm::Module& getModule() { return *module; }
@@ -25,8 +30,8 @@ public:
 	void popContext();
 	llvm::Function* createFunction(const std::string &name, llvm::FunctionType *funcType);
 	void endFunction();
-	void addSymbol(const std::string &name, llvm::Value *value);
-	llvm::Value* findSymbol(const std::string &name);
+	void addSymbol(Symbol *symbol);
+	Symbol* findSymbol(const std::string &name);
 	void removeSymbol(const std::string &name);
 	llvm::BasicBlock* newBlock();
 	llvm::BasicBlock* newBlock(const std::string &name);

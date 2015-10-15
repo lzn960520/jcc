@@ -3,9 +3,11 @@
 #include "Context.h"
 #include "Identifier.h"
 #include "CallArgumentList.h"
+#include "Function.h"
+#include "Symbol.h"
 
-FunctionCall::FunctionCall(ASTNode *identifier, ASTNode *arg_list) :
-	identifier((Identifier *) identifier), arg_list((CallArgumentList *) arg_list) {
+FunctionCall::FunctionCall(Identifier *identifier, CallArgumentList *arg_list) :
+	identifier(identifier), arg_list(arg_list) {
 }
 
 FunctionCall::~FunctionCall() {
@@ -23,13 +25,35 @@ Json::Value FunctionCall::json() {
 	return root;
 }
 
-void* FunctionCall::gen(Context &context) {
-	llvm::Function *function = context.getModule().getFunction(identifier->getName());
+llvm::Value* FunctionCall::load(Context &context) {
+	Symbol *symbol = context.findSymbol(identifier->getName());
+	if (symbol->type != Symbol::FUNCTION)
+		throw InvalidType("calling a symbol which is not a function");
+	llvm::Function *function = symbol->data.function.function->getLLVMFunction(context);
 	if (function == NULL)
 		throw FunctionNotFound(identifier->getName());
 	std::vector<llvm::Value*> arg_code;
-	std::list<ASTNode*> &arg_list = this->arg_list->list;
-	for (std::list<ASTNode*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
-		arg_code.push_back((llvm::Value *) (*it)->gen(context));
+	std::list<Expression*> &arg_list = this->arg_list->list;
+	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
+		arg_code.push_back((*it)->load(context));
 	return context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code));
+}
+
+void FunctionCall::store(Context &context, llvm::Value *value) {
+	throw NotAssignable("function call");
+}
+
+Type* FunctionCall::getType(Context &context) {
+	Symbol *symbol = context.findSymbol(identifier->getName());
+	if (symbol->type != Symbol::FUNCTION)
+		throw InvalidType("calling a symbol which is not a function");
+	return symbol->data.function.function->getReturnType();
+}
+
+Expression::Constant FunctionCall::loadConstant() {
+	throw NotConstant("function call");
+}
+
+Type* FunctionCall::getTypeConstant() {
+	throw NotConstant("function call");
 }

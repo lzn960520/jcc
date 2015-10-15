@@ -143,7 +143,7 @@ int main(int argc, char * const argv[]) {
 
 			// optimization
 			llvm::PassManager passManager;
-			passManager.add(llvm::createConstantMergePass());
+			/*passManager.add(llvm::createConstantMergePass());
 			passManager.add(llvm::createConstantPropagationPass());
 			passManager.add(llvm::createLoopSimplifyPass());
 			passManager.add(llvm::createCFGSimplificationPass());
@@ -151,7 +151,7 @@ int main(int argc, char * const argv[]) {
 			passManager.add(llvm::createDeadInstEliminationPass());
 			passManager.add(llvm::createDeadCodeEliminationPass());
 			passManager.add(llvm::createUnreachableBlockEliminationPass());
-			passManager.add(llvm::createGlobalDCEPass());
+			passManager.add(llvm::createGlobalDCEPass());*/
 
 			if (opt_llvm_only) {
 				if (output_filename.empty() && input_filename.empty()) {

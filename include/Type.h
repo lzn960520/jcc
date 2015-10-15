@@ -2,9 +2,11 @@
 #define _TYPE_H_
 
 #include <llvm/IR/Type.h>
+#include <vector>
 
 #include "ASTNode.h"
 
+class ArrayDefinator;
 struct Type : public ASTNode {
 	enum BaseType {
 		BYTE,
@@ -12,14 +14,34 @@ struct Type : public ASTNode {
 		INT,
 		CHAR,
 		FLOAT,
-		DOUBLE
+		DOUBLE,
+		ARRAY,
+		BOOL,
+		STRING
 	} baseType;
 	static const char *BaseTypeNames[];
+	static Type Bool;
+	static Type String;
+	static Type Int32;
+	static Type UInt32;
 	bool isUnsigned;
+	std::vector<std::pair<int, int> > arrayDim;
+	Type *internal;
 	Type(BaseType baseType, bool isUnsigned = false);
+	Type(BaseType array, Type *baseType, ArrayDefinator *definator);
 	~Type();
 	Json::Value json() override;
 	llvm::Type *getType(Context &context);
+	size_t getSize();
+	bool isInt() { return baseType == BYTE || baseType == SHORT || baseType == INT || baseType == BOOL; }
+	bool isBool() { return baseType == BOOL; }
+	bool isFloat() { return baseType == FLOAT || baseType == DOUBLE; }
+	bool isNumber() { return isInt() || isFloat(); }
+	bool isChar() { return baseType == CHAR; }
+	bool isArray() { return baseType == ARRAY; }
+	bool isString() { return baseType == STRING; }
+	static Type* higherType(Type *a, Type *b);
+	const char *getName() { return BaseTypeNames[baseType]; }
 };
 
 #endif

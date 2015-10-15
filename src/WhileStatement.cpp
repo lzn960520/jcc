@@ -2,8 +2,9 @@
 #include "Context.h"
 #include "util.h"
 #include "exception.h"
+#include "Expression.h"
 
-WhileStatement::WhileStatement(ASTNode *test, ASTNode *body) :
+WhileStatement::WhileStatement(Expression *test, ASTNode *body) :
 	test(test), body(body) {
 }
 
@@ -32,7 +33,7 @@ void* WhileStatement::gen(Context &context) {
 	context.getBuilder().CreateBr(loopBlock);
 
 	context.setBlock(loopBlock);
-	llvm::Value *cond = (llvm::Value *) test->gen(context);
+	llvm::Value *cond = test->load(context);
 	if (!cond->getType()->isIntegerTy(1))
 		if (cond->getType()->isIntegerTy())
 			cond = context.getBuilder().CreateCast(llvm::Instruction::Trunc, cond, context.getBuilder().getInt1Ty());
