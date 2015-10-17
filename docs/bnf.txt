@@ -131,7 +131,7 @@ for_statement
 repeat_statement
 	::= "repeat" statement_list "until" "(" expression ")"
 case_statement
-	::= "case" expression "of" { expression ":" statement_list } "end"
+	::= "case" expression "of" { expression ":" statement_list ["else" ":" statement_list]} "end"
 break_statement
 	::= "break"
 continue_statement
