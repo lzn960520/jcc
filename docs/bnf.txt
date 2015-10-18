@@ -1,22 +1,22 @@
 compile_unit
 	::=
 	{ using_statement }
-	( { module_def } | { class_declaration | interface_declaration } )
+	{ module_def | class_declaration | interface_declaration }
 using_statement
-	::=	"using" module_name ";"
+	::=	"using" class_name ";"
 module_def
-	::=	"module" module_name "begin" { class_declaration | interface_declaration } "end"
+	::=	"module" module_name "begin" { class_declaration | interface_declaration } "end" ";"
 module_name
 	::=
 	  identifier
 	| module_name "::" identifier
 class_declaration
 	::=	"class" identifier
-		[ "extend" class_name ]
+		[ "extends" class_name ]
 		{ "implements" interface_name } 
-		"begin" { member_defination | function_defination } "end"
+		"begin" { member_defination | function_defination } "end" ";"
 interface_declaration
-	::= "interface" identifier "begin" { function_declaration } "end"
+	::= "interface" identifier "begin" { function_declaration } "end" ";"
 identifier
 	::= ( letter | "_" ) { letter | digit | "_" }
 letter
@@ -33,13 +33,14 @@ interface_name
 	| module_name "::" identifier
 member_defination
 	::= [ "static" ]
-		[ "private" | "public" | "protected" ]
+		( "private" | "public" | "protected" )
 		[ "const" ]
 		variable_defination ";"
 variable_defination
-	::= type_name identifier [ "=" expression ] { identifier [ "=" expression ] }
+	::= type_name identifier [ "=" expression ] { "," identifier [ "=" expression ] }
 function_declaration
-	::= type_name identifier "(" [ type_name identifier { "," type_name identifier } ] ")" ";"
+	::= "function" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" ":" type_name ";"
+		| "procedure" identifier "(" [ type_name identifier { "," type_name identifier} ] ")" ";"
 expression
 	::=
 	  ( expression
@@ -50,6 +51,7 @@ expression
 		| "<<" | ">>" 
 		| "+=" | "-=" | "*=" | "/=" | "**=" | "%="
 		| "|=" | "&=" | "^="
+		| "||=" | "&&=" | "^^="
 		| "<<=" | ">>="
 		| "=" )
 		expression )
@@ -58,13 +60,15 @@ expression
 	| expression ( "++" | "--" )
 	| identifier
 	| class_name "::" identifier
-	| class_name "." identifier
+	| expression "." identifier
 	| function_call
 	| literal
 	| "new" class_name "(" [ expression { "," expression } ] ")"
-	| "new" type_name { array_specifier } "[" expression { "," expression } "]"
+	| "new" type_name "[" expression { "," expression } "]"
 	| "delete" expression
-array_specifier
+	| expression array_accessor
+	| "[[" expression { "," expression } "]]"
+array_accessor
 	::= "[" [ literal_int { "," literal_int } ] "]"
 literal
 	::=
@@ -74,33 +78,37 @@ literal
 	| literal_double
 literal_int
 	::=
-	  [ "-" ] ( "0" | ( "1-9" { "0-9" } ) )
-	| [ "-" ] ( "0x" | "0X" ) ( "0" | ( "1-9a-fA-F" ) { "0-9a-fA-F" } )
+	  [ "+" | "-" ] ( "0-9" )
+	| "0"
+	| "1-9" { "0-9" }
+	| ( "0x" | "0X" ) ( "0" | ( "1-9a-fA-F" ) { "0-9a-fA-F" } )
 	| "0,1" { "0,1" } "b"
 literal_string
 	::= "\"" ".*" "\""
 literal_float
 	::=
-	  [ "-" ] "0" "." "0-9" { "0-9" } "f"
-	| [ "-" ] "." "0-9" { "0-9" } "f"
-	| [ "-" ] "1-9" { "0-9" } "." "0-9" { "0-9" } "f"
+	  [ "+" | "-" ] "0" "." "0-9" { "0-9" } "f"
+	| [ "+" | "-" ] "." "0-9" { "0-9" } "f"
+	| [ "+" | "-" ] "1-9" { "0-9" } "." "0-9" { "0-9" } "f"
 literal_double
 	::=
-	  [ "-" ] "0" "." "0-9" { "0-9" }
-	| [ "-" ] "." "0-9" { "0-9" }
-	| [ "-" ] "1-9" { "0-9" } "." "0-9" { "0-9" }
+	  [ "+" | "-" ] "0" "." "0-9" { "0-9" }
+	| [ "+" | "-" ] "." "0-9" { "0-9" }
+	| [ "+" | "-" ] "1-9" { "0-9" } "." "0-9" { "0-9" }
 function_call
 	::=
 	  identifier "(" [ expression { "," expression } ] ")"
 	| expression "." identifier "(" [ expression { "," expression } ] ")"
 	| class_name "::" identifier "(" [ expression { "," expression } ] ")"
+array_definator
+	::= "[" ( ".." | ( expression ".." ) | ( expression ".." expression ) ) { "," ( ".." | ( expression ".." ) | ( expression ".." expression ) ) } "]"
 type_name
 	::=
 	  base_type
 	| "[[" type_name { "," type_name } "]]"
 	| class_name
 	| interface_name
-	| type_name array_specifier
+	| type_name array_definator
 base_type
 	::= ( [ "unsigned" ] ( "byte" | "short" | "int" ) ) | "char" | "float" | "double"
 function_defination
@@ -121,17 +129,17 @@ statement
 statement_list
 	::= { statement ";" } [ statement ]
 if_statement
-	::=
-	"if" "(" expression ")" "then" statement
+	::=	
+	  "if" "(" expression ")" "then" statement
 	| "if" "(" expression ")" "then" statement "else" statement
 while_statement
-	::= "while" "(" expression ")" "do" statement
+	::= "while" expression "do" statement
 for_statement
 	::= "for" "(" [ variable_defination | expression ] ";" [ expression ] ";" [ expression ] ")" "do" statement
 repeat_statement
-	::= "repeat" statement_list "until" "(" expression ")"
+	::= "repeat" statement_list "until" expression
 case_statement
-	::= "case" expression "of" { expression ":" statement_list ["else" ":" statement_list]} "end"
+	::= "case" expression "of" { expression ":" statement_list } ["else " statement_list]"end"
 break_statement
 	::= "break"
 continue_statement
