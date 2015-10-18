@@ -3,15 +3,15 @@ compile_unit
 	{ using_statement }
 	{ module_def | class_declaration | interface_declaration }
 using_statement
-	::=	"using" class_name ";"
+	::= "using" class_name ";"
 module_def
-	::=	"module" module_name "begin" { class_declaration | interface_declaration } "end" ";"
+	::= "module" module_name "begin" { class_declaration | interface_declaration } "end" ";"
 module_name
 	::=
 	  identifier
 	| module_name "::" identifier
 class_declaration
-	::=	"class" identifier
+	::= "class" identifier
 		[ "extends" class_name ]
 		{ "implements" interface_name } 
 		"begin" { member_defination | function_defination } "end" ";"
@@ -39,8 +39,9 @@ member_defination
 variable_defination
 	::= type_name identifier [ "=" expression ] { "," identifier [ "=" expression ] }
 function_declaration
-	::= "function" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" ":" type_name ";"
-		| "procedure" identifier "(" [ type_name identifier { "," type_name identifier} ] ")" ";"
+	::=
+	  "function" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" ":" type_name ";"
+	| "procedure" identifier "(" [ type_name identifier { "," type_name identifier} ] ")" ";"
 expression
 	::=
 	  ( expression
@@ -68,20 +69,22 @@ expression
 	| "delete" expression
 	| expression array_accessor
 	| "[[" expression { "," expression } "]]"
+	| type_name "(" expression ")"
 array_accessor
-	::= "[" [ literal_int { "," literal_int } ] "]"
+	::= "[" expression { "," expression } "]"
 literal
 	::=
 	  literal_int
 	| literal_string
 	| literal_float
 	| literal_double
+	| literal_bool
 literal_int
 	::=
-	  [ "+" | "-" ] ( "0-9" )
+	  ( "+" | "-" ) ( "0-9" ) { "0-9" }
 	| "0"
 	| "1-9" { "0-9" }
-	| ( "0x" | "0X" ) ( "0" | ( "1-9a-fA-F" ) { "0-9a-fA-F" } )
+	| ( "0x" | "0X" ) "0-9a-fA-F" { "0-9a-fA-F" }
 	| "0,1" { "0,1" } "b"
 literal_string
 	::= "\"" ".*" "\""
@@ -95,13 +98,15 @@ literal_double
 	  [ "+" | "-" ] "0" "." "0-9" { "0-9" }
 	| [ "+" | "-" ] "." "0-9" { "0-9" }
 	| [ "+" | "-" ] "1-9" { "0-9" } "." "0-9" { "0-9" }
+literal_bool
+	::= "true" | "false"
 function_call
 	::=
 	  identifier "(" [ expression { "," expression } ] ")"
 	| expression "." identifier "(" [ expression { "," expression } ] ")"
 	| class_name "::" identifier "(" [ expression { "," expression } ] ")"
 array_definator
-	::= "[" ( ".." | ( expression ".." ) | ( expression ".." expression ) ) { "," ( ".." | ( expression ".." ) | ( expression ".." expression ) ) } "]"
+	::= "[" ( ( expression ".." ) | ( expression ".." expression ) ) { "," ( ( expression ".." ) | ( expression ".." expression ) ) } "]"
 type_name
 	::=
 	  base_type
@@ -110,12 +115,14 @@ type_name
 	| interface_name
 	| type_name array_definator
 base_type
-	::= ( [ "unsigned" ] ( "byte" | "short" | "int" ) ) | "char" | "float" | "double"
+	::= ( [ "unsigned" ] ( "byte" | "short" | "int" ) ) | "char" | "float" | "double" | "string"
 function_defination
-	::= ( "private" | "public" | "protected" ) "function" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" ":" type_name "begin" statement_list "end"
-		| ( "private" | "public" | "protected" ) "procedure" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" "begin" statement_list "end"
+	::=
+	  [ "static" ] ( "private" | "public" | "protected" ) "function" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" ":" type_name "begin" statement_list "end"
+	| [ "static" ] ( "private" | "public" | "protected" ) "procedure" identifier "(" [ type_name identifier { "," type_name identifier } ] ")" "begin" statement_list "end"
 statement
 	::=
+	  "var" variable_defination
 	| expression
 	| if_statement
 	| while_statement
@@ -129,13 +136,11 @@ statement
 statement_list
 	::= { statement ";" } [ statement ]
 if_statement
-	::=	
-	  "if" "(" expression ")" "then" statement
-	| "if" "(" expression ")" "then" statement "else" statement
+	::= "if" expression "then" statement [ "else" statement ]
 while_statement
 	::= "while" expression "do" statement
 for_statement
-	::= "for" "(" [ variable_defination | expression ] ";" [ expression ] ";" [ expression ] ")" "do" statement
+	::= "for" "(" [ "var" variable_defination | expression ] ";" [ expression ] ";" [ expression ] ")" "do" statement
 repeat_statement
 	::= "repeat" statement_list "until" expression
 case_statement
