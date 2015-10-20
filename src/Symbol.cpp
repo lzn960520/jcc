@@ -18,3 +18,8 @@ Symbol::Symbol(const std::string &name, Type *type, size_t index) :
 	data.member.type = type;
 	data.member.index = index;
 }
+
+Symbol::Symbol(const std::string &name, Class *cls) :
+		name(name), type(CLASS) {
+	data.cls.cls = cls;
+}

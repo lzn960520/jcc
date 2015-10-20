@@ -3,13 +3,17 @@
 
 #include <list>
 #include <map>
+#include <string>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/DIBuilder.h>
 
 class Function;
 class Symbol;
 class Namespace;
+class Class;
 class Context {
 	llvm::LLVMContext *llvmContext;
 public:
@@ -27,12 +31,21 @@ private:
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
 	llvm::Function *currentFunction;
-	Namespace *currentNS;
 
 	typedef std::map<std::string, Function*> FunctionContext;
 	FunctionContext functions;
 public:
+	llvm::DataLayout * const DL;
+	llvm::DIBuilder * const DI;
+	Namespace *currentNS;
+	Class *currentClass;
+	llvm::Function * const mallocFunc;
+	llvm::DICompileUnit *DIcu;
+	llvm::DIFile *DIfile;
+	llvm::DILexicalBlock *DIblock;
+	llvm::DISubprogram *DIfunction;
 	Context();
+	void initDWARF(const std::string &filename);
 	llvm::Module& getModule() { return *module; }
 	llvm::IRBuilder<>& getBuilder() { return *builder; }
 	llvm::LLVMContext& getContext() { return *llvmContext; }

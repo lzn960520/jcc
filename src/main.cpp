@@ -1,17 +1,11 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
+#include <iostream>
 #include <fstream>
-#include <llvm/Support/raw_os_ostream.h>
-#include <llvm/PassManager.h>
-#include <llvm/IR/IRPrintingPasses.h>
-#include <llvm/LinkAllPasses.h>
-#include "context.h"
+#include <cerrno>
+#include "Context.h"
 #include "exception.h"
-#include <wait.h>
 #include "cmdline.h"
 #include "Module.h"
+#include "Output.h"
 
 // global
 std::string input_filename;
@@ -78,7 +72,7 @@ int main(int argc, char * const argv[]) {
 			}
 			yyin = fopen(opt.arg.c_str(), "r");
 			if (yyin == NULL) {
-				fprintf(stderr, "Can't open input file \"%s\", errno %d\n", optarg, errno);
+				fprintf(stderr, "Can't open input file \"%s\", errno %d\n", opt.arg.c_str(), errno);
 				exit(0);
 			}
 			input_filename = opt.arg.c_str();
@@ -136,6 +130,10 @@ int main(int argc, char * const argv[]) {
 				break;
 
 			Context *context = new Context();
+			if (input_filename.empty())
+				context->initDWARF("stdin");
+			else
+				context->initDWARF(input_filename);
 
 			// generate struct type
 			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
@@ -144,101 +142,37 @@ int main(int argc, char * const argv[]) {
 			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
 				(*it)->gen(*context);
 
-			// optimization
-			llvm::PassManager passManager;
-			/*passManager.add(llvm::createConstantMergePass());
-			passManager.add(llvm::createConstantPropagationPass());
-			passManager.add(llvm::createLoopSimplifyPass());
-			passManager.add(llvm::createCFGSimplificationPass());
-			passManager.add(llvm::createInstructionSimplifierPass());
-			passManager.add(llvm::createDeadInstEliminationPass());
-			passManager.add(llvm::createDeadCodeEliminationPass());
-			passManager.add(llvm::createUnreachableBlockEliminationPass());
-			passManager.add(llvm::createGlobalDCEPass());*/
+			context->DI->finalize();
 
 			if (opt_llvm_only) {
-				if (output_filename.empty() && input_filename.empty()) {
-					llvm::raw_fd_ostream ofs(1, false);
-					passManager.add(llvm::createPrintModulePass(ofs));
-					passManager.run(context->getModule());
-					ofs.close();
-				} else if (output_filename.empty()) {
-					std::string oname = input_filename.substr(0, input_filename.rfind('.')) + ".llvm";
+				if (output_filename.empty() && input_filename.empty())
+					outputLLVM(context->getModule(), std::cout);
+				else if (output_filename.empty()) {
+					std::string oname = input_filename.substr(0, input_filename.rfind('.')) + ".ll";
 					std::ofstream sys_ofs(oname);
-					llvm::raw_os_ostream ofs(sys_ofs);
-					passManager.add(llvm::createPrintModulePass(ofs));
-					passManager.run(context->getModule());
-					ofs.flush();
+					outputLLVM(context->getModule(), sys_ofs);
 					sys_ofs.close();
 				} else {
 					std::ofstream sys_ofs(output_filename);
-					llvm::raw_os_ostream ofs(sys_ofs);
-					passManager.add(llvm::createPrintModulePass(ofs));
-					passManager.run(context->getModule());
-					ofs.flush();
+					outputLLVM(context->getModule(), sys_ofs);
 					sys_ofs.close();
 				}
-				break;
 			}
 
-			// write out
-			int pipe_me_llvm_as[2], pipe_llvm_as_llc[2];
-			pipe(pipe_me_llvm_as);
-			pipe(pipe_llvm_as_llc);
-			int pid;
-			if ((pid = fork()) < 0)
-				throw CompileException("Can't fork");
-			else if (pid == 0) {
-				dup2(pipe_me_llvm_as[0], 0);
-				dup2(pipe_llvm_as_llc[1], 1);
-				close(pipe_me_llvm_as[0]);
-				close(pipe_me_llvm_as[1]);
-				close(pipe_llvm_as_llc[0]);
-				close(pipe_llvm_as_llc[1]);
-				execlp("llvm-as", "llvm-as", "-", NULL);
+			if (opt_compile_only) {
+				if (output_filename.empty() && input_filename.empty())
+					outputAssemble(context->getModule(), std::cout);
+				else if (output_filename.empty()) {
+					std::string oname = input_filename.substr(0, input_filename.rfind('.')) + ".s";
+					std::ofstream sys_ofs(oname);
+					outputAssemble(context->getModule(), sys_ofs);
+					sys_ofs.close();
+				} else {
+					std::ofstream sys_ofs(output_filename);
+					outputAssemble(context->getModule(), sys_ofs);
+					sys_ofs.close();
+				}
 			}
-			if ((pid = fork()) < 0)
-				throw CompileException("Can't fork");
-			else if (pid == 0) {
-				dup2(pipe_llvm_as_llc[0], 0);
-				close(pipe_me_llvm_as[0]);
-				close(pipe_me_llvm_as[1]);
-				close(pipe_llvm_as_llc[0]);
-				close(pipe_llvm_as_llc[1]);
-				if (opt_compile_only)
-					execlp("llc", "llc", "-filetype=asm" , "-o", output_filename.c_str(), "-", NULL);
-				else if (opt_as_only)
-					execlp("llc", "llc", "-filetype=obj", "-o", output_filename.c_str(), "-", NULL);
-				else
-					execlp("llc", "llc", "-filetype=obj", "-o", "tmp.o", "-", NULL);
-			}
-			close(pipe_me_llvm_as[0]);
-			close(pipe_llvm_as_llc[0]);
-			close(pipe_llvm_as_llc[1]);
-			{
-				llvm::raw_fd_ostream ofs(pipe_me_llvm_as[1], false);
-				passManager.add(llvm::createPrintModulePass(ofs));
-				passManager.run(context->getModule());
-				ofs.flush();
-				ofs.close();
-			}
-
-			// wait for llc terminate
-			waitpid(pid, NULL, 0);
-
-			if (opt_as_only || opt_compile_only)
-				break;
-
-			// exec gcc to build executable
-			std::string cmdline = "gcc";
-			if (!output_filename.empty()) {
-				cmdline += " -o ";
-				cmdline += output_filename;
-			}
-			cmdline += " tmp.o";
-			system(cmdline.c_str());
-
-			unlink("tmp.o");
 		} catch (CompileException &e) {
 			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
 		}

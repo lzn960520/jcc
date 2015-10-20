@@ -6,6 +6,9 @@
 #include "ArrayDefinator.h"
 #include "Expression.h"
 #include "Class.h"
+#include "Identifier.h"
+#include "Symbol.h"
+#include "Namespace.h"
 
 const char *Type::BaseTypeNames[] = {
 	"byte",
@@ -26,14 +29,14 @@ Type Type::Int32(Type::INT);
 Type Type::UInt32(Type::INT, true);
 
 Type::Type(BaseType baseType, bool isUnsigned) :
-	baseType(baseType), isUnsigned(isUnsigned), internal(NULL), cls(NULL) {
+			baseType(baseType), isUnsigned(isUnsigned), internal(NULL), cls(NULL), identifier(NULL) {
 	assert(baseType != ARRAY);
 	if ((baseType == CHAR || baseType == FLOAT || baseType == DOUBLE) && isUnsigned)
 		throw InvalidType("Can't set char, float or double to unsigned");
 }
 
 Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
-	baseType(array), isUnsigned(false), internal(baseType), cls(NULL) {
+			baseType(array), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
 	assert(array == ARRAY);
 	for (std::vector<std::pair<Expression *, Expression *> >::iterator it = definator->list.begin(); it != definator->list.end(); it++) {
 		if (it->first && !it->first->isConstant())
@@ -50,7 +53,12 @@ Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
 	}
 }
 
-Type::Type(Class *cls) : baseType(OBJECT), cls(cls), internal(NULL), isUnsigned(false) {
+Type::Type(Class *cls) :
+			baseType(OBJECT), cls(cls), internal(NULL), isUnsigned(false), identifier(NULL) {
+}
+
+Type::Type(Identifier *identifier) :
+			baseType(OBJECT), cls(NULL), internal(NULL), isUnsigned(false), identifier(identifier) {
 }
 
 Type::~Type() {
@@ -112,6 +120,14 @@ llvm::Type* Type::getType(Context &context) {
 		}
 		break;
 	case OBJECT:
+		if (!cls) {
+			Symbol *sym = context.findSymbol(context.currentNS->getPrefix() + identifier->getName());
+			if (!sym)
+				throw SymbolNotFound("No such class: " + context.currentNS->getPrefix() + identifier->getName());
+			if (sym->type != Symbol::CLASS)
+				throw InvalidType(context.currentNS->getPrefix() + identifier->getName() + " is not a class");
+			cls = sym->data.cls.cls;
+		}
 		return cls->getLLVMType();
 	}
 }
@@ -124,6 +140,8 @@ size_t Type::getSize() {
 		return 2;
 	case INT:
 		return 4;
+	case OBJECT:
+		throw NotImplemented("caculate size of object");
 	}
 }
 

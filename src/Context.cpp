@@ -1,12 +1,12 @@
 #include <llvm/IR/Module.h>
 #include <iostream>
+#include <unistd.h>
 
 #include "Context.h"
 #include "exception.h"
 #include "Function.h"
 #include "Symbol.h"
 #include "Type.h"
-#include "ArgumentList.h"
 #include "Identifier.h"
 
 void Context::SymbolContext::add(Symbol *symbol) {
@@ -25,12 +25,50 @@ Context::SymbolContext::~SymbolContext() {
 		delete it->second;
 }
 
-Context::Context() {
+Context::Context() : mallocFunc(NULL), DL(NULL), DI(NULL) {
 	llvmContext = &llvm::getGlobalContext();
 	module = new llvm::Module("top", getContext());
 	builder = new llvm::IRBuilder<>(getContext());
+	*const_cast<llvm::DataLayout**>(&DL) = new llvm::DataLayout(module);
 
 	currentFunction = NULL;
+
+	contextStack.push_back(new SymbolContext());
+
+	{
+		llvm::Type *tmp[] = { llvm::Type::getInt64Ty(*llvmContext) };
+		*const_cast<llvm::Function **>(&mallocFunc) = llvm::Function::Create(
+				llvm::FunctionType::get(
+						llvm::Type::getInt8PtrTy(*llvmContext),
+						llvm::ArrayRef<llvm::Type*>(tmp, 1),
+						false),
+				llvm::Function::ExternalLinkage,
+				"malloc",
+				module
+		);
+	}
+}
+
+void Context::initDWARF(const std::string &filename) {
+	getModule().addModuleFlag(llvm::Module::Warning, "Dwarf Version", llvm::ConstantInt::get(getBuilder().getInt32Ty(), 4, false));
+	getModule().addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::ConstantInt::get(getBuilder().getInt32Ty(), 3, false));
+	*const_cast<llvm::DIBuilder**>(&DI) = new llvm::DIBuilder(*module);
+
+	// create debug info
+	{
+		char tmp[256];
+		getcwd(tmp, sizeof(tmp));
+		DIcu = DI->createCompileUnit(
+				2, // language
+				llvm::StringRef(filename), // filename
+				llvm::StringRef(tmp), // path
+				llvm::StringRef("jcc 0.0.1"), // producer
+				false, // optimized?
+				llvm::StringRef(""), // flags
+				1); // runtime version
+		DIfile = DI->createFile(llvm::StringRef(filename), llvm::StringRef(tmp));
+		DI->createModule(DIfile, "top", "", "", "");
+	}
 }
 
 llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType) {

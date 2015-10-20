@@ -26,8 +26,8 @@ int CmdLine::next(Option &opt) {
 		i++;
 		return -1;
 	}
-	char *p = strchr(argv[i], '=');
-	char *arg = p ? p + 1 : NULL;
+	const char *p = strchr(argv[i], '=');
+	const char *arg = p ? p + 1 : NULL;
 	std::string optstr(argv[i], p ? p - argv[i] : strlen(argv[i]));
 	it = opts.find(optstr);
 	if (it == opts.end()) {

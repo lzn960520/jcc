@@ -34,6 +34,8 @@ void Module::genStruct(Context &context) {
 }
 
 void Module::gen(Context &context) {
+	context.currentNS = ns;
 	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++)
 		(*it)->gen(context);
+	context.currentNS = NULL;
 }

@@ -1,6 +1,4 @@
 #include <llvm/IR/Type.h>
-#include <llvm/IR/GlobalVariable.h>
-#include <llvm/IR/DIBuilder.h>
 
 #include "Class.h"
 #include "Identifier.h"
@@ -35,6 +33,7 @@ Json::Value Class::json() {
 
 void Class::genStruct(Context &context) {
 	llvmType = llvm::StructType::create(context.getContext(), ns + identifier->getName());
+	context.addSymbol(new Symbol(ns + identifier->getName(), this));
 	std::vector<llvm::Type*> members;
 	int i = 1;
 	members.push_back(llvm::PointerType::get(llvm::Type::getInt8PtrTy(context.getContext()), 0));
@@ -58,6 +57,7 @@ void Class::genStruct(Context &context) {
 }
 
 void Class::gen(Context &context) {
+	context.currentClass = this;
 	context.pushContext();
 	int i = 1;
 	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++) {
@@ -74,6 +74,7 @@ void Class::gen(Context &context) {
 		}
 	}
 	context.popContext();
+	context.currentClass = NULL;
 }
 
 void Class::setNS(const std::string &ns) {

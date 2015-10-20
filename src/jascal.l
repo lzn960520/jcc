@@ -228,6 +228,14 @@
 	if (lex_output)
 		fprintf(lex_output, "<INTERFACE>");
 	return T_INTERFACE; }
+"new" {
+	if (lex_output)
+		fprintf(lex_output, "<NEW>");
+	return T_NEW; }
+"var" {
+	if (lex_output)
+		fprintf(lex_output, "<VAR>");
+	return T_VAR; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);

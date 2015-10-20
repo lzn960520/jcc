@@ -33,14 +33,10 @@ llvm::Value* Identifier::load(Context &context) {
 	case Symbol::LOCAL_VAR:
 		return context.getBuilder().CreateLoad(ans->data.identifier.value);
 	case Symbol::MEMBER_VAR: {
-		llvm::Value *index[2];
-		index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
-		index[1] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), ans->data.member.index, false);
-		llvm::Value *tmp = llvm::GetElementPtrInst::Create(
+		llvm::Value *tmp = context.getBuilder().CreateStructGEP(
+				nullptr,
 				context.findSymbol("this")->data.identifier.value,
-				llvm::ArrayRef<llvm::Value*>(index, 2),
-				"",
-				context.currentBlock()
+				ans->data.member.index
 		);
 		if (tmp->getType()->getPointerElementType()->isArrayTy())
 			return tmp;
@@ -62,14 +58,12 @@ void Identifier::store(Context &context, llvm::Value *value) {
 		context.getBuilder().CreateStore(value, ans->data.identifier.value);
 		break;
 	case Symbol::MEMBER_VAR: {
-		llvm::Value *index = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), ans->data.member.index, false);
 		context.getBuilder().CreateStore(
 				value,
-				llvm::GetElementPtrInst::Create(
+				context.getBuilder().CreateStructGEP(
+						nullptr,
 						context.findSymbol("this")->data.identifier.value,
-						llvm::ArrayRef<llvm::Value*>(&index, 1),
-						"",
-						context.currentBlock()
+						ans->data.member.index
 				)
 		);
 		break;

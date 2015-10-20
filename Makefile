@@ -1,6 +1,8 @@
 .PHONY: all clean test vars deps flex bison
 
+CXX := clang++
 LEX := flex
+LLVM_COMPONENTS := all
 
 CPPFLAGS ?=
 CPPFLAGS += -Iinclude -frtti
@@ -21,22 +23,25 @@ endif
 
 # llvm
 ifeq ($(OS_NAME), cygwin)
-CPPFLAGS +=
 LIBS += -lLLVM-3.5
 else
-CPPFLAGS += -I/usr/include/llvm-3.6 -I/usr/include/llvm-c-3.6
-LDFLAGS += -L/usr/lib/llvm-3.6/lib
-LIBS += -lLLVM-3.6
+CPPFLAGS += `llvm-config-3.7 --cppflags`
+LDFLAGS += `llvm-config-3.7 --ldflags`
+#LIBS += `llvm-config-3.7 --libs $(LLVM_COMPONENTS)`
+LIBS += -lLLVM-3.7
+LIBS += `llvm-config-3.7 --system-libs $(LLVM_COMPONENTS)`
 endif
+
+CPPFLAGS += -frtti -fexceptions
 
 # jascal
 SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
-	ArgumentList.cpp Visibility.cpp Context.cpp FunctionCall.cpp \
+	Visibility.cpp Context.cpp FunctionCall.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
-	ArrayAccessor.cpp Symbol.cpp \
+	ArrayAccessor.cpp Symbol.cpp Output.cpp New.cpp DebugInfo.cpp \
 	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
@@ -50,25 +55,26 @@ deps/%.d: src/%.cpp | flex bison
 	$(RM) $@.$$$$
 
 objs/%.o:
-	$(CXX) $(CPPFLAGS) -c -o $@ src/$*.cpp
-	
-include $(DEPS)
-
-vars:
-	@echo $(SOURCES)
-	@echo $(DEPS)
-	@echo $(OBJS)
-	
-deps: $(DEPS)
-
-$(PROG): $(OBJS)
-	g++ $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
+	@echo "CXX src/$*.cpp -> $@"
+	@$(CXX) $(CPPFLAGS) -c -o $@ src/$*.cpp
 	
 include/jascal.tab.hpp: src/jascal.y
 	$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
 	mv src/jascal.tab.hpp include/
 
 src/jascal.tab.cpp: include/jascal.tab.hpp
+
+include $(DEPS)
+
+vars:
+	@echo "$$(SOURCES)" $(SOURCES)
+	@echo $(DEPS)
+	@echo $(OBJS)
+	
+deps: $(DEPS)
+
+$(PROG): $(OBJS)
+	$(CXX) $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 bison: include/jascal.tab.hpp src/jascal.tab.cpp 
 
@@ -79,8 +85,8 @@ flex: src/lex.yy.cpp
 
 clean:
 	$(RM) -rf src/jascal.tab.cpp include/jascal.tab.hpp src/lex.yy.cpp \
-		 $(PROG) $(OBJS) $(DEPS) lex.txt bison-report.txt test.llvm test.llvm.s \
+		 $(PROG) $(OBJS) $(DEPS) lex.txt bison-report.txt test.ll test.ll.s \
 		 test.o test.exe test ast/ast.json
 
 test: jcc test.jas
-	./$(PROG) --llvm --dump-lex --dump-ast=ast/ast.json -o test.llvm test.jas
+	./$(PROG) --llvm --dump-lex --dump-ast=ast/ast.json -o test.ll test.jas

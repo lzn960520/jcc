@@ -42,6 +42,7 @@ llvm::Value* FunctionCall::load(Context &context) {
 	if (function == NULL)
 		throw FunctionNotFound(identifier->getName());
 	std::vector<llvm::Value*> arg_code;
+	arg_code.push_back(tmpTarget->load(context));
 	std::list<Expression*> &arg_list = this->arg_list->list;
 	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_code.push_back((*it)->load(context));

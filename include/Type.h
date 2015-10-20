@@ -7,6 +7,7 @@
 #include "ASTNode.h"
 
 class ArrayDefinator;
+class Identifier;
 class Class;
 struct Type : public ASTNode {
 	enum BaseType {
@@ -30,9 +31,11 @@ struct Type : public ASTNode {
 	std::vector<std::pair<int, int> > arrayDim;
 	Type *internal;
 	Class *cls;
+	Identifier *identifier;
 	Type(BaseType baseType, bool isUnsigned = false);
 	Type(BaseType array, Type *baseType, ArrayDefinator *definator);
 	Type(Class *cls);
+	Type(Identifier *identifier);
 	~Type();
 	Json::Value json() override;
 	llvm::Type *getType(Context &context);

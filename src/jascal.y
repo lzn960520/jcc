@@ -9,7 +9,6 @@
 	class Statements;
 	class Type;
 	class CallArgumentList;
-	class ArgumentList;
 	class Identifier;
 	class Function;
 	class VariableDefination;
@@ -27,7 +26,6 @@
 	#include "Type.h"
 	#include "CallArgumentList.h"
 	#include "Visibility.h"
-	#include "ArgumentList.h"
 	#include "VariableDefination.h"
 	#include "FunctionCall.h"
 	#include "Function.h"
@@ -45,6 +43,8 @@
 	#include "Namespace.h"
 	#include "Module.h"
 	#include "Class.h"
+	#include "New.h"
+	#include "Identifier.h"
 }
 
 %initial-action {
@@ -58,7 +58,6 @@
 	Statements *statements;
 	Type *type;
 	CallArgumentList *call_arg_list;
-	ArgumentList *arg_list;
 	Identifier *identifier;
 	Function *function;
 	Visibility visibility;
@@ -71,6 +70,7 @@
 	std::list<std::pair<Identifier*,Expression*> > *var_entry_list;
 	Class *cls;
 	Interface *interface;
+	std::list<std::pair<Type*, Identifier*> > *arg_list;
 }
 
 %code {
@@ -90,10 +90,13 @@
 %locations
 
 %type <arr_def> array_definator
+%type <arr_def> array_definator_list
 %type <arr_acc> array_accessor
+%type <arr_acc> array_accessor_list
 %type <var_entry_list> variable_defination_list
 %type <var_def> variable_defination
 %type <function> function_defination
+%type <function> function_declaration
 %type <ast> while_statement if_statement repeat_statement statement
 %type <statements> statement_list_head statement_list
 %type <expression> expression literal function_call
@@ -107,6 +110,7 @@
 %type <interface> interface_defination
 %type <list> inclass_definations
 %type <list> ininterface_definations
+%type <expression> object_create
 
 %token <expression> T_LITERAL_INT
 %token <expression> T_LITERAL_STRING
@@ -143,6 +147,7 @@
 %token T_CLASS
 %token T_NS
 %token T_INTERFACE
+%token T_VAR
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -158,6 +163,7 @@
 %right T_BIT_XOR_ASSIGN
 %left T_SELF_INC T_SELF_DEC
 %left T_LEFT_SQUARE T_RIGHT_SQUARE
+%right T_NEW
 %left T_DOT
 %left T_LEFT_PARENTHESIS T_RIGHT_PARENTHESIS
 
@@ -214,8 +220,12 @@ interface_defination:
 	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END
 	
 ininterface_definations:
-	function_declaration T_SEMICOLON
-	| ininterface_definations function_declaration T_SEMICOLON
+	function_declaration T_SEMICOLON {
+		$$ = new std::list<ASTNode*>();
+		$$->push_back((ASTNode *) $1); }
+	| ininterface_definations function_declaration T_SEMICOLON {
+		$$ = $1;
+		$1->push_back((ASTNode *) $2); }
 	
 function_declaration:
 	T_VISIBILITY T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name
@@ -257,37 +267,51 @@ expression:
 	| T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS {
 		$$ = $2; }
 	| literal
-	| T_IDENTIFIER
+	| T_IDENTIFIER {
+		$$ = $1; }
 	| function_call
-	| expression T_LEFT_SQUARE array_accessor T_RIGHT_SQUARE {
-		$$ = new ArrayAccess((Expression *) $1, (ArrayAccessor *) $3); }
+	| expression array_accessor {
+		$$ = new ArrayAccess((Expression *) $1, (ArrayAccessor *) $2); }
+	| object_create
+	
+object_create:
+	T_NEW type_name {
+		$$ = new New($2); }
 	
 array_accessor:
+	T_LEFT_SQUARE array_accessor_list T_RIGHT_SQUARE {
+		$$ = $2; }
+		
+array_accessor_list:
 	{
 		$$ = new ArrayAccessor(NULL); }
 	| expression {
 		$$ = new ArrayAccessor($1); }
-	| array_accessor T_COMMA {
+	| array_accessor_list T_COMMA {
 		$$ = $1;
-		((ArrayAccessor *) $1)->push_back(NULL); }
-	| array_accessor T_COMMA expression {
+		$1->push_back(NULL); }
+	| array_accessor_list T_COMMA expression {
 		$$ = $1;
-		((ArrayAccessor *) $1)->push_back($3); }
+		$1->push_back($3); }
 		
 array_definator:
+	T_LEFT_SQUARE array_definator_list T_RIGHT_SQUARE {
+		$$ = $2; }
+		
+array_definator_list:
 	{
 		$$ = new ArrayDefinator(NULL, NULL); }
 	| expression T_DOTDOT expression {
 		$$ = new ArrayDefinator($1, $3); }
 	| expression T_DOTDOT {
 		$$ = new ArrayDefinator($1, NULL); }
-	| array_definator T_COMMA {
+	| array_definator_list T_COMMA {
 		$$ = $1;
 		((ArrayDefinator *) $1)->push_back(NULL, NULL); }
-	| array_definator T_COMMA expression T_DOTDOT expression {
+	| array_definator_list T_COMMA expression T_DOTDOT expression {
 		$$ = $1;
 		((ArrayDefinator *) $1)->push_back($3, $5); }
-	| array_definator T_COMMA expression T_DOTDOT {
+	| array_definator_list T_COMMA expression T_DOTDOT {
 		$$ = $1;
 		((ArrayDefinator *) $1)->push_back($3, NULL); }
 
@@ -299,8 +323,8 @@ statement:
 	expression {
 		$$ = $1; }
 	| while_statement
-	| variable_defination {
-		$$ = $1; }
+	| T_VAR variable_defination {
+		$$ = $2; }
 	| T_RETURN expression {
 		$$ = new Return($2); }
 	| T_RETURN {
@@ -324,14 +348,14 @@ statement_list:
 		$$ = $1; }
 		
 if_statement:
-	T_IF T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_THEN statement {
-		$$ = new IfStatement($3, $6); }
-	| T_IF T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_THEN statement T_ELSE statement {
-		$$ = new IfStatement($3, $6, $8); }
+	T_IF expression T_THEN statement {
+		$$ = new IfStatement($2, $4); }
+	| T_IF expression T_THEN statement T_ELSE statement {
+		$$ = new IfStatement($2, $4, $6); }
 
 while_statement:
-	T_WHILE T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS T_DO statement {
-		$$ = new WhileStatement($3, $6); }
+	T_WHILE expression T_DO statement {
+		$$ = new WhileStatement($2, $4); }
 
 repeat_statement:
 	T_REPEAT statement_list T_UNTIL expression {
@@ -357,8 +381,10 @@ variable_defination_list:
 
 type_name:
 	base_type
-	| type_name T_LEFT_SQUARE array_definator T_RIGHT_SQUARE {
-		$$ = new Type(Type::ARRAY, $1, $3); }
+	| T_IDENTIFIER {
+		$$ = new Type($1); }
+	| type_name array_definator {
+		$$ = new Type(Type::ARRAY, $1, $2); }
 
 base_type:
 	T_UNSIGNED T_BYTE { 
@@ -389,12 +415,13 @@ function_defination:
 		$$ = new Function($1, NULL, $3, $5, $8); }
 
 arg_list:
-	{ $$ = new ArgumentList(); }
+	{ $$ = new std::list<std::pair<Type*, Identifier*> >(); }
 	| type_name T_IDENTIFIER {
-		$$ = new ArgumentList((Type*) $1, (Identifier*) $2); }
+		$$ = new std::list<std::pair<Type*, Identifier*> >();
+		$$->push_back(std::pair<Type*, Identifier*>($1, $2)); }
 	| arg_list T_COMMA type_name T_IDENTIFIER {
 		$$ = $1;
-		((ArgumentList *) $$)->push_back((Type*) $3, (Identifier*) $4); }
+		$$->push_back(std::pair<Type*, Identifier*>($3, $4)); }
 		
 function_call:
 	T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {

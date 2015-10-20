@@ -6,12 +6,14 @@
 class Function;
 class Identifier;
 class Type;
+class Class;
 struct Symbol {
 	enum SymbolType {
 		LOCAL_VAR,
 		MEMBER_VAR,
 		ARGUMENT,
-		FUNCTION
+		FUNCTION,
+		CLASS
 	} type;
 	std::string name;
 	union {
@@ -28,11 +30,15 @@ struct Symbol {
 			Type *type;
 			size_t index;
 		} member;
+		struct {
+			Class *cls;
+		} cls;
 	} data;
 public:
 	Symbol(const std::string &name, Function *function, size_t index);
 	Symbol(const std::string &name, SymbolType st, Type *type, llvm::Value *value);
 	Symbol(const std::string &name, Type *type, size_t index);
+	Symbol(const std::string &name, Class *cls);
 };
 
 #endif

@@ -49,6 +49,14 @@ void VariableDefination::gen(Context &context) {
 				throw NotImplemented("initial array");
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
 		}
+	} else if (this->type->isObject()) {
+		llvm::Type *type = llvm::PointerType::get(this->type->getType(context), 0);
+		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
+			llvm::AllocaInst *tmp = context.getBuilder().CreateAlloca(type, NULL, it->first->getName());
+			if (it->second)
+				context.getBuilder().CreateStore(it->second->load(context), tmp, false);
+			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
+		}
 	} else {
 		llvm::Type *type = this->type->getType(context);
 		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
