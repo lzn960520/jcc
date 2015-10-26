@@ -11,7 +11,7 @@ public:
 	~New();
 	Json::Value json();
 	llvm::Value *load(Context &context) override;
-	void store(Context &context, llvm::Value *value) override;
+	llvm::Instruction* store(Context &context, llvm::Value *value) override;
 	Type* getType(Context &context) override;
 	bool isConstant() override { return false; }
 	Constant loadConstant() override;

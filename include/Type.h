@@ -2,6 +2,7 @@
 #define _TYPE_H_
 
 #include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
 #include <vector>
 
 #include "ASTNode.h"
@@ -9,6 +10,7 @@
 class ArrayDefinator;
 class Identifier;
 class Class;
+class Context;
 struct Type : public ASTNode {
 	enum BaseType {
 		BYTE,
@@ -51,6 +53,7 @@ struct Type : public ASTNode {
 	Class* getClass() { return cls; }
 	static Type* higherType(Type *a, Type *b);
 	const char *getName() { return BaseTypeNames[baseType]; }
+	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
 };
 
 #endif

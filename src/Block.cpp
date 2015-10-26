@@ -18,6 +18,8 @@ Json::Value Block::json() {
 
 void Block::gen(Context &context) {
 	context.pushContext();
+	context.pushDIScope(loc);
 	body->gen(context);
+	context.popDIScope();
 	context.popContext();
 }

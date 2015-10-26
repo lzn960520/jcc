@@ -126,7 +126,7 @@ llvm::Value* LiteralString::load(Context &context) {
 	return context.getBuilder().CreatePointerCast(context.getBuilder().CreateGlobalString(text), llvm::Type::getInt8PtrTy(context.getContext()));
 }
 
-void LiteralString::store(Context &context, llvm::Value *value) {
+llvm::Instruction* LiteralString::store(Context &context, llvm::Value *value) {
 	throw NotAssignable("literal string");
 }
 

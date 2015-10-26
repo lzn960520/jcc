@@ -7,6 +7,7 @@
 #include "Symbol.h"
 #include "Type.h"
 #include "Class.h"
+#include "DebugInfo.h"
 
 FunctionCall::FunctionCall(Expression *target, Identifier *identifier, CallArgumentList *arg_list) :
 	target(target), identifier(identifier), arg_list(arg_list) {
@@ -46,13 +47,16 @@ llvm::Value* FunctionCall::load(Context &context) {
 	std::list<Expression*> &arg_list = this->arg_list->list;
 	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_code.push_back((*it)->load(context));
-	llvm::Value *ans = context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code));
+	llvm::Value *ans = addDebugLoc(
+			context,
+			context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code)),
+			loc);
 	if (target == NULL)
 		delete tmpTarget;
 	return ans;
 }
 
-void FunctionCall::store(Context &context, llvm::Value *value) {
+llvm::Instruction* FunctionCall::store(Context &context, llvm::Value *value) {
 	throw NotAssignable("function call");
 }
 

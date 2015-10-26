@@ -5,6 +5,7 @@
 #include "Expression.h"
 #include "Symbol.h"
 #include "exception.h"
+#include "DebugInfo.h"
 
 VariableDefination::VariableDefination(Type *type, std::list<std::pair<Identifier*, Expression*> > *list) :
 	type(type), list(*list) {
@@ -41,10 +42,14 @@ void VariableDefination::gen(Context &context) {
 			totalSize = totalSize * (it->second - it->first + 1);
 		}
 		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
-			llvm::AllocaInst *tmp = context.getBuilder().CreateAlloca(
+			llvm::AllocaInst *tmp = addDebugLoc(
+					context,
+					context.getBuilder().CreateAlloca(
 							this->type->internal->getType(context),
 							llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), totalSize, false),
-							it->first->getName());
+							it->first->getName()),
+					it->first->loc);
+			insertDeclareDebugInfo(context, this->type, it->first->getName(), tmp, it->first->loc, false);
 			if (it->second)
 				throw NotImplemented("initial array");
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
@@ -52,17 +57,19 @@ void VariableDefination::gen(Context &context) {
 	} else if (this->type->isObject()) {
 		llvm::Type *type = llvm::PointerType::get(this->type->getType(context), 0);
 		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
-			llvm::AllocaInst *tmp = context.getBuilder().CreateAlloca(type, NULL, it->first->getName());
+			llvm::AllocaInst *tmp = addDebugLoc(context, context.getBuilder().CreateAlloca(type, NULL, it->first->getName()), it->first->loc);
+			insertDeclareDebugInfo(context, this->type, it->first->getName(), tmp, it->first->loc, false);
 			if (it->second)
-				context.getBuilder().CreateStore(it->second->load(context), tmp, false);
+				addDebugLoc(context, context.getBuilder().CreateStore(it->second->load(context), tmp, false), it->first->loc);
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
 		}
 	} else {
 		llvm::Type *type = this->type->getType(context);
 		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
-			llvm::AllocaInst *tmp = context.getBuilder().CreateAlloca(type, NULL, it->first->getName());
+			llvm::AllocaInst *tmp = addDebugLoc(context, context.getBuilder().CreateAlloca(type, NULL, it->first->getName()), it->first->loc);
+			insertDeclareDebugInfo(context, this->type, it->first->getName(), tmp, it->first->loc, false);
 			if (it->second)
-				context.getBuilder().CreateStore(it->second->load(context), tmp, false);
+				addDebugLoc(context, context.getBuilder().CreateStore(it->second->load(context), tmp, false), it->first->loc);
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
 		}
 	}

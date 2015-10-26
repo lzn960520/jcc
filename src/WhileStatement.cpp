@@ -3,6 +3,8 @@
 #include "util.h"
 #include "exception.h"
 #include "Expression.h"
+#include "Type.h"
+#include "DebugInfo.h"
 
 WhileStatement::WhileStatement(Expression *test, ASTNode *body) :
 	test(test), body(body) {
@@ -30,20 +32,20 @@ void WhileStatement::gen(Context &context) {
 	llvm::BasicBlock *afterBlock = context.newBlock("while_" + itos(loc.first_line) + "@after");
 
 	context.setBlock(oriBlock);
-	context.getBuilder().CreateBr(loopBlock);
+	addDebugLoc(context, context.getBuilder().CreateBr(loopBlock), loc);
 
 	context.setBlock(loopBlock);
 	llvm::Value *cond = test->load(context);
-	if (!cond->getType()->isIntegerTy(1))
-		if (cond->getType()->isIntegerTy())
-			cond = context.getBuilder().CreateCast(llvm::Instruction::Trunc, cond, context.getBuilder().getInt1Ty());
-		else
-			throw CompileException("The expression can't be converted to boolean");
-	context.getBuilder().CreateCondBr(cond, bodyBlock, afterBlock);
+	if (!test->getType(context)->isBool())
+		throw InvalidType("The test expression of while statement must be boolean");
+	addDebugLoc(context, context.getBuilder().CreateCondBr(cond, bodyBlock, afterBlock), loc);
 
 	context.setBlock(bodyBlock);
 	body->gen(context);
-	context.getBuilder().CreateBr(loopBlock);
+	YYLTYPE tmploc;
+	tmploc.first_line = loc.first_line;
+	tmploc.first_column = loc.first_column;
+	addDebugLoc(context, context.getBuilder().CreateBr(loopBlock), tmploc);
 
 	context.setBlock(afterBlock);
 }

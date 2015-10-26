@@ -10,6 +10,8 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/DIBuilder.h>
 
+#include "yyvaltypes.h"
+
 class Function;
 class Symbol;
 class Namespace;
@@ -27,6 +29,8 @@ public:
 private:
 	typedef std::list<SymbolContext*> SymbolContextStack;
 	SymbolContextStack contextStack;
+	typedef std::list<llvm::DIScope*> DIScopeStack;
+	DIScopeStack diScopeStack;
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
@@ -42,7 +46,6 @@ public:
 	llvm::Function * const mallocFunc;
 	llvm::DICompileUnit *DIcu;
 	llvm::DIFile *DIfile;
-	llvm::DILexicalBlock *DIblock;
 	llvm::DISubprogram *DIfunction;
 	Context();
 	void initDWARF(const std::string &filename);
@@ -62,6 +65,10 @@ public:
 	std::string getFunctionName();
 	void setBlock(llvm::BasicBlock *targetBlock);
 	llvm::BasicBlock* currentBlock();
+	llvm::DIScope* currentDIScope();
+	void pushDIScope(YYLTYPE &loc);
+	void pushDIScope(llvm::DIScope *scope);
+	void popDIScope();
 };
 
 #endif

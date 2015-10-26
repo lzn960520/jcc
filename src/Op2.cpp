@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "Type.h"
 #include "Expression.h"
+#include "DebugInfo.h"
 
 const char* Op2::OpNames[] = {
 	"+",
@@ -46,129 +47,88 @@ Op2::~Op2() {
 }
 
 llvm::Value* Op2::load(Context &context) {
-	llvm::Value *lhs = left->load(context);
-	llvm::Value *rhs = right->load(context);
+	if (op == ASSIGN) {
+		llvm::Value *tmp = right->load(context);
+		addDebugLoc(
+				context,
+				left->store(context, tmp),
+				loc);
+		return tmp;
+	}
 	Type *ansType = Type::higherType(left->getType(context), right->getType(context));
+	llvm::Value *lhs = Type::cast(context, left->getType(context), left->load(context), ansType);
+	llvm::Value *rhs = Type::cast(context, right->getType(context), right->load(context), ansType);
 	switch (op) {
 	case ADD:
-		return context.getBuilder().CreateAdd(lhs, rhs);
+		return addDebugLoc(context, context.getBuilder().CreateAdd(lhs, rhs), loc);
 	case SUB:
-		return context.getBuilder().CreateSub(lhs, rhs);
+		return addDebugLoc(context, context.getBuilder().CreateSub(lhs, rhs), loc);
 	case MUL:
-		return context.getBuilder().CreateMul(lhs, rhs);
+		return addDebugLoc(context, context.getBuilder().CreateMul(lhs, rhs), loc);
 	case DIV:
-		return context.getBuilder().CreateSDiv(lhs, rhs);
+		return addDebugLoc(context, context.getBuilder().CreateSDiv(lhs, rhs), loc);
 	case LT:
-		if (left->getType(context)->isFloat() || right->getType(context)->isFloat()) {
-			if (!left->getType(context)->isFloat())
-				lhs = context.getBuilder().CreateFPCast(lhs, context.getBuilder().getFloatTy());
-			if (!right->getType(context)->isFloat())
-				rhs = context.getBuilder().CreateFPCast(rhs, context.getBuilder().getFloatTy());
-			return context.getBuilder().CreateFCmpOLT(lhs, rhs);
-		} else if (left->getType(context)->isUnsigned || right->getType(context)->isUnsigned) {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), false);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), false);
-			return context.getBuilder().CreateICmpULT(lhs, rhs);
+		if (ansType->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFCmpOLT(lhs, rhs), loc);
+		else if (ansType->isInt()) {
+			if (ansType->isUnsigned)
+				return addDebugLoc(context, context.getBuilder().CreateICmpULT(lhs, rhs), loc);
+			else
+				return addDebugLoc(context, context.getBuilder().CreateICmpSLT(lhs, rhs), loc);
 		} else if (ansType->isString())
-			throw NotImplemented("string operation");
-		else {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), true);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), true);
-			return context.getBuilder().CreateICmpSLT(lhs, rhs);
-		}
+			throw NotImplemented("comparison of string");
+		break;
 	case LEQ:
-		if (left->getType(context)->isFloat() || right->getType(context)->isFloat()) {
-			if (!left->getType(context)->isFloat())
-				lhs = context.getBuilder().CreateFPCast(lhs, context.getBuilder().getFloatTy());
-			if (!right->getType(context)->isFloat())
-				rhs = context.getBuilder().CreateFPCast(rhs, context.getBuilder().getFloatTy());
-			return context.getBuilder().CreateFCmpOLT(lhs, rhs);
-		} else if (left->getType(context)->isUnsigned || right->getType(context)->isUnsigned) {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), false);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), false);
-			return context.getBuilder().CreateICmpULE(lhs, rhs);
+		if (ansType->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFCmpOLE(lhs, rhs), loc);
+		else if (ansType->isInt()) {
+			if (ansType->isUnsigned)
+				return addDebugLoc(context, context.getBuilder().CreateICmpULE(lhs, rhs), loc);
+			else
+				return addDebugLoc(context, context.getBuilder().CreateICmpSLE(lhs, rhs), loc);
 		} else if (ansType->isString())
-			throw NotImplemented("string operation");
-		else {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), true);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), true);
-			return context.getBuilder().CreateICmpSLE(lhs, rhs);
-		}
+			throw NotImplemented("comparison of string");
+		break;
 	case GT:
-		if (left->getType(context)->isFloat() || right->getType(context)->isFloat()) {
-			if (!left->getType(context)->isFloat())
-				lhs = context.getBuilder().CreateFPCast(lhs, context.getBuilder().getFloatTy());
-			if (!right->getType(context)->isFloat())
-				rhs = context.getBuilder().CreateFPCast(rhs, context.getBuilder().getFloatTy());
-			return context.getBuilder().CreateFCmpOLT(lhs, rhs);
-		} else if (left->getType(context)->isUnsigned || right->getType(context)->isUnsigned) {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), false);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), false);
-			return context.getBuilder().CreateICmpUGT(lhs, rhs);
+		if (ansType->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFCmpOGT(lhs, rhs), loc);
+		else if (ansType->isInt()) {
+			if (ansType->isUnsigned)
+				return addDebugLoc(context, context.getBuilder().CreateICmpUGT(lhs, rhs), loc);
+			else
+				return addDebugLoc(context, context.getBuilder().CreateICmpSGT(lhs, rhs), loc);
 		} else if (ansType->isString())
-			throw NotImplemented("string operation");
-		else {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), true);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), true);
-			return context.getBuilder().CreateICmpSGT(lhs, rhs);
-		}
+			throw NotImplemented("comparison of string");
+		break;
 	case GEQ:
-		if (left->getType(context)->isFloat() || right->getType(context)->isFloat()) {
-			if (!left->getType(context)->isFloat())
-				lhs = context.getBuilder().CreateFPCast(lhs, context.getBuilder().getFloatTy());
-			if (!right->getType(context)->isFloat())
-				rhs = context.getBuilder().CreateFPCast(rhs, context.getBuilder().getFloatTy());
-			return context.getBuilder().CreateFCmpOLT(lhs, rhs);
-		} else if (left->getType(context)->isUnsigned || right->getType(context)->isUnsigned) {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), false);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), false);
-			return context.getBuilder().CreateICmpUGE(lhs, rhs);
+		if (ansType->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFCmpOGE(lhs, rhs), loc);
+		else if (ansType->isInt()) {
+			if (ansType->isUnsigned)
+				return addDebugLoc(context, context.getBuilder().CreateICmpUGE(lhs, rhs), loc);
+			else
+				return addDebugLoc(context, context.getBuilder().CreateICmpSGE(lhs, rhs), loc);
 		} else if (ansType->isString())
-			throw NotImplemented("string operation");
-		else {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), true);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), true);
-			return context.getBuilder().CreateICmpSGE(lhs, rhs);
-		}
+			throw NotImplemented("comparison of string");
+		break;
 	case ASSIGN:
-		left->store(context, right->load(context));
 		break;
 	case EQ:
-		if (left->getType(context)->isFloat() || right->getType(context)->isFloat()) {
-			if (!left->getType(context)->isFloat())
-				lhs = context.getBuilder().CreateFPCast(lhs, context.getBuilder().getFloatTy());
-			if (!right->getType(context)->isFloat())
-				rhs = context.getBuilder().CreateFPCast(rhs, context.getBuilder().getFloatTy());
-			return context.getBuilder().CreateFCmpOEQ(lhs, rhs);
-		} else if (left->getType(context)->isUnsigned || right->getType(context)->isUnsigned) {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), false);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), false);
-			return context.getBuilder().CreateICmpEQ(lhs, rhs);
-		} else if (ansType->isString())
-			throw NotImplemented("string operation");
-		else {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), true);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), true);
-			return context.getBuilder().CreateICmpEQ(lhs, rhs);
-		}
+		if (ansType->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFCmpOEQ(lhs, rhs), loc);
+		else if (ansType->isInt())
+			return addDebugLoc(context, context.getBuilder().CreateICmpEQ(lhs, rhs), loc);
+		else if (ansType->isString())
+			throw NotImplemented("comparison of string");
+		break;
 	case NEQ:
-		if (left->getType(context)->isFloat() || right->getType(context)->isFloat()) {
-			if (!left->getType(context)->isFloat())
-				lhs = context.getBuilder().CreateFPCast(lhs, context.getBuilder().getFloatTy());
-			if (!right->getType(context)->isFloat())
-				rhs = context.getBuilder().CreateFPCast(rhs, context.getBuilder().getFloatTy());
-			return context.getBuilder().CreateFCmpONE(lhs, rhs);
-		} else if (left->getType(context)->isUnsigned || right->getType(context)->isUnsigned) {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), false);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), false);
-			return context.getBuilder().CreateICmpNE(lhs, rhs);
-		} else if (ansType->isString())
-			throw NotImplemented("string operation");
-		else {
-			lhs = context.getBuilder().CreateIntCast(lhs, context.getBuilder().getInt32Ty(), true);
-			rhs = context.getBuilder().CreateIntCast(rhs, context.getBuilder().getInt32Ty(), true);
-			return context.getBuilder().CreateICmpNE(lhs, rhs);
-		}
+		if (ansType->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFCmpONE(lhs, rhs), loc);
+		else if (ansType->isInt())
+			return addDebugLoc(context, context.getBuilder().CreateICmpNE(lhs, rhs), loc);
+		else if (ansType->isString())
+			throw NotImplemented("comparison of string");
+		break;
 	case LOG_AND:
 		if (!left->getType(context)->isBool() || !right->getType(context)->isBool())
 			throw InvalidType("Logical and only allowed to bool");
@@ -184,10 +144,10 @@ llvm::Value* Op2::load(Context &context) {
 	default:
 		throw NotImplemented(std::string("operator ") + OpNames[op] + " not implemented");
 	}
-	return NULL;
+	throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + left->getType(context)->getName() + " and " + right->getType(context)->getName());
 }
 
-void Op2::store(Context &context, llvm::Value *value) {
+llvm::Instruction* Op2::store(Context &context, llvm::Value *value) {
 	throw NotImplemented("store to op2");
 }
 

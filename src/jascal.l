@@ -12,6 +12,7 @@
 	#define YY_USER_ACTION { \
 		yylloc.first_column = yylloc.last_column + 1; \
 		yylloc.last_column = yylloc.first_column + yyleng - 1; \
+		yylval.token = yylloc; \
 	}
 %}
 
@@ -136,17 +137,17 @@
 "private"	{
 	if (lex_output)
 		fprintf(lex_output, "<PRIVATE>");
-	yylval.visibility = PRIVATE;
+	yylval.visibility.v = PRIVATE;
 	return T_VISIBILITY; }
 "public"	{
 	if (lex_output)
 		fprintf(lex_output, "<PUBLIC>");
-	yylval.visibility = PUBLIC;
+	yylval.visibility.v = PUBLIC;
 	return T_VISIBILITY; }
 "protected"	{
 	if (lex_output)
 		fprintf(lex_output, "<PROTECTED>");
-	yylval.visibility = PROTECTED;
+	yylval.visibility.v = PROTECTED;
 	return T_VISIBILITY; }
 "return" {
 	if (lex_output)
@@ -240,6 +241,7 @@
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);
 	yylval.expression = new LiteralString(yytext);
+	yylval.expression->loc = yylloc;
 	return T_LITERAL_STRING; }
 [ ]+	{
 	if (lex_output)
@@ -274,16 +276,19 @@
 	return yylex(); }
 [0-9]+	{
 	yylval.expression = new LiteralInt(atoi(yytext), false);
+	yylval.expression->loc = yylloc;
 	if (lex_output)
 		fprintf(lex_output, "<literal_int %s>", yytext);
 	return T_LITERAL_INT; }
 [0-9]+(u|U) {
 	yylval.expression = new LiteralInt(atoi(yytext), true);
+	yylval.expression->loc = yylloc;
 	if (lex_output)
 		fprintf(lex_output, "<literal_int %s>", yytext);
 	return T_LITERAL_INT; }
 [a-zA-Z_][a-zA-Z_0-9]*	{
 	yylval.identifier = new Identifier(yytext);
+	yylval.identifier->loc = yylloc;
 	if (lex_output)
 		fprintf(lex_output, "<identifier %s>", yytext);
 	return T_IDENTIFIER; }

@@ -9,6 +9,7 @@
 #include "Identifier.h"
 #include "Symbol.h"
 #include "Namespace.h"
+#include "DebugInfo.h"
 
 const char *Type::BaseTypeNames[] = {
 	"byte",
@@ -185,4 +186,33 @@ Type* Type::higherType(Type *a, Type *b) {
 	if (b->baseType == BYTE)
 		return b;
 	throw IncompatibleType(BaseTypeNames[a->baseType], BaseTypeNames[b->baseType]);
+}
+
+llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *dtype) {
+	switch (dtype->baseType) {
+	case INT:
+	case SHORT:
+	case BYTE:
+	case BOOL:
+		if (otype->isInt())
+			if (otype->getSize() == dtype->getSize())
+				return val;
+			else
+				return context.getBuilder().CreateTruncOrBitCast(val, dtype->getType(context));
+		else if (otype->isFloat())
+			return context.getBuilder().CreateFPCast(val, dtype->getType(context));
+		break;
+	case FLOAT:
+	case DOUBLE:
+		if (otype->isNumber())
+			return context.getBuilder().CreateFPCast(val, dtype->getType(context));
+		break;
+	case CHAR:
+	case STRING:
+		break;
+	case OBJECT:
+	case ARRAY:
+		break;
+	}
+	throw IncompatibleType(std::string("convert ") + BaseTypeNames[otype->baseType] + " to " + BaseTypeNames[dtype->baseType]);
 }

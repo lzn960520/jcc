@@ -53,20 +53,26 @@ void Function::gen(Context &context) {
 			llvm::FunctionType::get(
 					return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
 					llvm::ArrayRef<llvm::Type*>(arg_type),
-					false)
-	);
+					false));
+	*const_cast<llvm::DISubprogram**>(&context.DIfunction) = getDIFunction(context, this, loc);
+	context.pushContext();
+	context.pushDIScope(context.DIfunction);
 	arg_iterator it = arg_list.begin();
 	llvm::Function::arg_iterator it2 = llvmFunction->arg_begin();
 	it2->setName("this");
+	insertDeclareDebugInfo(context, cls->getType(), "this", &(*it2), loc, true);
 	context.addSymbol(new Symbol("this", Symbol::ARGUMENT, cls->getType(), &(*it2)));
 	it2++;
 	for (; it != arg_list.end(); it++, it2++) {
 		assert(it2 != llvmFunction->arg_end());
+		insertDeclareDebugInfo(context, it->first, it->second->getName(), &(*it2), it->second->loc, true);
 		context.addSymbol(new Symbol(it->second->getName(), Symbol::ARGUMENT, it->first, &(*it2)));
 		it2->setName(it->second->getName());
 	}
-	getDIFunction(context, this);
 	body->gen(context);
+	context.popDIScope();
+	context.popContext();
+	*const_cast<llvm::DISubprogram**>(&context.DIfunction) = NULL;
 	context.endFunction();
 }
 

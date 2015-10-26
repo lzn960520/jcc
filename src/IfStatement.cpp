@@ -4,6 +4,7 @@
 #include "Expression.h"
 #include "exception.h"
 #include "Type.h"
+#include "DebugInfo.h"
 
 IfStatement::IfStatement(Expression *test, ASTNode *then_st) :
 	test(test), then_st(then_st), else_st(NULL) {
@@ -45,18 +46,21 @@ void IfStatement::gen(Context &context) {
 		else_st->gen(context);
 	}
 	llvm::BasicBlock *after = context.newBlock("if_" + itos(then_st->loc.first_line) + "@after");
+	YYLTYPE tmploc;
+	tmploc.first_line = loc.last_line;
+	tmploc.first_column = loc.last_column;
 	if (then_st) {
 		context.setBlock(true_b);
-		context.getBuilder().CreateBr(after);
+		addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);
 	}
 	if (else_st) {
 		context.setBlock(false_b);
-		context.getBuilder().CreateBr(after);
+		addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);
 	}
 	if (!else_st)
 		false_b = after;
 	context.setBlock(ori_block);
 	llvm::Value *cond = test->load(context);
-	context.getBuilder().CreateCondBr(cond, true_b, false_b);
+	addDebugLoc(context, context.getBuilder().CreateCondBr(cond, true_b, false_b), loc);
 	context.setBlock(after);
 }

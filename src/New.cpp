@@ -38,7 +38,7 @@ llvm::Value *New::load(Context &context) {
 	);
 }
 
-void New::store(Context &context, llvm::Value *value) {
+llvm::Instruction* New::store(Context &context, llvm::Value *value) {
 	throw NotAssignable("object create");
 }
 

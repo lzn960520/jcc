@@ -57,7 +57,7 @@ llvm::Value* Op1::load(Context &context) {
 	}
 }
 
-void Op1::store(Context &context, llvm::Value *value) {
+llvm::Instruction* Op1::store(Context &context, llvm::Value *value) {
 	throw NotAssignable("op1 expression");
 }
 

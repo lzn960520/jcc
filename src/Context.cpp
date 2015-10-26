@@ -72,8 +72,6 @@ void Context::initDWARF(const std::string &filename) {
 }
 
 llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType) {
-	SymbolContext *cxt = new SymbolContext();
-	contextStack.push_back(cxt);
 	llvm::Function *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
 	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), name + "@entry", function);
 	builder->SetInsertPoint(block);
@@ -82,16 +80,15 @@ llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionT
 }
 
 void Context::endFunction() {
-	for (llvm::Function::iterator it = currentFunction->begin(); it != currentFunction->end(); it++) {
-		if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getEntryBlock()) && it->getTerminator() == NULL)
+	for (llvm::Function::iterator it = currentFunction->begin(); it != currentFunction->end(); it++)
+		if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getEntryBlock()) && it->getTerminator() == NULL) {
 			if (currentFunction->getReturnType()->isVoidTy()) {
 				builder->SetInsertPoint(&(*it));
 				builder->CreateRetVoid();
 			} else
 				throw NoReturn(currentFunction->getName().str());
-	}
+		}
 	currentFunction = NULL;
-	contextStack.pop_back();
 	builder->ClearInsertionPoint();
 }
 
@@ -146,4 +143,23 @@ void Context::setBlock(llvm::BasicBlock *targetBlock) {
 
 llvm::BasicBlock* Context::currentBlock() {
 	return builder->GetInsertBlock();
+}
+
+llvm::DIScope* Context::currentDIScope() {
+	return diScopeStack.empty() ? DIfile : diScopeStack.back();
+}
+
+void Context::pushDIScope(YYLTYPE &loc) {
+	if (diScopeStack.empty())
+		diScopeStack.push_back(llvm::DILexicalBlock::get(getContext(), DIfile, DIfile, loc.first_line, loc.first_column));
+	else
+		diScopeStack.push_back(llvm::DILexicalBlock::get(getContext(), diScopeStack.back(), DIfile, loc.first_line, loc.first_column));
+}
+
+void Context::pushDIScope(llvm::DIScope *scope) {
+	diScopeStack.push_back(scope);
+}
+
+void Context::popDIScope() {
+	diScopeStack.pop_back();
 }

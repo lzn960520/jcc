@@ -35,7 +35,7 @@ llvm::Value* LiteralInt::load(Context &context) {
 	return llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), val._uint32, type->isUnsigned);
 }
 
-void LiteralInt::store(Context &context, llvm::Value *value) {
+llvm::Instruction* LiteralInt::store(Context &context, llvm::Value *value) {
 	throw NotAssignable("literal integer");
 }
 

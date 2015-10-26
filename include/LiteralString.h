@@ -11,7 +11,7 @@ struct LiteralString : public Expression {
 	~LiteralString();
 	Json::Value json() override;
 	llvm::Value* load(Context &context) override;
-	void store(Context &context, llvm::Value *value) override;
+	llvm::Instruction* store(Context &context, llvm::Value *value) override;
 	Type* getType(Context &context) override;
 	bool isConstant() override { return true; }
 	Constant loadConstant() override {

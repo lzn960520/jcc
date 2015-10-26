@@ -98,6 +98,7 @@ public:
 
 class IncompatibleType : public CompileException {
 public:
+	IncompatibleType(const std::string &msg);
 	IncompatibleType(const std::string &type1, const std::string &type2);
 	std::string message() const;
 };

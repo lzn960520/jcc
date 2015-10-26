@@ -18,7 +18,7 @@ public:
 	void gen(Context &context) override final { this->load(context); };
 	virtual Type* getType(Context &context) = 0;
 	virtual llvm::Value* load(Context &context) = 0;
-	virtual void store(Context &context, llvm::Value *value) = 0;
+	virtual llvm::Instruction* store(Context &context, llvm::Value *value) = 0;
 	virtual bool isConstant() = 0;
 	virtual Constant loadConstant() = 0;
 	virtual Type* getTypeConstant() = 0;

@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "ArrayAccessor.h"
 #include "Type.h"
+#include "DebugInfo.h"
 
 ArrayAccess::ArrayAccess(Expression *array, ArrayAccessor *accessor) :
 	array(array), accessor(accessor) {
@@ -34,20 +35,33 @@ llvm::Value* ArrayAccess::load(Context &context) {
 			throw NotImplemented("Dynamic array");
 		} else {
 			if (offset == NULL)
+				//offset = addDebugLoc(
+				//		context,
+				//		context.getBuilder().CreateSub(
+				//				accessor->list[i]->load(context),
+				//				llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true)),
+				//		loc);
 				offset = context.getBuilder().CreateSub(
-						accessor->list[i]->load(context),
-						llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true));
-			else {
-				offset = context.getBuilder().CreateMul(
-						offset,
-						llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].second - dim[i].first + 1, false));
-				offset = context.getBuilder().CreateAdd(
-						offset,
-						context.getBuilder().CreateSub(
 								accessor->list[i]->load(context),
-								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true)
-						)
-				);
+								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true));
+			else {
+				offset = addDebugLoc(
+						context,
+						context.getBuilder().CreateMul(
+								offset,
+								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].second - dim[i].first + 1, false)),
+						loc);
+				offset = addDebugLoc(
+						context,
+						context.getBuilder().CreateAdd(
+								offset,
+								addDebugLoc(
+										context,
+										context.getBuilder().CreateSub(
+												accessor->list[i]->load(context),
+												llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true)),
+										loc)),
+						loc);
 			}
 		}
 	}
@@ -55,18 +69,22 @@ llvm::Value* ArrayAccess::load(Context &context) {
 	index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
 	index[1] = offset;
 	llvm::Value *array_ptr = array->load(context);
-	return context.getBuilder().CreateLoad(
-			llvm::GetElementPtrInst::Create(
-					nullptr,
-					array_ptr,
-					llvm::ArrayRef<llvm::Value*>(index, 2),
-					"",
-					context.currentBlock()
-			)
-	);
+	return addDebugLoc(
+			context,
+			context.getBuilder().CreateLoad(
+					addDebugLoc(
+							context,
+							llvm::GetElementPtrInst::Create(
+									nullptr,
+									array_ptr,
+									llvm::ArrayRef<llvm::Value*>(index, 2),
+									"",
+									context.currentBlock()),
+							loc)),
+			loc);
 }
 
-void ArrayAccess::store(Context &context, llvm::Value *value) {
+llvm::Instruction* ArrayAccess::store(Context &context, llvm::Value *value) {
 	const std::vector<std::pair<int, int> > &dim = array->getType(context)->arrayDim;
 	llvm::Value *offset = NULL;
 	for (size_t i = 0; i < dim.size(); i++) {
@@ -75,37 +93,46 @@ void ArrayAccess::store(Context &context, llvm::Value *value) {
 			throw NotImplemented("Dynamic array");
 		} else {
 			if (offset == NULL)
-				offset = context.getBuilder().CreateSub(
-						accessor->list[i]->load(context),
-						llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, false));
+				//offset = addDebugLoc(
+				//		context,
+				//		context.getBuilder().CreateSub(
+				//				accessor->list[i]->load(context),
+				//				llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, false)),
+				//		loc);
+				offset = context.getBuilder().CreateSub(accessor->list[i]->load(context),
+								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, false));
 			else {
-				offset = context.getBuilder().CreateMul(
-						offset,
-						llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].second - dim[i].first + 1, false));
-				offset = context.getBuilder().CreateAdd(
-						offset,
-						context.getBuilder().CreateSub(
-								accessor->list[i]->load(context),
-								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true)
-						)
-				);
+				offset = addDebugLoc(
+						context,
+						context.getBuilder().CreateMul(
+								offset,
+								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].second - dim[i].first + 1, false)),
+						loc);
+				offset = addDebugLoc(
+						context,
+						context.getBuilder().CreateAdd(
+								offset,
+								context.getBuilder().CreateSub(
+										accessor->list[i]->load(context),
+										llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true))),
+						loc);
 			}
 		}
 	}
 	llvm::Value *index[2];
 	index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
 	index[1] = offset;
-	llvm::Value *array_ptr = array->load(context);
-	context.getBuilder().CreateStore(
+	return context.getBuilder().CreateStore(
 			value,
-			llvm::GetElementPtrInst::Create(
-					nullptr,
-					array_ptr,
-					llvm::ArrayRef<llvm::Value*>(index, 2),
-					"",
-					context.currentBlock()
-			)
-	);
+			addDebugLoc(
+					context,
+					llvm::GetElementPtrInst::Create(
+							nullptr,
+							array->load(context),
+							llvm::ArrayRef<llvm::Value*>(index, 2),
+							"",
+							context.currentBlock()),
+					loc));
 }
 
 Type* ArrayAccess::getType(Context &context) {

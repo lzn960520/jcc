@@ -12,6 +12,7 @@ class Identifier;
 class ArgumentList;
 class Class;
 struct Function : public ASTNode {
+	bool isStatic;
 	Visibility visibility;
 	Type *return_type;
 	Identifier *identifier;

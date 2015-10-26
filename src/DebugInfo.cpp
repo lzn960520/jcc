@@ -9,7 +9,10 @@ using llvm::Value;
 using llvm::DISubroutineType;
 using llvm::DISubprogram;
 using llvm::Metadata;
+using llvm::DILocalVariable;
 using namespace llvm::dwarf;
+using std::string;
+using llvm::DILocation;
 
 DIType* getDIType(Context &context, Type *type) {
 	if (!type)
@@ -40,6 +43,8 @@ DIType* getDIType(Context &context, Type *type) {
 		return context.DI->createBasicType("double", 64, 64, DW_ATE_float);
 	case Type::STRING:
 		return context.DI->createBasicType("string", context.DL->getPointerSizeInBits(0), context.DL->getPointerSizeInBits(0), DW_ATE_float);
+	case Type::OBJECT:
+		return context.DI->createPointerType(getDIType(context, (Type *) NULL), context.DL->getPointerSizeInBits(0), context.DL->getPointerSizeInBits(0));
 	}
 }
 
@@ -51,18 +56,36 @@ DISubroutineType* getDIType(Context &context, Function *function) {
 	return context.DI->createSubroutineType(context.DIfile, context.DI->getOrCreateTypeArray(argv));
 }
 
-DISubprogram* getDIFunction(Context &context, Function *function) {
+DISubprogram* getDIFunction(Context &context, Function *function, YYLTYPE &loc) {
 	return context.DI->createFunction(
 			context.DIfile,
 			function->getName(),
 			function->getMangleName(),
 			context.DIfile,
-			1,
+			loc.first_line,
 			getDIType(context, function),
 			false,
 			function->body != NULL,
-			1,
+			loc.first_line,
 			0,
 			false,
 			function->llvmFunction != nullptr ? function->llvmFunction : nullptr);
+}
+
+void insertDeclareDebugInfo(Context &context, Type *type, const string &name, llvm::Value *val, YYLTYPE &loc, bool isArg) {
+	addDebugLoc(
+			context,
+			context.DI->insertDeclare(
+					val,
+					context.DI->createLocalVariable(
+							isArg ? DW_TAG_arg_variable : DW_TAG_auto_variable,
+							context.currentDIScope(),
+							name,
+							context.DIfile,
+							loc.first_line,
+							getDIType(context, type)),
+					context.DI->createExpression(llvm::ArrayRef<uint64_t>(NULL, (uint32_t) 0)), 
+					DILocation::get(context.getContext(), loc.first_line, loc.first_column, context.currentDIScope()),
+					context.currentBlock()),
+			loc);
 }

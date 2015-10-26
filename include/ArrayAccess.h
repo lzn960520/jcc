@@ -15,7 +15,7 @@ struct ArrayAccess : public Expression {
 	Json::Value json() override;
 	Type* getType(Context &context) override;
 	llvm::Value* load(Context &context) override;
-	void store(Context &context, llvm::Value *value) override;
+	llvm::Instruction* store(Context &context, llvm::Value *value) override;
 	bool isConstant() override;
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;

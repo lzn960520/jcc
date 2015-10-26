@@ -5,7 +5,7 @@ LEX := flex
 LLVM_COMPONENTS := all
 
 CPPFLAGS ?=
-CPPFLAGS += -Iinclude -frtti
+CPPFLAGS += -Iinclude -frtti -g
 ifeq ($(DEBUG), 1)
 CPPFLAGS += -g
 endif

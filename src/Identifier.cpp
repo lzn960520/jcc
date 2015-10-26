@@ -3,7 +3,7 @@
 #include "Context.h"
 #include "Symbol.h"
 #include "Type.h"
-#include <iostream>
+#include "DebugInfo.h"
 
 Identifier::Identifier(const char *name) :
 	text(name) {
@@ -30,42 +30,53 @@ llvm::Value* Identifier::load(Context &context) {
 	switch (ans->type) {
 	case Symbol::ARGUMENT:
 		return ans->data.identifier.value;
-	case Symbol::LOCAL_VAR:
-		return context.getBuilder().CreateLoad(ans->data.identifier.value);
+	case Symbol::LOCAL_VAR: {
+		return addDebugLoc(
+				context,
+				context.getBuilder().CreateLoad(ans->data.identifier.value),
+				loc);
+	}
 	case Symbol::MEMBER_VAR: {
-		llvm::Value *tmp = context.getBuilder().CreateStructGEP(
-				nullptr,
-				context.findSymbol("this")->data.identifier.value,
-				ans->data.member.index
-		);
+		llvm::Value *tmp = addDebugLoc(
+				context,
+				context.getBuilder().CreateStructGEP(
+						nullptr,
+						context.findSymbol("this")->data.identifier.value,
+						ans->data.member.index),
+				loc);
 		if (tmp->getType()->getPointerElementType()->isArrayTy())
 			return tmp;
-		else
-			return context.getBuilder().CreateLoad(tmp);
+		else {
+			return addDebugLoc(
+					context,
+					context.getBuilder().CreateLoad(tmp),
+					loc);
+		}
 	}
 	}
 }
 
-void Identifier::store(Context &context, llvm::Value *value) {
+llvm::Instruction* Identifier::store(Context &context, llvm::Value *value) {
 	Symbol *ans = context.findSymbol(text);
 	if (ans == NULL)
 		throw SymbolNotFound(text, loc);
 	switch (ans->type) {
 	case Symbol::ARGUMENT:
-		context.getBuilder().CreateStore(value, ans->data.identifier.value);
+		return context.getBuilder().CreateStore(value, ans->data.identifier.value);
 		break;
 	case Symbol::LOCAL_VAR:
-		context.getBuilder().CreateStore(value, ans->data.identifier.value);
+		return context.getBuilder().CreateStore(value, ans->data.identifier.value);
 		break;
 	case Symbol::MEMBER_VAR: {
-		context.getBuilder().CreateStore(
+		return context.getBuilder().CreateStore(
 				value,
-				context.getBuilder().CreateStructGEP(
-						nullptr,
-						context.findSymbol("this")->data.identifier.value,
-						ans->data.member.index
-				)
-		);
+				addDebugLoc(
+						context,
+						context.getBuilder().CreateStructGEP(
+								nullptr,
+								context.findSymbol("this")->data.identifier.value,
+								ans->data.member.index),
+						loc));
 		break;
 	}
 	case Symbol::FUNCTION:

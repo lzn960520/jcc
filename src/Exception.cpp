@@ -80,6 +80,7 @@ string DimMismatch::message() const {
 	return "Dim mismatch between array " + msg + " and accessor";
 }
 
+IncompatibleType::IncompatibleType(const string &msg) : CompileException("Incompatible type: " + msg) {}
 IncompatibleType::IncompatibleType(const string &type1, const string &type2) : CompileException("Incompatible type " + type1 + " and " + type2) {}
 string IncompatibleType::message() const {
 	return msg;
