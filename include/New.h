@@ -9,7 +9,7 @@ class New : public Expression {
 public:
 	New(Type *type);
 	~New();
-	Json::Value json();
+	Json::Value json() override;
 	llvm::Value *load(Context &context) override;
 	llvm::Instruction* store(Context &context, llvm::Value *value) override;
 	Type* getType(Context &context) override;

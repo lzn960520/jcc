@@ -4,7 +4,7 @@ class Main
 begin
 	private int[0..10] a;
 	
-	private procedure writeInt(int a)
+	private static procedure writeInt(int a)
 	begin
 	end;
 	
@@ -31,22 +31,22 @@ begin
 			sort(l, j);
 	end;
 	
-	public function main() : int
+	static public function main() : int
 	begin
-		new Main;
-		a[0] = 1;
-		a[1] = 5;
-		a[2] = 4;
-		a[3] = 7;
-		a[4] = 10;
-		a[5] = 8;
-		sort(0, 5);
-		writeInt(a[0]);
-		writeInt(a[1]);
-		writeInt(a[2]);
-		writeInt(a[3]);
-		writeInt(a[4]);
-		writeInt(a[5]);
+		var Main that = new Main;
+		that.a[0] = 1;
+		that.a[1] = 5;
+		that.a[2] = 4;
+		that.a[3] = 7;
+		that.a[4] = 10;
+		that.a[5] = 8;
+		that.sort(0, 5);
+		writeInt(that.a[0]);
+		writeInt(that.a[1]);
+		writeInt(that.a[2]);
+		writeInt(that.a[3]);
+		writeInt(that.a[4]);
+		writeInt(that.a[5]);
 		return 0;
 	end;
 end;

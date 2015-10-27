@@ -29,12 +29,12 @@ Json::Value FunctionCall::json() {
 }
 
 llvm::Value* FunctionCall::load(Context &context) {
-	Expression *tmpTarget = target;
-	if (tmpTarget == NULL)
-		tmpTarget = new Identifier("this");
-	if (!tmpTarget->getType(context)->isObject())
-		throw InvalidType(std::string("calling a function of ") + tmpTarget->getType(context)->getName());
-	Symbol *symbol = tmpTarget->getType(context)->getClass()->findSymbol(identifier->getName());
+	Class *targetClass = NULL;
+	if (target == NULL)
+		targetClass = context.currentFunction->cls;
+	else
+		targetClass = target->getType(context)->getClass();
+	Symbol *symbol = targetClass->findSymbol(identifier->getName());
 	if (!symbol)
 		throw FunctionNotFound(identifier->getName());
 	if (symbol->type != Symbol::FUNCTION)
@@ -43,7 +43,17 @@ llvm::Value* FunctionCall::load(Context &context) {
 	if (function == NULL)
 		throw FunctionNotFound(identifier->getName());
 	std::vector<llvm::Value*> arg_code;
-	arg_code.push_back(tmpTarget->load(context));
+	if (symbol->data.function.function->isStatic()) {
+		// Calling a static function
+		if (target)
+			throw CompileException("Calling a static function of an object");
+	} else {
+		Expression *tmpTarget = target ? target : new Identifier("this");
+		if (!tmpTarget->getType(context)->isObject())
+			throw InvalidType(std::string("calling a function of ") + tmpTarget->getType(context)->getName());
+		arg_code.push_back(tmpTarget->load(context));
+		delete tmpTarget;
+	}
 	std::list<Expression*> &arg_list = this->arg_list->list;
 	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_code.push_back((*it)->load(context));
@@ -51,8 +61,6 @@ llvm::Value* FunctionCall::load(Context &context) {
 			context,
 			context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code)),
 			loc);
-	if (target == NULL)
-		delete tmpTarget;
 	return ans;
 }
 

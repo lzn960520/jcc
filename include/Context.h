@@ -34,7 +34,6 @@ private:
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
-	llvm::Function *currentFunction;
 
 	typedef std::map<std::string, Function*> FunctionContext;
 	FunctionContext functions;
@@ -43,6 +42,7 @@ public:
 	llvm::DIBuilder * const DI;
 	Namespace *currentNS;
 	Class *currentClass;
+	Function *currentFunction;
 	llvm::Function * const mallocFunc;
 	llvm::DICompileUnit *DIcu;
 	llvm::DIFile *DIfile;
@@ -55,7 +55,7 @@ public:
 	void pushContext();
 	void popContext();
 	SymbolContext* currentContext();
-	llvm::Function* createFunction(const std::string &name, llvm::FunctionType *funcType);
+	llvm::Function* createFunction(const std::string &name, llvm::FunctionType *funcType, Function *function);
 	void endFunction();
 	void addSymbol(Symbol *symbol);
 	Symbol* findSymbol(const std::string &name);

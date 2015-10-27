@@ -5,23 +5,22 @@
 #include <llvm/IR/DerivedTypes.h>
 
 #include "ASTNode.h"
-#include "Visibility.h"
+#include "Qualifier.h"
 
 class Type;
 class Identifier;
 class ArgumentList;
 class Class;
 struct Function : public ASTNode {
-	bool isStatic;
-	Visibility visibility;
+	Qualifier *qualifier;
 	Type *return_type;
 	Identifier *identifier;
 	std::list<std::pair<Type*, Identifier*> > &arg_list;
 	typedef std::list<std::pair<Type*, Identifier*> >::iterator arg_iterator;
 	ASTNode *body;
 	Class *cls;
-	Function(Visibility visibility, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body);
-	Function(Visibility visibility, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, llvm::Function *llvmFunction);
+	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body);
+	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, llvm::Function *llvmFunction);
 	~Function();
 	arg_iterator arg_begin() { return arg_list.begin(); }
 	arg_iterator arg_end() { return arg_list.end(); }
@@ -33,6 +32,10 @@ struct Function : public ASTNode {
 	Type *getReturnType() { return return_type; }
 	llvm::FunctionType* getLLVMType(Context &context);
 	const std::string getMangleName();
+	inline bool isStatic() const { return qualifier->isStatic(); }
+	inline bool isPublic() const { return qualifier->isPublic(); }
+	inline bool isPrivate() const { return qualifier->isPrivate(); }
+	inline bool isProtected() const { return qualifier->isProtected(); }
 };
 
 #endif

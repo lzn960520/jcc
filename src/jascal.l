@@ -4,7 +4,6 @@
 	#include "Identifier.h"
 	#include "LiteralString.h"
 	#include "LiteralInt.h"
-	#include "Visibility.h"
 	#include <stdio.h>
 
 	FILE *lex_output = NULL;
@@ -137,18 +136,15 @@
 "private"	{
 	if (lex_output)
 		fprintf(lex_output, "<PRIVATE>");
-	yylval.visibility.v = PRIVATE;
-	return T_VISIBILITY; }
+	return T_PRIVATE; }
 "public"	{
 	if (lex_output)
 		fprintf(lex_output, "<PUBLIC>");
-	yylval.visibility.v = PUBLIC;
-	return T_VISIBILITY; }
+	return T_PUBLIC; }
 "protected"	{
 	if (lex_output)
 		fprintf(lex_output, "<PROTECTED>");
-	yylval.visibility.v = PROTECTED;
-	return T_VISIBILITY; }
+	return T_PROTECTED; }
 "return" {
 	if (lex_output)
 		fprintf(lex_output, "<RETURN>");
@@ -181,6 +177,10 @@
 	if (lex_output)
 		fprintf(lex_output, "<RIGHT_SQUARE>");
 	return T_RIGHT_SQUARE; }
+"." {
+	if (lex_output)
+		fprintf(lex_output, "<DOT>");
+	return T_DOT; }
 ".." {
 	if (lex_output)
 		fprintf(lex_output, "<DOT_DOT>");
@@ -237,6 +237,14 @@
 	if (lex_output)
 		fprintf(lex_output, "<VAR>");
 	return T_VAR; }
+"static" {
+	if (lex_output)
+		fprintf(lex_output, "<STATIC>");
+	return T_STATIC; }
+"const" {
+	if (lex_output)
+		fprintf(lex_output, "<CONST>");
+	return T_CONST; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);

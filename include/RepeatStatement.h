@@ -10,7 +10,7 @@ struct RepeatStatement : public ASTNode {
 	RepeatStatement(ASTNode *body, Expression *until);
 	~RepeatStatement();
 	Json::Value json() override;
-	void gen(Context &context);
+	void gen(Context &context) override;
 };
 
 #endif

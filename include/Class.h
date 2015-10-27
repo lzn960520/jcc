@@ -29,6 +29,7 @@ public:
 	void setNS(const std::string &ns);
 	const std::string& getPrefix() { return prefix; }
 	Symbol* findSymbol(const std::string &name);
+	const std::string& getName();
 };
 
 #endif

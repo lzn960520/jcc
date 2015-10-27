@@ -38,11 +38,11 @@ CPPFLAGS += -frtti -fexceptions
 SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
-	Visibility.cpp Context.cpp FunctionCall.cpp \
+	Visibility.cpp Context.cpp FunctionCall.cpp Qualifier.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
 	ArrayAccessor.cpp Symbol.cpp Output.cpp New.cpp DebugInfo.cpp \
-	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp
+	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 PROG := jcc
@@ -50,9 +50,9 @@ PROG := jcc
 all: $(PROG)
 
 deps/%.d: src/%.cpp | flex bison
-	$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,objs/\1.o: $@ ,g' < $@.$$$$ > $@; \
-	$(RM) $@.$$$$
+	$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$ || exit "$$?"; \
+	sed 's,\($*\)\.o[ :]*,objs/\1.o: $@ ,g' < $@.$$$$ > $@ || exit "$$?"; \
+	$(RM) $@.$$$$ || exit "$$?"
 
 objs/%.o:
 	@echo "CXX src/$*.cpp -> $@"

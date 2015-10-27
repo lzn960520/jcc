@@ -4,6 +4,7 @@
 #include "Symbol.h"
 #include "Type.h"
 #include "DebugInfo.h"
+#include "Function.h"
 
 Identifier::Identifier(const char *name) :
 	text(name) {
@@ -37,6 +38,8 @@ llvm::Value* Identifier::load(Context &context) {
 				loc);
 	}
 	case Symbol::MEMBER_VAR: {
+		if (context.currentFunction->isStatic())
+			throw CompileException("Access non-static member variable in static function");
 		llvm::Value *tmp = addDebugLoc(
 				context,
 				context.getBuilder().CreateStructGEP(

@@ -71,35 +71,35 @@ void Context::initDWARF(const std::string &filename) {
 	}
 }
 
-llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType) {
-	llvm::Function *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
-	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), name + "@entry", function);
+llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType, Function *function) {
+	llvm::Function *llvmFunction = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
+	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), name + "@entry", llvmFunction);
 	builder->SetInsertPoint(block);
 	currentFunction = function;
-	return function;
+	return llvmFunction;
 }
 
 void Context::endFunction() {
-	for (llvm::Function::iterator it = currentFunction->begin(); it != currentFunction->end(); it++)
-		if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getEntryBlock()) && it->getTerminator() == NULL) {
-			if (currentFunction->getReturnType()->isVoidTy()) {
+	for (llvm::Function::iterator it = currentFunction->getLLVMFunction(*this)->begin(); it != currentFunction->getLLVMFunction(*this)->end(); it++)
+		if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getLLVMFunction(*this)->getEntryBlock()) && it->getTerminator() == NULL) {
+			if (currentFunction->getLLVMFunction(*this)->getReturnType()->isVoidTy()) {
 				builder->SetInsertPoint(&(*it));
 				builder->CreateRetVoid();
 			} else
-				throw NoReturn(currentFunction->getName().str());
+				throw NoReturn(currentFunction->getName().c_str());
 		}
 	currentFunction = NULL;
 	builder->ClearInsertionPoint();
 }
 
 llvm::BasicBlock* Context::newBlock() {
-	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), "", currentFunction);
+	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), "", currentFunction->getLLVMFunction(*this));
 	builder->SetInsertPoint(block);
 	return block;
 }
 
 llvm::BasicBlock* Context::newBlock(const std::string &name) {
-	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), currentFunction->getName() + "@" + name, currentFunction);
+	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), currentFunction->getName() + "@" + name, currentFunction->getLLVMFunction(*this));
 	builder->SetInsertPoint(block);
 	return block;
 }

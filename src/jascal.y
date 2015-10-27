@@ -2,7 +2,6 @@
 	#include <list>
 	
 	#include "yyvaltypes.h"
-	#include "Visibility.h"
 
 	class ASTNode;
 	class Expression;
@@ -18,6 +17,7 @@
 	class Module;
 	class Class;
 	class Interface;
+	class Qualifier;
 }
 
 %code top {
@@ -25,7 +25,6 @@
 	
 	#include "Type.h"
 	#include "CallArgumentList.h"
-	#include "Visibility.h"
 	#include "VariableDefination.h"
 	#include "FunctionCall.h"
 	#include "Function.h"
@@ -46,6 +45,8 @@
 	#include "New.h"
 	#include "Identifier.h"
 	#include "Interface.h"
+	#include "Qualifier.h"
+	#include "MemberAccess.h"
 }
 
 %initial-action {
@@ -61,7 +62,6 @@
 	CallArgumentList *call_arg_list;
 	Identifier *identifier;
 	Function *function;
-	struct { YYLTYPE loc; Visibility v; } visibility;
 	VariableDefination *var_def;
 	ArrayDefinator *arr_def;
 	ArrayAccessor *arr_acc;
@@ -73,6 +73,7 @@
 	Interface *interface;
 	struct { YYLTYPE loc; std::list<std::pair<Type*, Identifier*> > *v; } arg_list;
 	YYLTYPE token;
+	Qualifier *qualifier;
 }
 
 %code {
@@ -122,6 +123,7 @@
 %type <list> inclass_definations
 %type <list> ininterface_definations
 %type <expression> object_create
+%type <qualifier> qualifier
 
 %token <expression> T_LITERAL_INT
 %token <expression> T_LITERAL_STRING
@@ -130,8 +132,7 @@
 		T_IF T_THEN T_ELSE T_WHILE T_DO T_COMMA T_UNSIGNED T_BYTE T_VAR
 		T_SHORT T_INT T_CHAR T_FLOAT T_DOUBLE T_RETURN T_INTERFACE
 		T_REPEAT T_UNTIL T_COLON T_FUNCTION T_PROCEDURE T_DOTDOT T_STRING
-		T_CLASS T_NS
-%token <visibility> T_VISIBILITY
+		T_CLASS T_NS T_PUBLIC T_PRIVATE T_PROTECTED T_CONST T_STATIC
 
 %right <token> T_ASSIGN
 %left <token> T_LOG_OR
@@ -193,21 +194,63 @@ class_defination:
 	T_CLASS T_IDENTIFIER T_BEGIN inclass_definations T_END {
 		$$ = new Class($2, $4.v);
 		GEN_LOC(P($$), D($1), D($5)); }
+
+qualifier:
+	T_PUBLIC {
+		$$ = new Qualifier();
+		$$->setPublic();
+		GEN_LOC(P($$), D($1), D($1)); }
+	| T_PRIVATE {
+		$$ = new Qualifier();
+		$$->setPrivate();
+		GEN_LOC(P($$), D($1), D($1)); }
+	| T_PROTECTED {
+		$$ = new Qualifier();
+		$$->setProtected();
+		GEN_LOC(P($$), D($1), D($1)); }
+	| T_CONST {
+		$$ = new Qualifier();
+		$$->setConst();
+		GEN_LOC(P($$), D($1), D($1)); }
+	| T_STATIC {
+		$$ = new Qualifier();
+		$$->setStatic();
+		GEN_LOC(P($$), D($1), D($1)); }
+	| qualifier T_PUBLIC {
+		$$ = $1;
+		$$->setPublic();
+		GEN_LOC(P($$), P($1), D($2)); }
+	| qualifier T_PRIVATE {
+		$$ = $1;
+		$$->setPrivate();
+		GEN_LOC(P($$), P($1), D($2)); }
+	| qualifier T_PROTECTED {
+		$$ = $1;
+		$$->setProtected();
+		GEN_LOC(P($$), P($1), D($2)); }
+	| qualifier T_CONST {
+		$$ = $1;
+		$$->setConst();
+		GEN_LOC(P($$), P($1), D($2)); }
+	| qualifier T_STATIC {
+		$$ = $1;
+		$$->setStatic();
+		GEN_LOC(P($$), P($1), D($2)); }
 	
 inclass_definations:
 	function_defination T_SEMICOLON {
 		$$.v = new std::list<ASTNode*>();
 		$$.v->push_back((ASTNode *) $1);
 		GEN_LOC(S($$), P($1), D($2)); }
-	| T_VISIBILITY variable_defination T_SEMICOLON {
+	| qualifier variable_defination T_SEMICOLON {
 		$$.v = new std::list<ASTNode*>();
 		$$.v->push_back((ASTNode *) $2);
-		GEN_LOC(S($$), S($1), D($3)); }
+		GEN_LOC(S($$), P($1), D($3)); }
 	| inclass_definations function_defination T_SEMICOLON {
 		$$.v = $1.v;
 		$1.v->push_back((ASTNode *) $2);
 		GEN_LOC(S($$), S($1), D($3)); }
-	| inclass_definations T_VISIBILITY variable_defination T_SEMICOLON {
+	| inclass_definations qualifier variable_defination T_SEMICOLON {
 		$$.v = $1.v;
 		$1.v->push_back((ASTNode *) $3);
 		GEN_LOC(S($$), S($1), D($4)); }
@@ -226,8 +269,8 @@ ininterface_definations:
 		GEN_LOC(S($$), S($1), D($3)); }
 	
 function_declaration:
-	T_VISIBILITY T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name
-	| T_VISIBILITY T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS
+	qualifier T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name
+	| qualifier T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS
 		
 expression:
 	expression T_ADD expression {
@@ -285,9 +328,12 @@ expression:
 		$$ = $1; }
 	| function_call
 	| expression array_accessor {
-		$$ = new ArrayAccess((Expression *) $1, (ArrayAccessor *) $2);
+		$$ = new ArrayAccess($1, $2);
 		GEN_LOC(P($$), P($2), P($2)); }
 	| object_create
+	| expression T_DOT T_IDENTIFIER {
+		$$ = new MemberAccess($1, $3);
+		GEN_LOC(P($$), D($2), D($2)); }
 	
 object_create:
 	T_NEW type_name {
@@ -459,12 +505,12 @@ base_type:
 		GEN_LOC(P($$), D($1), D($1)); }
 
 function_defination:
-	T_VISIBILITY T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name T_BEGIN statement_list T_END {
-		$$ = new Function($1.v, $8, $3, $5.v, $10);
-		GEN_LOC(P($$), S($1), D($11)); }
-	| T_VISIBILITY T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statement_list T_END {
-		$$ = new Function($1.v, NULL, $3, $5.v, $8);
-		GEN_LOC(P($$), S($1), D($9)); }
+	qualifier T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name T_BEGIN statement_list T_END {
+		$$ = new Function($1, $8, $3, $5.v, $10);
+		GEN_LOC(P($$), P($1), D($11)); }
+	| qualifier T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statement_list T_END {
+		$$ = new Function($1, NULL, $3, $5.v, $8);
+		GEN_LOC(P($$), P($1), D($9)); }
 
 arg_list:
 	{

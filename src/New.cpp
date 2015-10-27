@@ -4,6 +4,7 @@
 #include "Type.h"
 #include "Context.h"
 #include "exception.h"
+#include "DebugInfo.h"
 
 New::New(Type *type) : type(type) {
 }
@@ -26,16 +27,20 @@ llvm::Value *New::load(Context &context) {
 					context.getBuilder().getInt64Ty(),
 					DL.getTypeAllocSize(type->getType(context)),
 					false) };
-	return llvm::BitCastInst::Create(
-			llvm::Instruction::BitCast,
-			llvm::CallInst::Create(
-					context.mallocFunc,
-					llvm::ArrayRef<llvm::Value*>(arg, 1),
-					"",
-					context.currentBlock()
-			),
-			llvm::PointerType::get(type->getType(context), 0)
-	);
+	return addDebugLoc(
+			context,
+			context.getBuilder().CreateBitCast(
+					addDebugLoc(
+							context,
+							llvm::CallInst::Create(
+									context.mallocFunc,
+									llvm::ArrayRef<llvm::Value*>(arg, 1),
+									"",
+									context.currentBlock()
+							),
+							loc),
+					llvm::PointerType::get(type->getType(context), 0)),
+			loc);
 }
 
 llvm::Instruction* New::store(Context &context, llvm::Value *value) {

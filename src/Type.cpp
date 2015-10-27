@@ -55,14 +55,18 @@ Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
 }
 
 Type::Type(Class *cls) :
-			baseType(OBJECT), cls(cls), internal(NULL), isUnsigned(false), identifier(NULL) {
+		baseType(OBJECT), cls(cls), internal(NULL), isUnsigned(false), identifier(NULL) {
 }
 
 Type::Type(Identifier *identifier) :
-			baseType(OBJECT), cls(NULL), internal(NULL), isUnsigned(false), identifier(identifier) {
+		baseType(OBJECT), cls(NULL), internal(NULL), isUnsigned(false), identifier(identifier) {
 }
 
 Type::~Type() {
+	if (identifier)
+		delete identifier;
+	if (internal)
+		delete internal;
 }
 
 Json::Value Type::json() {
@@ -90,7 +94,10 @@ Json::Value Type::json() {
 		break;
 	}
 	case OBJECT:
-		root["class"] = cls->getPrefix().substr(0, cls->getPrefix().length() - 1);
+		if (cls)
+			root["class"] = cls->getPrefix().substr(0, cls->getPrefix().length() - 1);
+		else
+			root["class"] = identifier->getName();
 		break;
 	case BYTE:
 	case SHORT:

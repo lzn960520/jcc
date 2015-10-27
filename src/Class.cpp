@@ -85,3 +85,7 @@ void Class::setNS(const std::string &ns) {
 Symbol* Class::findSymbol(const std::string &name) {
 	return symbols.find(name);
 }
+
+const std::string& Class::getName() {
+	return identifier->getName();
+}
