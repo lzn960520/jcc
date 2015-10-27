@@ -17,6 +17,14 @@
 
 %%
 
+\/\/.*	{
+	if (lex_output)
+		fprintf(lex_output, "<comment>");
+	return yylex(); }
+\/\*(.|\n)*\*\/	{
+	if (lex_output)
+		fprintf(lex_output, "<comment>");
+	return yylex(); }
 "+"	{
 	if (lex_output)
 		fprintf(lex_output, "<ADD>");

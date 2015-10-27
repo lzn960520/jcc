@@ -1,9 +1,13 @@
 module sort begin
 
+/***
+ * the class is the Main class
+ */
 class Main
 begin
-	private int[0..10] a;
-	
+	private int[0..10] a; // the array
+
+	// stub of writeInt	
 	private static procedure writeInt(int a)
 	begin
 	end;
