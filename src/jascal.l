@@ -253,6 +253,10 @@
 	if (lex_output)
 		fprintf(lex_output, "<CONST>");
 	return T_CONST; }
+"using" {
+	if (lex_output)
+		fprintf(lex_output, "<USING>");
+	return T_USING; }
 \"(\\\"|[^\"])*\"	{
 	if (lex_output)
 		fprintf(lex_output, "<literal_string %s>", yytext);

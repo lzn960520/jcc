@@ -20,6 +20,7 @@ extern void lex_only();
 // from bison
 extern void yyparse();
 extern std::list<Module*> modules;
+extern std::list<std::string> usings;
 
 // for cmdline process
 #define OPT_LEX_ONLY 256
@@ -133,8 +134,20 @@ int main(int argc, char * const argv[]) {
 				break;
 
 			Context *context = new Context(input_filename, true);
-			JsymFile js("test.jsym", true);
-			js >> *context;
+
+			// import jsym
+			for (std::list<std::string>::iterator it = usings.begin(); it != usings.end(); it++) {
+				if (input_filename.empty()) {
+					JsymFile jsymFile(*it, true);
+					jsymFile >> *context;
+				} else if (input_filename.rfind('/') == std::string::npos) {
+					JsymFile jsymFile(*it, true);
+					jsymFile >> *context;
+				} else {
+					JsymFile jsymFile(input_filename.substr(0, input_filename.rfind('/') + 1) + *it, true);
+					jsymFile >> *context;
+				}
+			}
 
 			// generate struct type
 			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++) {

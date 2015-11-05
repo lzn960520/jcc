@@ -1,0 +1,14 @@
+using "qsort.jsym";
+
+module Main
+begin
+
+class Main
+begin
+	public static function main() : int
+	begin
+		return 0;
+	end;
+end;
+
+end;

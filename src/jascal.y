@@ -20,6 +20,7 @@
 	class Qualifier;
 	class MemberNode;
 	class StructNode;
+	class LiteralString;
 }
 
 %code top {
@@ -52,6 +53,7 @@
 	#include "MemberNode.h"
 	#include "MemberVariableDefination.h"
 	#include "exception.h"
+	#include "LiteralString.h"
 }
 
 %initial-action {
@@ -81,6 +83,7 @@
 	YYLTYPE token;
 	Qualifier *qualifier;
 	MemberNode *member;
+	LiteralString *literal_string;
 }
 
 %code {
@@ -92,6 +95,7 @@
 
 	// global
 	std::list<Module*> modules;
+	std::list<std::string> usings;
 
 	// from main
 	extern const char *input_filename;
@@ -135,13 +139,13 @@
 %type <identifier> class_name
 
 %token <expression> T_LITERAL_INT
-%token <expression> T_LITERAL_STRING
+%token <literal_string> T_LITERAL_STRING
 %token <identifier> T_IDENTIFIER
 %token <token> T_MODULE T_BEGIN T_END T_LEFT_CURLY T_RIGHT_CURLY T_SEMICOLON
 		T_IF T_THEN T_ELSE T_WHILE T_DO T_COMMA T_UNSIGNED T_BYTE T_VAR
 		T_SHORT T_INT T_CHAR T_FLOAT T_DOUBLE T_RETURN T_INTERFACE
 		T_REPEAT T_UNTIL T_COLON T_FUNCTION T_PROCEDURE T_DOTDOT T_STRING
-		T_CLASS T_NS T_PUBLIC T_PRIVATE T_PROTECTED T_CONST T_STATIC
+		T_CLASS T_NS T_PUBLIC T_PRIVATE T_PROTECTED T_CONST T_STATIC T_USING
 
 %right <token> T_ASSIGN
 %left <token> T_LOG_OR
@@ -164,11 +168,24 @@
 %%
 
 compile_unit:
-	module_defination T_SEMICOLON {
+	| usings module_definations
+	| module_definations
+	| usings
+
+usings:
+	T_USING T_LITERAL_STRING T_SEMICOLON {
+		usings.push_back($2->text); }
+	| usings T_USING T_LITERAL_STRING T_SEMICOLON {
+		usings.push_back($3->text); }
+
+module_definations:
+	module_defination {
 		modules.push_back($1); }
-	
+	| module_definations module_defination {
+		modules.push_back($2); }
+
 module_defination:
-	T_MODULE ns_identifier T_BEGIN inmodule_definations T_END {
+	T_MODULE ns_identifier T_BEGIN inmodule_definations T_END T_SEMICOLON {
 		$$ = new Module($2, $4.v);
 		GEN_LOC(P($$), D($1), D($5)); }
 
