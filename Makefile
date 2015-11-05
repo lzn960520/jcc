@@ -1,6 +1,7 @@
 .PHONY: all clean test vars deps flex bison
 
 CXX := clang++
+CC := clang
 LEX := flex
 LLVM_COMPONENTS := all
 
@@ -45,6 +46,7 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
 	JsymFile.cpp MemberVariableDefination.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
+OBJS += objs/HtmlTemplate.o
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 PROG := jcc
 TESTS := $(wildcard tests/*.jas)
@@ -78,7 +80,7 @@ deps: $(DEPS)
 
 $(PROG): $(OBJS)
 	@echo "[LINK] $@"
-	@$(CXX) $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
+	@$(CXX) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 bison: include/jascal.tab.hpp
 
@@ -98,3 +100,16 @@ test: $(TESTS_OUT)
 tests/%.ll: tests/%.jas $(PROG)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
 	@./$(PROG) --dump-ast=tests/$*.json --dump-lex=tests/$*.txt --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
+
+objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
+	@echo "[GEN ] $< -> $@"
+	@./tools/HtmlCombiner/combiner.py $< $@
+	@dd if=/dev/zero bs=1 count=1 >> $@ 2>/dev/null
+
+objs/HtmlTemplate.o: objs/index-comb.html tools/bincc/bincc
+	@echo "[GEN ] $< -> $@"
+	@./tools/bincc/bincc $< $@ htmlTemplate
+
+tools/bincc/bincc: tools/bincc/bincc.c
+	@echo "[CC  ] $< -> $@"
+	@$(CC) -o $@ $<
