@@ -4,6 +4,7 @@
 #include "Context.h"
 #include "exception.h"
 #include "Type.h"
+#include "DebugInfo.h"
 
 const char* Op1::OpNames[] = {
 	"++",
@@ -35,25 +36,39 @@ llvm::Value* Op1::load(Context &context) {
 	case SELF_INC:
 		if (!operand->getType(context)->isInt())
 			throw InvalidType("Self increment only allowed to integer");
-		operand->store(context, context.getBuilder().CreateAdd(
-				ohs,
-				llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 1, false)));
+		addDebugLoc(
+				context,
+				operand->store(context,
+						addDebugLoc(
+								context,
+								context.getBuilder().CreateAdd(
+										ohs,
+										llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 1, false)),
+								loc)),
+				loc);
 		return ohs;
 	case SELF_DEC:
 		if (!operand->getType(context)->isInt())
 			throw InvalidType("Self decrement only allowed to integer");
-		operand->store(context, context.getBuilder().CreateSub(
-				ohs,
-				llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 1, false)));
+		addDebugLoc(
+				context,
+				operand->store(context,
+						addDebugLoc(
+								context,
+								context.getBuilder().CreateSub(
+										ohs,
+										llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 1, false)),
+								loc)),
+				loc);
 		return ohs;
 	case LOGIC_NOT:
 		if (!operand->getType(context)->isBool())
-			throw InvalidType("Logical not only allowed to bool");
-		return context.getBuilder().CreateNot(ohs);
+			throw InvalidType("Logical-not only allowed to bool");
+		return addDebugLoc(context, context.getBuilder().CreateNot(ohs), loc);
 	case BIT_NOT:
 		if (!operand->getType(context)->isInt())
-			throw InvalidType("Bit not only allowed to integer");
-		return context.getBuilder().CreateNot(ohs);
+			throw InvalidType("Bit-not only allowed to integer");
+		return addDebugLoc(context, context.getBuilder().CreateNot(ohs), loc);
 	}
 }
 

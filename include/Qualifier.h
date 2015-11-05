@@ -19,6 +19,7 @@ public:
 	inline bool isPublic() const { return _isPublic; }
 	inline bool isProtected() const { return _isProtected; }
 	Json::Value json() override;
+	void writeJsymFile(FILE *f);
 };
 
 #endif

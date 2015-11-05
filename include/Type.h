@@ -35,7 +35,8 @@ struct Type : public ASTNode {
 	Class *cls;
 	Identifier *identifier;
 	Type(BaseType baseType, bool isUnsigned = false);
-	Type(BaseType array, Type *baseType, ArrayDefinator *definator);
+	Type(Type *internal, ArrayDefinator *definator);
+	Type(Type *internal, const std::vector<std::pair<int, int> > &dims);
 	Type(Class *cls);
 	Type(Identifier *identifier);
 	~Type();
@@ -54,6 +55,8 @@ struct Type : public ASTNode {
 	static Type* higherType(Type *a, Type *b);
 	const char *getName() { return BaseTypeNames[baseType]; }
 	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
+	void writeJsymFile(FILE *f);
+	const std::string getMangleName();
 };
 
 #endif

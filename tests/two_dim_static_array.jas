@@ -1,0 +1,19 @@
+module Main
+begin
+
+class Main
+begin
+	public int[0..5,0..5] a;
+	private procedure test()
+	begin
+		a[0, 0] = 0;
+		a[1, 1] = 0;
+	end;
+	public procedure main()
+	begin
+		var Main test = new Main;
+		test.test();
+	end;
+end;
+
+end;

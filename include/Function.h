@@ -3,22 +3,22 @@
 
 #include <list>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 
-#include "ASTNode.h"
+#include "MemberNode.h"
 #include "Qualifier.h"
 
 class Type;
 class Identifier;
 class ArgumentList;
 class Class;
-struct Function : public ASTNode {
+struct Function : public MemberNode {
 	Qualifier *qualifier;
 	Type *return_type;
 	Identifier *identifier;
 	std::list<std::pair<Type*, Identifier*> > &arg_list;
 	typedef std::list<std::pair<Type*, Identifier*> >::iterator arg_iterator;
 	ASTNode *body;
-	Class *cls;
 	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body);
 	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, llvm::Function *llvmFunction);
 	~Function();
@@ -36,6 +36,9 @@ struct Function : public ASTNode {
 	inline bool isPublic() const { return qualifier->isPublic(); }
 	inline bool isPrivate() const { return qualifier->isPrivate(); }
 	inline bool isProtected() const { return qualifier->isProtected(); }
+	void genStruct(Context &context) override;
+	void writeJsymFile(FILE *f) override;
+	bool isDeclaration() { return body == NULL; }
 };
 
 #endif

@@ -18,6 +18,8 @@
 	class Class;
 	class Interface;
 	class Qualifier;
+	class MemberNode;
+	class StructNode;
 }
 
 %code top {
@@ -47,6 +49,9 @@
 	#include "Interface.h"
 	#include "Qualifier.h"
 	#include "MemberAccess.h"
+	#include "MemberNode.h"
+	#include "MemberVariableDefination.h"
+	#include "exception.h"
 }
 
 %initial-action {
@@ -67,13 +72,15 @@
 	ArrayAccessor *arr_acc;
 	Namespace *ns;
 	Module *module;
-	struct { YYLTYPE loc; std::list<ASTNode*> *v; } list;
+	struct { YYLTYPE loc; std::list<StructNode*> *v; } struct_list;
 	struct { YYLTYPE loc; std::list<std::pair<Identifier*,Expression*> > *v; } var_entry_list;
 	Class *cls;
 	Interface *interface;
 	struct { YYLTYPE loc; std::list<std::pair<Type*, Identifier*> > *v; } arg_list;
+	struct { YYLTYPE loc; std::list<MemberNode*> *v; } member_list;
 	YYLTYPE token;
 	Qualifier *qualifier;
+	MemberNode *member;
 }
 
 %code {
@@ -117,13 +124,15 @@
 %type <arg_list> arg_list
 %type <ns> ns_identifier
 %type <module> module_defination
-%type <list> inmodule_definations
+%type <struct_list> inmodule_definations
 %type <cls> class_defination
 %type <interface> interface_defination
-%type <list> inclass_definations
-%type <list> ininterface_definations
+%type <member_list> inclass_definations
+%type <member_list> ininterface_definations
 %type <expression> object_create
 %type <qualifier> qualifier
+%type <member> class_member_defination
+%type <identifier> class_name
 
 %token <expression> T_LITERAL_INT
 %token <expression> T_LITERAL_STRING
@@ -171,23 +180,29 @@ ns_identifier:
 		$$ = $1;
 		$1->push_back($3);
 		GEN_LOC(P($$), P($1), P($3)); }
+
+class_name:
+	ns_identifier {
+		$$ = new Identifier($1->getFullName().c_str());
+		GEN_LOC(P($$), P($1), P($1));
+		delete $1; }
 		
 inmodule_definations:
 	class_defination T_SEMICOLON {
-		$$.v = new std::list<ASTNode*>();
-		$$.v->push_back((ASTNode *) $1);
+		$$.v = new std::list<StructNode*>();
+		$$.v->push_back($1);
 		GEN_LOC(S($$), P($1), D($2)); }
 	| interface_defination T_SEMICOLON {
-		$$.v = new std::list<ASTNode*>();
-		$$.v->push_back((ASTNode *) $1); 
+		$$.v = new std::list<StructNode*>();
+		$$.v->push_back($1); 
 		GEN_LOC(S($$), P($1), D($2)); }
 	| inmodule_definations class_defination T_SEMICOLON {
 		$$.v = $1.v;
-		$1.v->push_back((ASTNode *) $2);
+		$1.v->push_back($2);
 		GEN_LOC(S($$), S($1), D($3)); }
 	| inmodule_definations interface_defination T_SEMICOLON  {
 		$$.v = $1.v;
-		$1.v->push_back((ASTNode *) $2);
+		$1.v->push_back($2);
 		GEN_LOC(S($$), S($1), D($3)); }
 	
 class_defination:
@@ -238,34 +253,33 @@ qualifier:
 		GEN_LOC(P($$), P($1), D($2)); }
 	
 inclass_definations:
+	class_member_defination {
+		$$.v = new std::list<MemberNode*>();
+		$$.v->push_back($1);
+		GEN_LOC(S($$), P($1), P($1)); }
+	| inclass_definations class_member_defination {
+		$$.v = $1.v;
+		$1.v->push_back($2);
+		GEN_LOC(S($$), S($1), P($2)); }
+
+class_member_defination:
 	function_defination T_SEMICOLON {
-		$$.v = new std::list<ASTNode*>();
-		$$.v->push_back((ASTNode *) $1);
-		GEN_LOC(S($$), P($1), D($2)); }
+		$$ = $1; }
 	| qualifier variable_defination T_SEMICOLON {
-		$$.v = new std::list<ASTNode*>();
-		$$.v->push_back((ASTNode *) $2);
-		GEN_LOC(S($$), P($1), D($3)); }
-	| inclass_definations function_defination T_SEMICOLON {
-		$$.v = $1.v;
-		$1.v->push_back((ASTNode *) $2);
-		GEN_LOC(S($$), S($1), D($3)); }
-	| inclass_definations qualifier variable_defination T_SEMICOLON {
-		$$.v = $1.v;
-		$1.v->push_back((ASTNode *) $3);
-		GEN_LOC(S($$), S($1), D($4)); }
-	
+		$$ = new MemberVariableDefination($1, $2);
+		GEN_LOC(P($$), P($1), P($2)); }
+
 interface_defination:
 	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END
 	
 ininterface_definations:
 	function_declaration T_SEMICOLON {
-		$$.v = new std::list<ASTNode*>();
-		$$.v->push_back((ASTNode *) $1);
+		$$.v = new std::list<MemberNode*>();
+		$$.v->push_back($1);
 		GEN_LOC(S($$), P($1), D($2)); }
 	| ininterface_definations function_declaration T_SEMICOLON {
 		$$.v = $1.v;
-		$1.v->push_back((ASTNode *) $2);
+		$1.v->push_back($2);
 		GEN_LOC(S($$), S($1), D($3)); }
 	
 function_declaration:
@@ -465,11 +479,11 @@ variable_defination_list:
 
 type_name:
 	base_type
-	| T_IDENTIFIER {
+	| class_name {
 		$$ = new Type($1);
 		GEN_LOC(P($$), P($1), P($1)); }
 	| type_name array_definator {
-		$$ = new Type(Type::ARRAY, $1, $2);
+		$$ = new Type($1, $2);
 		GEN_LOC(P($$), P($1), P($2)); }
 
 base_type:
@@ -579,4 +593,5 @@ void yyerror(const char *s) {
 		fprintf(stderr, "\n");
 	}
 	fprintf(stderr, "error: %s at %d:%d\n", s, yylloc.first_line, yylloc.first_column);
+	throw CompileException("syntax error");
 }

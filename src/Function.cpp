@@ -8,13 +8,14 @@
 #include "Class.h"
 #include "DebugInfo.h"
 #include "Qualifier.h"
+#include "util.h"
 
 Function::Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body) :
-	qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(body), llvmFunction(NULL), cls(NULL) {
+	qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(body), llvmFunction(NULL) {
 }
 
 Function::Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, llvm::Function *function) :
-	qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(NULL), llvmFunction(function), cls(NULL) {
+	qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(NULL), llvmFunction(function) {
 }
 
 Function::~Function() {
@@ -22,6 +23,11 @@ Function::~Function() {
 		delete return_type;
 	delete qualifier;
 	delete identifier;
+	for (std::list<std::pair<Type*, Identifier*> >::iterator it = arg_list.begin(); it != arg_list.end(); it++) {
+		delete it->first;
+		if (it->second)
+			delete it->second;
+	}
 	delete &arg_list;
 	if (body)
 		delete body;
@@ -51,7 +57,7 @@ void Function::gen(Context &context) {
 	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_type.push_back(it->first->getType(context));
 	llvmFunction = context.createFunction(
-			cls->getPrefix() + identifier->getName(),
+			getMangleName(),
 			llvm::FunctionType::get(
 					return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
 					llvm::ArrayRef<llvm::Type*>(arg_type),
@@ -82,7 +88,21 @@ void Function::gen(Context &context) {
 }
 
 llvm::Function* Function::getLLVMFunction(Context &context) {
-	if (!llvmFunction)
+	if (!llvmFunction && !body) {
+		std::vector<llvm::Type*> arg_type;
+		if (!isStatic())
+			arg_type.push_back(llvm::PointerType::get(cls->getLLVMType(), 0));
+		for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
+			arg_type.push_back(it->first->getType(context));
+		llvmFunction = context.createFunction(
+				getMangleName(),
+				llvm::FunctionType::get(
+						return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
+						llvm::ArrayRef<llvm::Type*>(arg_type),
+						false),
+				this);
+		return llvmFunction;
+	} else if (!llvmFunction)
 		gen(context);
 	return llvmFunction;
 }
@@ -92,7 +112,10 @@ const std::string& Function::getName() {
 }
 
 const std::string Function::getMangleName() {
-	return cls->getPrefix() + identifier->getName();
+	std::string tmp = cls->getMangleName() + "F" + itos(identifier->getName().length()) + identifier->getName() + itos(arg_list.size());
+	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
+		tmp += it->first->getMangleName();
+	return tmp;
 }
 
 llvm::FunctionType* Function::getLLVMType(Context &context) {
@@ -104,4 +127,12 @@ llvm::FunctionType* Function::getLLVMType(Context &context) {
 			return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
 			llvm::ArrayRef<llvm::Type*>(arg_type),
 			false);
+}
+
+void Function::genStruct(Context &context) {
+	if (!qualifier->isStatic()) {
+		cls->vtable.push_back(llvm::PointerType::get(getLLVMType(context), 0));
+		cls->symbols.add(new Symbol(getName(), this, cls->vtable.size() - 1));
+	} else
+		cls->symbols.add(new Symbol(getName(), this, 0));
 }

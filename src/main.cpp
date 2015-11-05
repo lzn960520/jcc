@@ -1,11 +1,13 @@
-#include <iostream>
 #include <fstream>
 #include <cerrno>
+#include <cstdio>
+#include <iostream>
 #include "Context.h"
 #include "exception.h"
 #include "cmdline.h"
 #include "Module.h"
 #include "Output.h"
+#include "JsymFile.h"
 
 // global
 std::string input_filename;
@@ -68,19 +70,19 @@ int main(int argc, char * const argv[]) {
 		case -1:
 			if (yyin != NULL) {
 				fprintf(stderr, "Can't specify two input files at the same time\n");
-				exit(0);
+				exit(-1);
 			}
 			yyin = fopen(opt.arg.c_str(), "r");
 			if (yyin == NULL) {
 				fprintf(stderr, "Can't open input file \"%s\", errno %d\n", opt.arg.c_str(), errno);
-				exit(0);
+				exit(-1);
 			}
 			input_filename = opt.arg.c_str();
 			break;
 		case OPT_OUTPUT_FILE:
 			if (!output_filename.empty()) {
 				fprintf(stderr, "Can't specify two output files at the same time\n");
-				exit(0);
+				exit(-1);
 			}
 			output_filename = opt.arg;
 			break;
@@ -88,7 +90,7 @@ int main(int argc, char * const argv[]) {
 			opt_dump_lex = true;
 			if (lex_output != NULL) {
 				fprintf(stderr, "Can't specify two lex output file\n");
-				exit(0);
+				exit(-1);
 			}
 			if (opt.arg.empty())
 				lex_output = fopen(DEFAULT_LEX_OUTPUT, "w");
@@ -96,29 +98,30 @@ int main(int argc, char * const argv[]) {
 				lex_output = fopen(opt.arg.c_str(), "w");
 			if (lex_output == NULL) {
 				fprintf(stderr, "Can't open lex output file \"%s\"\n", opt.arg.empty() ? DEFAULT_LEX_OUTPUT : opt.arg.c_str());
-				exit(0);
+				exit(-1);
 			}
 			break;
 		case OPT_DUMP_AST:
 			opt_dump_ast = true;
 			if (ast_filename != "") {
 				fprintf(stderr, "Can't specify two ast output file\n");
-				exit(0);
+				exit(-1);
 			}
 			ast_filename = opt.arg.empty() ? DEFAULT_AST_OUTPUT : opt.arg.c_str();
 			break;
 		default:
 			fprintf(stderr, "Unknown option %s\n", opt.opt.c_str());
-			exit(0);
+			exit(-1);
 			break;
 		}
 	}
 
 	if (opt_lex_only + opt_parse_only + opt_llvm_only + opt_as_only + opt_compile_only > 1) {
 		fprintf(stderr, "You can't specify two --xxx-only options at the same time\n");
-		exit(0);
+		exit(-1);
 	}
 
+	bool success = true;
 	do {
 		try {
 			if (opt_lex_only) {
@@ -129,15 +132,15 @@ int main(int argc, char * const argv[]) {
 			if (opt_parse_only)
 				break;
 
-			Context *context = new Context();
-			if (input_filename.empty())
-				context->initDWARF("stdin");
-			else
-				context->initDWARF(input_filename);
+			Context *context = new Context(input_filename, true);
+			JsymFile js("test.jsym", true);
+			js >> *context;
 
 			// generate struct type
-			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
-				(*it)->genStruct(*context);
+			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++) {
+				context->addModule(*it);
+				context->getJsymFile() << (*it);
+			}
 
 			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
 				(*it)->gen(*context);
@@ -175,6 +178,7 @@ int main(int argc, char * const argv[]) {
 			}
 		} catch (CompileException &e) {
 			fprintf(stderr, "Compile error: %s\n", e.message().c_str());
+			success = false;
 		}
 	} while(0);
 
@@ -184,7 +188,7 @@ int main(int argc, char * const argv[]) {
 		std::ofstream ofs(ast_filename);
 		if (!ofs) {
 			fprintf(stderr, "Can't open ast output file \"%s\"\n", ast_filename.c_str());
-			exit(0);
+			exit(-1);
 		}
 		Json::Value tmp;
 		tmp["name"] = "file";
@@ -194,7 +198,6 @@ int main(int argc, char * const argv[]) {
 			tmp["modules"][i] = (*it)->json();
 		ofs << "var ast = " << tmp << std::endl;
 		ofs.close();
-		exit(0);
 	}
-	return 0;
+	return success ? 0 : -1;
 }

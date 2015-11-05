@@ -1,0 +1,31 @@
+module:
+	'M' { 'N' len(nname) nname }
+	definations
+	'EM'
+
+class:
+	'C' len(cname) cname
+	definations
+	'EC'
+
+function:
+	'F'
+	qualifier
+	return_type
+	arg_types
+	'EF'
+
+procedure:
+	'F'
+	qualifier
+	'v'
+	arg_types
+	'EF'
+
+member_variable:
+	'V'
+	qualifier
+	type
+	n_vars
+	{ len(name) name }
+	'EV'

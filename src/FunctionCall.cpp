@@ -31,7 +31,7 @@ Json::Value FunctionCall::json() {
 llvm::Value* FunctionCall::load(Context &context) {
 	Class *targetClass = NULL;
 	if (target == NULL)
-		targetClass = context.currentFunction->cls;
+		targetClass = context.currentFunction->getClass();
 	else
 		targetClass = target->getType(context)->getClass();
 	Symbol *symbol = targetClass->findSymbol(identifier->getName());

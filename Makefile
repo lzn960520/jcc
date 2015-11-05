@@ -5,7 +5,7 @@ LEX := flex
 LLVM_COMPONENTS := all
 
 CPPFLAGS ?=
-CPPFLAGS += -Iinclude -frtti -g
+CPPFLAGS += -Iinclude -frtti -g -DDEBUG
 ifeq ($(DEBUG), 1)
 CPPFLAGS += -g
 endif
@@ -42,27 +42,30 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
 	ArrayAccessor.cpp Symbol.cpp Output.cpp New.cpp DebugInfo.cpp \
-	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp
+	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
+	JsymFile.cpp MemberVariableDefination.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 PROG := jcc
+TESTS := $(wildcard tests/*.jas)
+TESTS_OUT := $(patsubst %.jas,%.ll,$(TESTS))
 
 all: $(PROG)
 
 deps/%.d: src/%.cpp | flex bison
-	$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$ || exit "$$?"; \
+	@echo "[DEP ] $< -> $@"
+	@$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$ || exit "$$?"; \
 	sed 's,\($*\)\.o[ :]*,objs/\1.o: $@ ,g' < $@.$$$$ > $@ || exit "$$?"; \
 	$(RM) $@.$$$$ || exit "$$?"
 
-objs/%.o:
-	@echo "CXX src/$*.cpp -> $@"
+objs/%.o: 
+	@echo "[CXX ] src/$*.cpp -> $@"
 	@$(CXX) $(CPPFLAGS) -c -o $@ src/$*.cpp
-	
-include/jascal.tab.hpp: src/jascal.y
-	$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
-	mv src/jascal.tab.hpp include/
 
-src/jascal.tab.cpp: include/jascal.tab.hpp
+include/jascal.tab.hpp: src/jascal.y
+	@echo "[YACC] $<"
+	@$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
+	@mv src/jascal.tab.hpp include/
 
 include $(DEPS)
 
@@ -74,19 +77,24 @@ vars:
 deps: $(DEPS)
 
 $(PROG): $(OBJS)
-	$(CXX) $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
+	@echo "[LINK] $@"
+	@$(CXX) $(CPPFLAGS) -o $@ $(LDFLAGS) $^ $(LIBS)
 
-bison: include/jascal.tab.hpp src/jascal.tab.cpp 
+bison: include/jascal.tab.hpp
 
 src/lex.yy.cpp: src/jascal.l
-	$(LEX) --outfile=src/lex.yy.cpp src/jascal.l
+	@echo "[LEX ] $< -> $@"
+	@$(LEX) --outfile=$@ $<
 	
 flex: src/lex.yy.cpp
 
 clean:
-	$(RM) -rf src/jascal.tab.cpp include/jascal.tab.hpp src/lex.yy.cpp \
-		 $(PROG) $(OBJS) $(DEPS) lex.txt bison-report.txt test.ll test.ll.s \
-		 test.o test.exe test ast/ast.json
+	@echo "CLEAN"
+	@$(RM) -rf src/jascal.tab.cpp include/jascal.tab.hpp src/lex.yy.cpp \
+		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o
 
-test: jcc test.jas
-	./$(PROG) --llvm --dump-lex --dump-ast=ast/ast.json -o test.ll test.jas
+test: $(TESTS_OUT)
+
+tests/%.ll: tests/%.jas $(PROG)
+	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
+	@./$(PROG) --dump-ast=tests/$*.json --dump-lex=tests/$*.txt --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@

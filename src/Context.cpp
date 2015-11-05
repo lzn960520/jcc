@@ -1,5 +1,4 @@
 #include <llvm/IR/Module.h>
-#include <iostream>
 #include <unistd.h>
 
 #include "Context.h"
@@ -8,6 +7,9 @@
 #include "Symbol.h"
 #include "Type.h"
 #include "Identifier.h"
+#include "Class.h"
+#include "JsymFile.h"
+#include "Module.h"
 
 void Context::SymbolContext::add(Symbol *symbol) {
 	map[symbol->name] = symbol;
@@ -25,7 +27,7 @@ Context::SymbolContext::~SymbolContext() {
 		delete it->second;
 }
 
-Context::Context() : mallocFunc(NULL), DL(NULL), DI(NULL) {
+Context::Context(const std::string &filename, bool debug) : mallocFunc(NULL), DL(NULL), DI(NULL), isDebug(debug) {
 	llvmContext = &llvm::getGlobalContext();
 	module = new llvm::Module("top", getContext());
 	builder = new llvm::IRBuilder<>(getContext());
@@ -47,6 +49,28 @@ Context::Context() : mallocFunc(NULL), DL(NULL), DI(NULL) {
 				module
 		);
 	}
+
+	if (debug)
+		initDWARF(filename.empty() ? "stdin" : filename);
+
+	if (!filename.empty()) {
+		if (filename.rfind('.') == std::string::npos)
+			initJsymFile(filename + ".jsym");
+		else
+			initJsymFile(filename.substr(0, filename.rfind('.')) + ".jsym");
+	} else
+		initJsymFile("");
+}
+
+Context::~Context() {
+	delete jsymFile;
+	delete builder;
+	delete module;
+	delete llvmContext;
+	for (SymbolContextStack::iterator it = contextStack.begin(); it != contextStack.end(); it++)
+		delete *it;
+	for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
+		delete *it;
 }
 
 void Context::initDWARF(const std::string &filename) {
@@ -71,12 +95,22 @@ void Context::initDWARF(const std::string &filename) {
 	}
 }
 
+void Context::initJsymFile(const std::string &filename) {
+	if (!filename.empty())
+		unlink(filename.c_str());
+	jsymFile = new JsymFile(filename, false);
+}
+
 llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType, Function *function) {
-	llvm::Function *llvmFunction = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
-	llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), name + "@entry", llvmFunction);
-	builder->SetInsertPoint(block);
-	currentFunction = function;
-	return llvmFunction;
+	if (function->isDeclaration()) {
+		return llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
+	} else {
+		llvm::Function *llvmFunction = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
+		llvm::BasicBlock *block = llvm::BasicBlock::Create(getContext(), name + "@entry", llvmFunction);
+		builder->SetInsertPoint(block);
+		currentFunction = function;
+		return llvmFunction;
+	}
 }
 
 void Context::endFunction() {
@@ -162,4 +196,20 @@ void Context::pushDIScope(llvm::DIScope *scope) {
 
 void Context::popDIScope() {
 	diScopeStack.pop_back();
+}
+
+void Context::addClass(Class *cls) {
+	classes[cls->getFullName()] = cls;
+}
+
+Class* Context::findClass(const std::string &name) {
+	if (classes.count(name))
+		return classes[name];
+	else
+		return NULL;
+}
+
+void Context::addModule(Module *module) {
+	module->genStruct(*this);
+	modules.push_back(module);
 }

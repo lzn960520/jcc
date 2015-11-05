@@ -1,9 +1,9 @@
 #ifndef _INTERFACE_H_
 #define _INTERFACE_H_
 
-#include "ASTNode.h"
+#include "StructNode.h"
 
-class Interface : public ASTNode {
+class Interface : public StructNode {
 };
 
 #endif

@@ -1,0 +1,32 @@
+built-in-type:
+	byte # b
+	unsigned byte # B
+	short # s
+	unsigned short # S
+	int # i
+	unsigned int # I
+	char # c
+	float # f
+	double # d
+	string # a
+	bool # t
+	void # v
+
+array:
+	int[x..] # A1Di
+	int[x..y] # A1S(y-x)i
+	int[x..,x..] # A2DDi
+	int[x..y,x..] # A2S(y-x)Di
+	int[x..,x..y] # A2DS(y-x)i
+	int[x..y,x..y] # A2S(y-x)S(y-x)i
+	int[x..][x..] # A1DA1Di
+
+class:
+	N1::N2::Class # CN2N1N2N2C5Class
+
+procedure:
+	N1::Class1::func() # _FN2N1C6Class1F4func0
+	N1::Class1::func(int) # _FN2N1C6Class1F4func1i
+
+function:
+	N1::Class1::func(N2::Class2) : int # _FN2N1C6Class1F4func1CN2N2C6Class2

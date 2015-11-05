@@ -1,4 +1,5 @@
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
 
 #include "ArrayAccess.h"
 #include "Context.h"
@@ -35,15 +36,12 @@ llvm::Value* ArrayAccess::load(Context &context) {
 			throw NotImplemented("Dynamic array");
 		} else {
 			if (offset == NULL)
-				//offset = addDebugLoc(
-				//		context,
-				//		context.getBuilder().CreateSub(
-				//				accessor->list[i]->load(context),
-				//				llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true)),
-				//		loc);
-				offset = context.getBuilder().CreateSub(
+				offset = addDebugLoc(
+						context,
+						llvm::BinaryOperator::CreateSub(
 								accessor->list[i]->load(context),
-								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true));
+								context.getBuilder().getInt32(dim[i].first), "", context.currentBlock()),
+						loc);
 			else {
 				offset = addDebugLoc(
 						context,
@@ -57,16 +55,18 @@ llvm::Value* ArrayAccess::load(Context &context) {
 								offset,
 								addDebugLoc(
 										context,
-										context.getBuilder().CreateSub(
+										llvm::BinaryOperator::CreateSub(
 												accessor->list[i]->load(context),
-												llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true)),
+												context.getBuilder().getInt32(dim[i].first),
+												"",
+												context.currentBlock()),
 										loc)),
 						loc);
 			}
 		}
 	}
 	llvm::Value *index[2];
-	index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
+	index[0] = context.getBuilder().getInt32(0);
 	index[1] = offset;
 	llvm::Value *array_ptr = array->load(context);
 	return addDebugLoc(
@@ -93,14 +93,14 @@ llvm::Instruction* ArrayAccess::store(Context &context, llvm::Value *value) {
 			throw NotImplemented("Dynamic array");
 		} else {
 			if (offset == NULL)
-				//offset = addDebugLoc(
-				//		context,
-				//		context.getBuilder().CreateSub(
-				//				accessor->list[i]->load(context),
-				//				llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, false)),
-				//		loc);
-				offset = context.getBuilder().CreateSub(accessor->list[i]->load(context),
-								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, false));
+				offset = addDebugLoc(
+						context,
+						llvm::BinaryOperator::CreateSub(
+								accessor->list[i]->load(context),
+								context.getBuilder().getInt32(dim[i].first),
+								"",
+								context.currentBlock()),
+						loc);
 			else {
 				offset = addDebugLoc(
 						context,
@@ -112,9 +112,14 @@ llvm::Instruction* ArrayAccess::store(Context &context, llvm::Value *value) {
 						context,
 						context.getBuilder().CreateAdd(
 								offset,
-								context.getBuilder().CreateSub(
-										accessor->list[i]->load(context),
-										llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].first, true))),
+								addDebugLoc(
+										context,
+										llvm::BinaryOperator::CreateSub(
+												accessor->list[i]->load(context),
+												context.getBuilder().getInt32(dim[i].first),
+												"",
+												context.currentBlock()),
+										loc)),
 						loc);
 			}
 		}
@@ -122,17 +127,20 @@ llvm::Instruction* ArrayAccess::store(Context &context, llvm::Value *value) {
 	llvm::Value *index[2];
 	index[0] = llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), 0, false);
 	index[1] = offset;
-	return context.getBuilder().CreateStore(
-			value,
-			addDebugLoc(
-					context,
-					llvm::GetElementPtrInst::Create(
-							nullptr,
-							array->load(context),
-							llvm::ArrayRef<llvm::Value*>(index, 2),
-							"",
-							context.currentBlock()),
-					loc));
+	return addDebugLoc(
+			context,
+			context.getBuilder().CreateStore(
+					value,
+					addDebugLoc(
+							context,
+							llvm::GetElementPtrInst::Create(
+									nullptr,
+									array->load(context),
+									llvm::ArrayRef<llvm::Value*>(index, 2),
+									"",
+									context.currentBlock()),
+							loc)),
+			loc);
 }
 
 Type* ArrayAccess::getType(Context &context) {

@@ -1,6 +1,7 @@
 #include "Return.h"
 #include "Context.h"
 #include "Expression.h"
+#include "DebugInfo.h"
 
 Return::Return() :
 	expression(NULL) {
@@ -25,8 +26,8 @@ Json::Value Return::json() {
 
 void Return::gen(Context &context) {
 	if (expression)
-		context.getBuilder().CreateRet(expression->load(context));
+		addDebugLoc(context, context.getBuilder().CreateRet(expression->load(context)), loc);
 	else
-		context.getBuilder().CreateRetVoid();
+		addDebugLoc(context, context.getBuilder().CreateRetVoid(), loc);
 	context.newBlock();
 }

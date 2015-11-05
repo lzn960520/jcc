@@ -3,13 +3,13 @@
 #include "Context.h"
 #include "Class.h"
 
-Module::Module(Namespace *ns, std::list<ASTNode*> *definations) :
-	ns(ns), list(*definations) {
+Module::Module(Namespace *ns, std::list<StructNode*> *definations) :
+	ns(ns), list(*definations), parent(NULL) {
 }
 
 Module::~Module() {
 	delete ns;
-	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++)
+	for (std::list<StructNode*>::iterator it = list.begin(); it != list.end(); it++)
 		delete *it;
 	delete &list;
 }
@@ -20,22 +20,40 @@ Json::Value Module::json() {
 	root["ns"] = ns->json();
 	root["definations"] = Json::Value(Json::arrayValue);
 	int i = 0;
-	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); i++, it++)
+	for (std::list<StructNode*>::iterator it = list.begin(); it != list.end(); i++, it++)
 		root["definations"][i] = (*it)->json();
 	return root;
 }
 
 void Module::genStruct(Context &context) {
-	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++)
-		if (typeid(**it) == typeid(Class)) {
-			((Class *) *it)->setNS(ns->getPrefix());
-			((Class *) *it)->genStruct(context);
+	context.currentModule = this;
+	for (std::list<StructNode*>::iterator it = list.begin(); it != list.end(); it++) {
+		Class *cls = dynamic_cast<Class*>(*it);
+		if (cls) {
+			cls->module = this;
+			cls->genStruct(context);
 		}
+	}
+	context.currentModule = parent;
 }
 
 void Module::gen(Context &context) {
-	context.currentNS = ns;
-	for (std::list<ASTNode*>::iterator it = list.begin(); it != list.end(); it++)
+	context.currentModule = this;
+	for (std::list<StructNode*>::iterator it = list.begin(); it != list.end(); it++)
 		(*it)->gen(context);
-	context.currentNS = NULL;
+	context.currentModule = parent;
+}
+
+const std::string Module::getFullName() {
+	if (parent)
+		return parent->getFullName() + "::" + ns->getFullName();
+	else
+		return ns->getFullName();
+}
+
+const std::string Module::getMangleName() {
+	if (parent)
+		return parent->getFullName() + ns->getMangleName();
+	else
+		return ns->getMangleName();
 }

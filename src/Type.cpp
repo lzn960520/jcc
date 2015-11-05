@@ -8,8 +8,9 @@
 #include "Class.h"
 #include "Identifier.h"
 #include "Symbol.h"
-#include "Namespace.h"
 #include "DebugInfo.h"
+#include "Module.h"
+#include "util.h"
 
 const char *Type::BaseTypeNames[] = {
 	"byte",
@@ -36,9 +37,8 @@ Type::Type(BaseType baseType, bool isUnsigned) :
 		throw InvalidType("Can't set char, float or double to unsigned");
 }
 
-Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
-			baseType(array), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
-	assert(array == ARRAY);
+Type::Type(Type *baseType, ArrayDefinator *definator) :
+			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
 	for (std::vector<std::pair<Expression *, Expression *> >::iterator it = definator->list.begin(); it != definator->list.end(); it++) {
 		if (it->first && !it->first->isConstant())
 			throw InvalidType("Dim expression must be constant");
@@ -52,6 +52,10 @@ Type::Type(BaseType array, Type *baseType, ArrayDefinator *definator) :
 			throw InvalidType("Dim expression must be integer");
 		arrayDim.push_back(std::pair<unsigned int, unsigned int>(it->first->loadConstant()._uint64, it->second->loadConstant()._uint64));
 	}
+}
+
+Type::Type(Type *baseType, const std::vector<std::pair<int, int> > &dims) :
+			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL), arrayDim(dims) {
 }
 
 Type::Type(Class *cls) :
@@ -95,7 +99,7 @@ Json::Value Type::json() {
 	}
 	case OBJECT:
 		if (cls)
-			root["class"] = cls->getPrefix().substr(0, cls->getPrefix().length() - 1);
+			root["class"] = cls->getFullName();
 		else
 			root["class"] = identifier->getName();
 		break;
@@ -122,22 +126,21 @@ llvm::Type* Type::getType(Context &context) {
 			for (std::vector<std::pair<int, int> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
 				if (it->first >= it->second)
 					throw NotImplemented("dynamic array");
-				totalSize *= it->second - it->first;
+				totalSize *= it->second - it->first + 1;
 			}
 			return llvm::ArrayType::get(internal->getType(context), totalSize);
 		}
 		break;
 	case OBJECT:
-		if (!cls) {
-			Symbol *sym = context.findSymbol(context.currentNS->getPrefix() + identifier->getName());
-			if (!sym)
-				throw SymbolNotFound("No such class: " + context.currentNS->getPrefix() + identifier->getName());
-			if (sym->type != Symbol::CLASS)
-				throw InvalidType(context.currentNS->getPrefix() + identifier->getName() + " is not a class");
-			cls = sym->data.cls.cls;
-		}
+		if (!cls)
+			cls = context.findClass(identifier->getName());
+		if (!cls)
+			cls = context.findClass(context.currentModule->getFullName() + "::" + identifier->getName());
+		if (!cls)
+			throw SymbolNotFound("No such cls '" + context.currentModule->getFullName() + "::" + identifier->getName());
 		return cls->getLLVMType();
 	}
+	throw NotImplemented(std::string("type '") + getName() + "'");
 }
 
 size_t Type::getSize() {
@@ -222,4 +225,47 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		break;
 	}
 	throw IncompatibleType(std::string("convert ") + BaseTypeNames[otype->baseType] + " to " + BaseTypeNames[dtype->baseType]);
+}
+
+const std::string Type::getMangleName() {
+	switch (baseType) {
+	case INT:
+		if (isUnsigned)
+			return "I";
+		else
+			return "i";
+	case SHORT:
+		if (isUnsigned)
+			return "S";
+		else
+			return "s";
+	case BYTE:
+		if (isUnsigned)
+			return "B";
+		else
+			return "b";
+	case CHAR:
+		return "c";
+	case FLOAT:
+		return "f";
+	case DOUBLE:
+		return "d";
+	case STRING:
+		return "a";
+	case BOOL:
+		return "t";
+	case ARRAY: {
+		std::string tmp = "A";
+		tmp += itos(arrayDim.size());
+		for (std::vector<std::pair<int, int> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
+			if (it->first >= it->second)
+				tmp += "D";
+			else
+				tmp += "S" + itos(it->second - it->first + 1);
+		tmp += internal->getMangleName();
+		return tmp;
+	}
+	case OBJECT:
+		return getClass()->getMangleName();
+	}
 }

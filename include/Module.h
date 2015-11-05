@@ -3,18 +3,22 @@
 
 #include <list>
 
-#include "ASTNode.h"
+#include "StructNode.h"
 
 class Namespace;
-class Module : public ASTNode {
+class Module : public StructNode {
 	Namespace *ns;
-	std::list<ASTNode *> &list;
+	std::list<StructNode *> &list;
+	Module *parent;
 public:
-	Module(Namespace *ns, std::list<ASTNode *> *definations);
+	Module(Namespace *ns, std::list<StructNode *> *definations);
 	~Module();
 	Json::Value json() override;
-	void genStruct(Context &context);
+	void genStruct(Context &context) override;
 	void gen(Context &context) override;
+	const std::string getFullName();
+	const std::string getMangleName();
+	void writeJsymFile(FILE *f) override;
 };
 
 #endif

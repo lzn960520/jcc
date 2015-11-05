@@ -14,8 +14,10 @@
 
 class Function;
 class Symbol;
-class Namespace;
+class Module;
 class Class;
+class JsymFile;
+class Module;
 class Context {
 	llvm::LLVMContext *llvmContext;
 public:
@@ -31,24 +33,27 @@ private:
 	SymbolContextStack contextStack;
 	typedef std::list<llvm::DIScope*> DIScopeStack;
 	DIScopeStack diScopeStack;
+	std::map<std::string, Class*> classes;
+	JsymFile *jsymFile;
+	std::list<Module*> modules;
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
-
-	typedef std::map<std::string, Function*> FunctionContext;
-	FunctionContext functions;
+	void initDWARF(const std::string &filename);
+	void initJsymFile(const std::string &filename);
 public:
+	const bool isDebug;
+	Context(const std::string &filename, bool debug);
+	~Context();
 	llvm::DataLayout * const DL;
 	llvm::DIBuilder * const DI;
-	Namespace *currentNS;
+	Module *currentModule;
 	Class *currentClass;
 	Function *currentFunction;
 	llvm::Function * const mallocFunc;
 	llvm::DICompileUnit *DIcu;
 	llvm::DIFile *DIfile;
 	llvm::DISubprogram *DIfunction;
-	Context();
-	void initDWARF(const std::string &filename);
 	llvm::Module& getModule() { return *module; }
 	llvm::IRBuilder<>& getBuilder() { return *builder; }
 	llvm::LLVMContext& getContext() { return *llvmContext; }
@@ -69,6 +74,10 @@ public:
 	void pushDIScope(YYLTYPE &loc);
 	void pushDIScope(llvm::DIScope *scope);
 	void popDIScope();
+	Class* findClass(const std::string &name);
+	void addClass(Class *cls);
+	JsymFile& getJsymFile() { return *jsymFile; }
+	void addModule(Module *module);
 };
 
 #endif
