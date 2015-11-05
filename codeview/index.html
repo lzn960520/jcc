@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="css/global.css" type="text/css">
+  <link rel="stylesheet" href="css/ast.css" type="text/css">
+  <link rel="stylesheet" href="css/slide.css" type="text/css">
+  <link rel="stylesheet" href="css/ide.css" type="text/css">
+  <script src="lib/jquery/jquery-1.11.3.min.js"></script>
+  <script src="lib/d3/d3.min.js"></script>
+  <script src="lib/d3/d3-tip.js"></script>
+  <script src="lib/ace/ace.js"></script>
+  <script src="js/ace-mode-jascal-token.js"></script>
+  <script src="js/slide.js"></script>
+  <script src="js/AST.js"></script>
+  <script src="js/tree.js"></script>
+  <script>
+    ast = {
+      name: "file"
+    }
+    $(function() {
+      drawTree($("#ast-div").get(0), ast);
+      var editor = ace.edit("editor");
+      editor.setTheme("ace/theme/tomorrow");
+      editor.session.setMode("ace/mode/jascal_token");
+      editor.setFontSize(16);
+    })
+  </script>
+</head>
+<body>
+  <div class="slide-container">
+    <div class="slide-body" id="code-div">
+      <div class="footer">
+        Token stream
+        <div class="hint">powered by ace.js, authored by rododo</div>
+      </div>
+      <pre id="editor">HAHAHA_JASCAL_PLACEHOLDER_TOKEN</pre>
+    </div>
+    <div class="slide-body" id="ast-div">
+      <div class="footer">
+        AST Tree
+        <div class="hint">powered by d3.js, authored by rododo</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

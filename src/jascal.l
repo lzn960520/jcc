@@ -264,35 +264,20 @@
 	yylval.expression->loc = yylloc;
 	return T_LITERAL_STRING; }
 [ ]+	{
-	if (lex_output)
-		fprintf(lex_output, "<space \"%s\">", yytext);
 	return yylex(); }
 \t	{
 	if (lex_output)
-		fprintf(lex_output, "<space \"\\t\">");
+		fprintf(lex_output, "\t");
 	return yylex(); }
 [\n\r]	{
-	if (lex_output) {
-		fprintf(lex_output, "<space \"");
-		switch (*yytext) {
-		case '\n':
-			fprintf(lex_output, "\\n");
-			break;
-		case '\r':
-			fprintf(lex_output, "\\r");
-			break;
-		default:
-			fprintf(lex_output, "%c", *yytext);
-			break;
-		}
-		fprintf(lex_output, "\">");
-		if (*yytext == '\n') {
-			fprintf(lex_output, "\n");
-			yylloc.first_line++;
-			yylloc.last_line++;
-			yylloc.first_column = yylloc.last_column = 0;
-		}
+	if (*yytext == '\n') {
+		yylloc.first_line++;
+		yylloc.last_line++;
+		yylloc.first_column = yylloc.last_column = 0;
 	}
+	if (lex_output)
+		if (*yytext == '\n')
+			fprintf(lex_output, "\n");
 	return yylex(); }
 [0-9]+	{
 	yylval.expression = new LiteralInt(atoi(yytext), false);
