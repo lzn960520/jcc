@@ -8,13 +8,16 @@
 #include "Module.h"
 #include "Output.h"
 #include "JsymFile.h"
+#include "util.h"
 
 // global
 std::string input_filename;
+std::string html_filename;
 
 // from flex
 extern FILE *yyin;
-extern FILE *lex_output;
+typedef void (*lex_output_func)(char *fmt, ...);
+extern lex_output_func lex_output;
 extern void lex_only();
 
 // from bison
@@ -26,20 +29,33 @@ extern std::list<std::string> usings;
 #define OPT_LEX_ONLY 256
 #define OPT_PARSE_ONLY 257
 #define OPT_INPUT_FILE 258
-#define OPT_DUMP_LEX 259
-#define DEFAULT_LEX_OUTPUT "lex.txt"
-#define OPT_DUMP_AST 260
-#define DEFAULT_AST_OUTPUT "ast.json"
-#define OPT_OUTPUT_FILE 261
-#define OPT_COMPILE_ONLY 262
-#define OPT_AS_ONLY 263
-#define OPT_LLVM_ONLY 264
+#define OPT_DUMP_HTML 259
+#define OPT_OUTPUT_FILE 260
+#define OPT_COMPILE_ONLY 261
+#define OPT_AS_ONLY 262
+#define OPT_LLVM_ONLY 263
+
+// for store lex txt
+static std::string lex;
+
+void _lex_output(char *fmt, ...) {
+	static char buf[4096];
+	va_list va;
+	va_start(va, fmt);
+	int i = vsnprintf(buf, sizeof(buf), fmt, va);
+	if (i < 0 || i >= sizeof(buf))
+		throw CompileException("token too long");
+	va_end(va);
+	lex += buf;
+}
+
+void _disable_lex_output(char *fmt, ...) {
+}
 
 int main(int argc, char * const argv[]) {
 	// process cmdline
 	CmdLine cmdline(argc, argv);
-	cmdline.registerOpt(OPT_DUMP_AST, "--dump-ast", CmdLine::OPT_ARG);
-	cmdline.registerOpt(OPT_DUMP_LEX, "--dump-lex", CmdLine::OPT_ARG);
+	cmdline.registerOpt(OPT_DUMP_HTML, "--dump-html", CmdLine::OPT_ARG);
 	cmdline.registerOpt(OPT_LEX_ONLY, "--lex", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_PARSE_ONLY, "--parse", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_OUTPUT_FILE, "-o", CmdLine::REQUIRE_ARG);
@@ -48,7 +64,7 @@ int main(int argc, char * const argv[]) {
 	cmdline.registerOpt(OPT_LLVM_ONLY, "--llvm", CmdLine::NO_ARG);
 
 	bool opt_lex_only = false, opt_parse_only = false,
-				opt_dump_lex = false, opt_dump_ast = false,
+				opt_dump_html = false,
 				opt_as_only = false, opt_compile_only = false, opt_llvm_only = false;
 	std::string ast_filename, output_filename;
 	for (CmdLine::Option opt; cmdline.next(opt) != -2;) {
@@ -87,28 +103,13 @@ int main(int argc, char * const argv[]) {
 			}
 			output_filename = opt.arg;
 			break;
-		case OPT_DUMP_LEX:
-			opt_dump_lex = true;
-			if (lex_output != NULL) {
-				fprintf(stderr, "Can't specify two lex output file\n");
+		case OPT_DUMP_HTML:
+			if (opt_dump_html) {
+				fprintf(stderr, "Can't specify two html output files at the same time\n");
 				exit(-1);
 			}
-			if (opt.arg.empty())
-				lex_output = fopen(DEFAULT_LEX_OUTPUT, "w");
-			else
-				lex_output = fopen(opt.arg.c_str(), "w");
-			if (lex_output == NULL) {
-				fprintf(stderr, "Can't open lex output file \"%s\"\n", opt.arg.empty() ? DEFAULT_LEX_OUTPUT : opt.arg.c_str());
-				exit(-1);
-			}
-			break;
-		case OPT_DUMP_AST:
-			opt_dump_ast = true;
-			if (ast_filename != "") {
-				fprintf(stderr, "Can't specify two ast output file\n");
-				exit(-1);
-			}
-			ast_filename = opt.arg.empty() ? DEFAULT_AST_OUTPUT : opt.arg.c_str();
+			opt_dump_html = true;
+			html_filename = opt.arg;
 			break;
 		default:
 			fprintf(stderr, "Unknown option %s\n", opt.opt.c_str());
@@ -122,9 +123,28 @@ int main(int argc, char * const argv[]) {
 		exit(-1);
 	}
 
+	// normalize filename
+	if (output_filename.empty() && input_filename.empty())
+		output_filename = "stdout";
+	else if (output_filename.empty()) {
+		if (opt_llvm_only)
+			output_filename = changeExtName(input_filename, "ll");
+		else if (opt_as_only)
+			output_filename = changeExtName(input_filename, "o");
+		else if (opt_compile_only)
+			output_filename = changeExtName(input_filename, "S");
+	}
+	if (input_filename.empty())
+		input_filename = "stdin";
+
 	bool success = true;
 	do {
 		try {
+			// prepare lex_output
+			if (opt_dump_html)
+				lex_output = _lex_output;
+			else
+				lex_output = _disable_lex_output;
 			if (opt_lex_only) {
 				lex_only();
 				break;
@@ -161,14 +181,9 @@ int main(int argc, char * const argv[]) {
 			context->DI->finalize();
 
 			if (opt_llvm_only) {
-				if (output_filename.empty() && input_filename.empty())
+				if (output_filename == "stdout")
 					outputLLVM(context->getModule(), std::cout);
-				else if (output_filename.empty()) {
-					std::string oname = input_filename.substr(0, input_filename.rfind('.')) + ".ll";
-					std::ofstream sys_ofs(oname);
-					outputLLVM(context->getModule(), sys_ofs);
-					sys_ofs.close();
-				} else {
+				else {
 					std::ofstream sys_ofs(output_filename);
 					outputLLVM(context->getModule(), sys_ofs);
 					sys_ofs.close();
@@ -176,14 +191,9 @@ int main(int argc, char * const argv[]) {
 			}
 
 			if (opt_compile_only) {
-				if (output_filename.empty() && input_filename.empty())
+				if (output_filename == "stdout")
 					outputAssemble(context->getModule(), std::cout);
-				else if (output_filename.empty()) {
-					std::string oname = input_filename.substr(0, input_filename.rfind('.')) + ".s";
-					std::ofstream sys_ofs(oname);
-					outputAssemble(context->getModule(), sys_ofs);
-					sys_ofs.close();
-				} else {
+				else {
 					std::ofstream sys_ofs(output_filename);
 					outputAssemble(context->getModule(), sys_ofs);
 					sys_ofs.close();
@@ -195,12 +205,12 @@ int main(int argc, char * const argv[]) {
 		}
 	} while(0);
 
-	if (opt_dump_lex)
-		fclose(lex_output);
-	if (opt_dump_ast) {
-		std::ofstream ofs(ast_filename);
+	if (opt_dump_html) {
+		if (html_filename.empty())
+			html_filename = changeExtName(output_filename, "html");
+		std::ofstream ofs(html_filename.c_str());
 		if (!ofs) {
-			fprintf(stderr, "Can't open ast output file \"%s\"\n", ast_filename.c_str());
+			fprintf(stderr, "Can't open html output file %s\n", html_filename.c_str());
 			exit(-1);
 		}
 		Json::Value tmp;
@@ -209,7 +219,7 @@ int main(int argc, char * const argv[]) {
 		int i = 0;
 		for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); i++, it++)
 			tmp["modules"][i] = (*it)->json();
-		ofs << "var ast = " << tmp << std::endl;
+		outputHtml(lex, tmp, ofs);
 		ofs.close();
 	}
 	return success ? 0 : -1;

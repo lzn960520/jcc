@@ -12,3 +12,4 @@ lex.yy.cpp
 /tests/*
 !/tests/*.jas
 /.ycm*
+/tools/bincc/bincc

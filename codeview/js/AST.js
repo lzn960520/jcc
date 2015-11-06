@@ -377,6 +377,23 @@ var AST;
 			return null;
 		}
 	}
+	function MemberVariableDefination(data, parent) {
+		this.parent = parent;
+		this.name = "member_var";
+		var children = [];
+		for (i in data.qualifier)
+			children.push(AST({
+				name: "dummy",
+				content: data.qualifier[i]
+			}, this));
+		children.push(AST(data.vars, this));
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
 	var ASTtypes = {
 		"op2": Op2,
 		"literal": Literal,
@@ -406,7 +423,8 @@ var AST;
 		"class": Class,
 		"dummy": Dummy,
 		"new": New,
-		"member_access": MemberAccess
+		"member_access": MemberAccess,
+		"member_var": MemberVariableDefination
 	};
 	AST = function(data, parent) {
 		if (!parent)

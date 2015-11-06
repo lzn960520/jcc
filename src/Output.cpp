@@ -9,6 +9,8 @@
 #include <llvm/Analysis/Passes.h>
 
 #include "Output.h"
+#include "exception.h"
+#include "util.h"
 
 using namespace llvm;
 using namespace std;
@@ -77,4 +79,29 @@ void outputAssemble(llvm::Module &module, raw_pwrite_stream &os) {
 	tm->addPassesToEmitFile(passManager, os, TargetMachine::CGFT_AssemblyFile, false);
 	passManager.run(module);
 	os.flush();
+}
+
+#define TOKEN_PLACEHOLDER "HAHAHA_JASCAL_PLACEHOLDER_TOKEN"
+#define AST_PLACEHOLDER "HAHAHA_JASCAL_PLACEHOLDER_AST"
+void outputHtml(std::string lex, const Json::Value &ast, std::ostream &os) {
+	extern const char htmlTemplate[];
+	const char *pos = strstr(htmlTemplate, AST_PLACEHOLDER), *p = htmlTemplate;
+	if (pos == NULL)
+		throw CompileException("Wrong template format");
+	for (; p < pos; p++)
+		os << *p;
+	Json::FastWriter writer;
+	os << writer.write(ast);
+	p += strlen(AST_PLACEHOLDER);
+
+	pos = strstr(p, TOKEN_PLACEHOLDER);
+	if (pos == NULL)
+		throw CompileException("Wrong template foramt");
+	for (; p < pos; p++)
+		os << *p;
+	replace_all_inplace(lex, "<", "&lt;");
+	replace_all_inplace(lex, ">", "&gt;");
+	os << lex;
+	p += strlen(TOKEN_PLACEHOLDER);
+	os << p;
 }

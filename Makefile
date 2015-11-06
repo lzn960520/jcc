@@ -10,7 +10,7 @@ CPPFLAGS += -Iinclude -frtti -g -DDEBUG
 ifeq ($(DEBUG), 1)
 CPPFLAGS += -g
 endif
-CPPFLAGS += -std=gnu++11
+CPPFLAGS += -std=c++11
 OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
 # libjsoncpp
@@ -99,7 +99,7 @@ test: $(TESTS_OUT)
 
 tests/%.ll: tests/%.jas $(PROG)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
-	@./$(PROG) --dump-ast=tests/$*.json --dump-lex=tests/$*.txt --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
+	@./$(PROG) --dump-html --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"
@@ -113,3 +113,7 @@ objs/HtmlTemplate.o: objs/index-comb.html tools/bincc/bincc
 tools/bincc/bincc: tools/bincc/bincc.c
 	@echo "[CC  ] $< -> $@"
 	@$(CC) -o $@ $<
+
+objs/Output.o: src/Output.cpp
+	@echo "[G++ ] $< -> $@"
+	@g++ $(CPPFLAGS) -c -o $@ $<
