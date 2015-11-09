@@ -93,7 +93,6 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
         this.tripleStarBlockCommentRe = /^\s*(\/\*\*\*).*\*\/\s*$/;
         this._getFoldWidgetBase = this.getFoldWidget;
         this.getFoldWidget = function(session, foldStyle, row) {
-            if (this.foldingStartMarker.)
             var line = session.getLine(row);
         
             if (this.singleLineBlockCommentRe.test(line)) {
