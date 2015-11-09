@@ -14,8 +14,8 @@
 }
  
 .node text {
-  font-size:10px; 
-  font-family:sans-serif;
+  font-size: 14px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
  
 .link {

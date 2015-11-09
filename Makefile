@@ -1,4 +1,4 @@
-.PHONY: all clean test vars deps flex bison
+.PHONY: all clean test vars deps flex bison update-html
 
 CXX := clang++
 CC := clang
@@ -117,3 +117,7 @@ tools/bincc/bincc: tools/bincc/bincc.c
 objs/Output.o: src/Output.cpp
 	@echo "[G++ ] $< -> $@"
 	@g++ $(CPPFLAGS) -c -o $@ $<
+
+update-html:
+	@rm objs/index-comb.html
+	@make all
