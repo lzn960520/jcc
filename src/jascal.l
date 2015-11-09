@@ -27,16 +27,16 @@
 	TOKEN_OUTPUT("<comment>");
 	return yylex(); }
 "+"	{
-	TOKEN_OUTPUT("<ADD>");
+	TOKEN_OUTPUT("<+>");
 	return T_ADD; }
 "-"	{
-	TOKEN_OUTPUT("<SUB>");
+	TOKEN_OUTPUT("<->");
 	return T_SUB; }
 "*"	{
-	TOKEN_OUTPUT("<MUL>");
+	TOKEN_OUTPUT("<*>");
 	return T_MUL; }
 "/"	{
-	TOKEN_OUTPUT("<DIV>");
+	TOKEN_OUTPUT("</>");
 	return T_DIV; }
 "begin"	{
 	TOKEN_OUTPUT("<BEGIN>");
@@ -45,7 +45,7 @@
 	TOKEN_OUTPUT("<END>");
 	return T_END; }
 ";"	{
-	TOKEN_OUTPUT("<SEMICOLON>");
+	TOKEN_OUTPUT("<;>");
 	return T_SEMICOLON; }
 "if"	{
 	TOKEN_OUTPUT("<IF>");
@@ -63,28 +63,28 @@
 	TOKEN_OUTPUT("<DO>");
 	return T_DO; }
 "("	{
-	TOKEN_OUTPUT("<LEFT_PARENTHESIS>");
+	TOKEN_OUTPUT("<(>");
 	return T_LEFT_PARENTHESIS; }
 ")"	{
-	TOKEN_OUTPUT("<RIGHT_PARENTHESIS>");
+	TOKEN_OUTPUT("<)>");
 	return T_RIGHT_PARENTHESIS; }
 "<" {
-	TOKEN_OUTPUT("<LESS>");
+	TOKEN_OUTPUT("<<>");
 	return T_LT; }
 ">" {
-	TOKEN_OUTPUT("<GREATER>");
+	TOKEN_OUTPUT("<>>");
 	return T_GT; }
 "<=" {
-	TOKEN_OUTPUT("<LESS_OR_EQUAL>");
+	TOKEN_OUTPUT("<<=>");
 	return T_LEQ; }
 ">=" {
-	TOKEN_OUTPUT("<GREATER_OR_EQUAL>");
+	TOKEN_OUTPUT("<>=>");
 	return T_GEQ; }
 "++" {
-	TOKEN_OUTPUT("<SELF_INC>");
+	TOKEN_OUTPUT("<++>");
 	return T_SELF_INC; }
 "--" {
-	TOKEN_OUTPUT("<SELF_DEC>");
+	TOKEN_OUTPUT("<-->");
 	return T_SELF_DEC; }	
 "unsigned"	{
 	TOKEN_OUTPUT("<UNSIGNED>");
@@ -108,10 +108,10 @@
 	TOKEN_OUTPUT("<DOUBLE>");
 	return T_DOUBLE; }
 "="	{
-	TOKEN_OUTPUT("<ASSIGN>");
+	TOKEN_OUTPUT("<=>");
 	return T_ASSIGN; }
 ","	{
-	TOKEN_OUTPUT("<COMMA>");
+	TOKEN_OUTPUT("<,>");
 	return T_COMMA; }
 "private"	{
 	TOKEN_OUTPUT("<PRIVATE>");
@@ -132,7 +132,7 @@
 	TOKEN_OUTPUT("<UNTIL>");
 	return T_UNTIL; }
 ":" {
-	TOKEN_OUTPUT("<COLON>");
+	TOKEN_OUTPUT("<:>");
 	return T_COLON; }
 "function" {
 	TOKEN_OUTPUT("<FUNCTION>");
@@ -141,37 +141,37 @@
 	TOKEN_OUTPUT("<PROCEDURE>");
 	return T_PROCEDURE; }
 "[" {
-	TOKEN_OUTPUT("<LEFT_SQUARE>");
+	TOKEN_OUTPUT("<[>");
 	return T_LEFT_SQUARE; }
 "]" {
-	TOKEN_OUTPUT("<RIGHT_SQUARE>");
+	TOKEN_OUTPUT("<]>");
 	return T_RIGHT_SQUARE; }
 "." {
-	TOKEN_OUTPUT("<DOT>");
+	TOKEN_OUTPUT("<.>");
 	return T_DOT; }
 ".." {
-	TOKEN_OUTPUT("<DOT_DOT>");
+	TOKEN_OUTPUT("<..>");
 	return T_DOTDOT; }
 "string" {
 	TOKEN_OUTPUT("<STRING>");
 	return T_STRING; }
 "==" {
-	TOKEN_OUTPUT("<EQUAL>");
+	TOKEN_OUTPUT("<==>");
 	return T_EQ; }
 "!=" {
-	TOKEN_OUTPUT("<NOT_EQUAL>");
+	TOKEN_OUTPUT("<!=>");
 	return T_NEQ; }
 "<>" {
-	TOKEN_OUTPUT("<NOT_EQUAL>");
+	TOKEN_OUTPUT("<<>>");
 	return T_NEQ; }
 "&&" {
-	TOKEN_OUTPUT("<LOGIC_AND>");
+	TOKEN_OUTPUT("<&&>");
 	return T_LOG_AND; }
 "||" {
-	TOKEN_OUTPUT("<LOGIC_OR>");
+	TOKEN_OUTPUT("<||>");
 	return T_LOG_OR; }
 "^^" {
-	TOKEN_OUTPUT("<LOGIC_XOR>");
+	TOKEN_OUTPUT("<^^>");
 	return T_LOG_XOR; }
 "module" {
 	TOKEN_OUTPUT("<MODULE>");
@@ -180,7 +180,7 @@
 	TOKEN_OUTPUT("<CLASS>");
 	return T_CLASS; }
 "::" {
-	TOKEN_OUTPUT("<COLON_COLON>");
+	TOKEN_OUTPUT("<::>");
 	return T_NS; }
 "interface" {
 	TOKEN_OUTPUT("<INTERFACE>");
