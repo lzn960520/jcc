@@ -6,53 +6,55 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
     var identifierRe = "[a-zA-Z_][a-zA-Z\\d_]*\\b";
 
     var JascalTokenHighlightRules = function(options) {
-        var keywordMapper = this.createKeywordMapper({
-            "variable.language":
-                "this|.class",
-            "keyword":
-                "begin|end|if|then|else|while|do|" +
-                "private|public|protected|return|repeat|until|function|procedure|module|" +
-                "class|interface|new|var|static|const|using",
-            "support.type":
-                "unsigned|byte|short|int|char|float|double|string",
-            "constant.language":
-                "nil",
-            "constant.language.boolean": "true|false"
-        }, "identifier");
-        var kwBeforeRe = "case|do|else|finally|in|instanceof|return|throw|try|typeof|yield|void";
-
-        var escapedRe = "\\\\(?:x[0-9a-fA-F]{2}|" + // hex
-            "u[0-9a-fA-F]{4}|" + // unicode
-            "[0-2][0-7]{0,2}|" + // oct
-            "3[0-6][0-7]?|" + // oct
-            "37[0-7]?|" + // oct
-            "[4-7][0-7]?|" + //oct
-            ".)";
-
         this.$rules = {
             "start" : [
                 {
+                    token : "invisible",
+                    regex : /</,
+                    next : "in_token"
+                }
+            ],
+            "in_token" : [
+                {
                     token : "comment",
-                    regex : /<comment>/,
+                    regex : /comment/,
+                    next : "expect_out_token"
                 }, {
                     token : "identifier",
-                    regex : /<identifier [^>]*>/
-                }, {
-                    token : "keyword.operator",
-                    regex : /<SELF_INC>|<SELF_DEC>/,
-                }, {
-                    token : "constant.numeric",
-                    regex : /<literal_int [^>]*>/
-                }, {
-                    token : "string",
-                    regex : /<literal_string \"(\\\"|[^\"])*\">/
-                }, {
-                    token : "support.type",
-                    regex : /<INT>/
+                    regex : /identifier [^>]*/,
+                    next : "expect_out_token"
                 }, {
                     token : "keyword",
-                    regex : /<[A-Z_]*>/
-                },
+                    regex : /\.\./,
+                    next : "expect_out_token"
+                }, {
+                    token : "keyword.operator",
+                    regex : /\+\+|--|&&|^^|\|\||[+-\/*&^%<>()\[\]=]/,
+                    next : "expect_out_token"
+                }, {
+                    token : "constant.numeric",
+                    regex : /literal_int [^>]*/,
+                    next : "expect_out_token"
+                }, {
+                    token : "string",
+                    regex : /literal_string \"(\\\"|[^\"])*\"/,
+                    next : "expect_out_token"
+                }, {
+                    token : "support.type",
+                    regex : /INT|BYTE|SHORT|CHAR|UNSIGNED|STRING|FLOAT|DOUBLE/,
+                    next : "expect_out_token"
+                }, {
+                    token : "keyword",
+                    regex : /[A-Z_]*/,
+                    next : "expect_out_token"
+                }
+            ],
+            "expect_out_token" : [
+                {
+                    token : "invisible",
+                    regex : />/,
+                    next : "start"
+                }
             ]
         };
         
@@ -71,7 +73,7 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
     var Range = require("../../range").Range;
     var BaseFoldMode = require("./fold_mode").FoldMode;
 
-    var JascalTokenFoldMode = exports.FoldMode = function(commentRegex) {
+    var JascalTokenFoldMode = exports.JascalTokenFoldMode = function(commentRegex) {
         if (commentRegex) {
             this.foldingStartMarker = new RegExp(
                 this.foldingStartMarker.source.replace(/\|[^|]*?$/, "|" + commentRegex.start)
@@ -85,13 +87,13 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
 
     (function() {
         
-        this.foldingStartMarker = /(\{|\[)[^\}\]]*$|^\s*(\/\*)/;
-        this.foldingStopMarker = /^[^\[\{]*(\}|\])|^[\s\*]*(\*\/)/;
+        this.foldingStartMarker = /<BEGIN>/;
+        this.foldingStopMarker = /<END>/;
         this.singleLineBlockCommentRe= /^\s*(\/\*).*\*\/\s*$/;
         this.tripleStarBlockCommentRe = /^\s*(\/\*\*\*).*\*\/\s*$/;
-        this.startRegionRe = /^\s*(\/\*|\/\/)#?region\b/;
         this._getFoldWidgetBase = this.getFoldWidget;
         this.getFoldWidget = function(session, foldStyle, row) {
+            if (this.foldingStartMarker.)
             var line = session.getLine(row);
         
             if (this.singleLineBlockCommentRe.test(line)) {
@@ -101,17 +103,11 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
         
             var fw = this._getFoldWidgetBase(session, foldStyle, row);
         
-            if (!fw && this.startRegionRe.test(line))
-                return "start"; // lineCommentRegionStart
-        
             return fw;
         };
 
         this.getFoldWidgetRange = function(session, foldStyle, row, forceMultiline) {
             var line = session.getLine(row);
-            
-            if (this.startRegionRe.test(line))
-                return this.getCommentRegionBlock(session, line, row);
             
             var match = line.match(this.foldingStartMarker);
             if (match) {
@@ -119,17 +115,6 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
 
                 if (match[1])
                     return this.openingBracketBlock(session, match[1], row, i);
-                    
-                var range = session.getCommentFoldRange(row, i + match[0].length, 1);
-                
-                if (range && !range.isMultiLine()) {
-                    if (forceMultiline) {
-                        range = this.getSectionRange(session, row);
-                    } else if (foldStyle != "all")
-                        range = null;
-                }
-                
-                return range;
             }
 
             if (foldStyle === "markbegin")
@@ -141,63 +126,9 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
 
                 if (match[1])
                     return this.closingBracketBlock(session, match[1], row, i);
-
-                return session.getCommentFoldRange(row, i, -1);
-            }
-        };
-        
-        this.getSectionRange = function(session, row) {
-            var line = session.getLine(row);
-            var startIndent = line.search(/\S/);
-            var startRow = row;
-            var startColumn = line.length;
-            row = row + 1;
-            var endRow = row;
-            var maxRow = session.getLength();
-            while (++row < maxRow) {
-                line = session.getLine(row);
-                var indent = line.search(/\S/);
-                if (indent === -1)
-                    continue;
-                if  (startIndent > indent)
-                    break;
-                var subRange = this.getFoldWidgetRange(session, "all", row);
-                
-                if (subRange) {
-                    if (subRange.start.row <= startRow) {
-                        break;
-                    } else if (subRange.isMultiLine()) {
-                        row = subRange.end.row;
-                    } else if (startIndent == indent) {
-                        break;
-                    }
-                }
-                endRow = row;
-            }
-            
-            return new Range(startRow, startColumn, endRow, session.getLine(endRow).length);
-        };
-        this.getCommentRegionBlock = function(session, line, row) {
-            var startColumn = line.search(/\s*$/);
-            var maxRow = session.getLength();
-            var startRow = row;
-            
-            var re = /^\s*(?:\/\*|\/\/|--)#?(end)?region\b/;
-            var depth = 1;
-            while (++row < maxRow) {
-                line = session.getLine(row);
-                var m = re.exec(line);
-                if (!m) continue;
-                if (m[1]) depth--;
-                else depth++;
-
-                if (!depth) break;
             }
 
-            var endRow = row;
-            if (endRow > startRow) {
-                return new Range(startRow, startColumn, endRow, line.length);
-            }
+            return null;
         };
 
     }).call(JascalTokenFoldMode.prototype);
@@ -260,7 +191,7 @@ define("ace/mode/jascal_token", [ "require", "exports", "module", "ace/mode/matc
         // set everything up
         this.HighlightRules = JascalTokenHighlightRules;
         this.$outdent = new MatchingBraceOutdent();
-        this.foldingRules = JascalTokenFoldMode;
+        this.foldingRules = new JascalTokenFoldMode();
     };
     oop.inherits(Mode, TextMode);
 
