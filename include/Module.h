@@ -18,7 +18,7 @@ public:
 	void gen(Context &context) override;
 	const std::string getFullName();
 	const std::string getMangleName();
-	void writeJsymFile(FILE *f) override;
+	void writeJsymFile(std::ostream &os) override;
 };
 
 #endif

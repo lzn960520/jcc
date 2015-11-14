@@ -38,17 +38,16 @@ void IfStatement::gen(Context &context) {
 		throw InvalidType("test expression of if must be bool");
 	llvm::BasicBlock *ori_block = context.currentBlock(), *true_b, *false_b;
 	if (then_st) {
-		true_b = context.newBlock("if_" + itos(then_st->loc.first_line) + "@true");
+		true_b = context.newBlock("if_" + itos(then_st->loc.begin.line) + "@true");
 		then_st->gen(context);
 	}
 	if (else_st) {
-		false_b = context.newBlock("if_" + itos(else_st->loc.first_line) + "@false");
+		false_b = context.newBlock("if_" + itos(else_st->loc.begin.line) + "@false");
 		else_st->gen(context);
 	}
-	llvm::BasicBlock *after = context.newBlock("if_" + itos(then_st->loc.first_line) + "@after");
-	YYLTYPE tmploc;
-	tmploc.first_line = loc.last_line;
-	tmploc.first_column = loc.last_column;
+	llvm::BasicBlock *after = context.newBlock("if_" + itos(then_st->loc.begin.line) + "@after");
+	Location tmploc;
+	tmploc.begin = loc.end;
 	if (then_st) {
 		context.setBlock(true_b);
 		addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);

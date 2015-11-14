@@ -10,7 +10,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/DIBuilder.h>
 
-#include "yyvaltypes.h"
+#include "location.h"
 
 class Function;
 class Symbol;
@@ -34,16 +34,14 @@ private:
 	typedef std::list<llvm::DIScope*> DIScopeStack;
 	DIScopeStack diScopeStack;
 	std::map<std::string, Class*> classes;
-	JsymFile *jsymFile;
 	std::list<Module*> modules;
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
-	void initDWARF(const std::string &filename);
-	void initJsymFile(const std::string &filename);
 public:
 	const bool isDebug;
-	Context(const std::string &filename, bool debug);
+	Context(bool debug);
+	void initDWARF(const std::string &filename);
 	~Context();
 	llvm::DataLayout * const DL;
 	llvm::DIBuilder * const DI;
@@ -52,7 +50,6 @@ public:
 	Function *currentFunction;
 	llvm::Function * const mallocFunc;
 	llvm::DICompileUnit *DIcu;
-	llvm::DIFile *DIfile;
 	llvm::DISubprogram *DIfunction;
 	llvm::Module& getModule() { return *module; }
 	llvm::IRBuilder<>& getBuilder() { return *builder; }
@@ -71,12 +68,11 @@ public:
 	void setBlock(llvm::BasicBlock *targetBlock);
 	llvm::BasicBlock* currentBlock();
 	llvm::DIScope* currentDIScope();
-	void pushDIScope(YYLTYPE &loc);
+	void pushDIScope(Location &loc);
 	void pushDIScope(llvm::DIScope *scope);
 	void popDIScope();
 	Class* findClass(const std::string &name);
 	void addClass(Class *cls);
-	JsymFile& getJsymFile() { return *jsymFile; }
 	void addModule(Module *module);
 };
 

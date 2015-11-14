@@ -5,13 +5,13 @@
 #include <llvm/IR/Value.h>
 #include <vector>
 
-#include "ASTNode.h"
+#include "StructNode.h"
 
 class ArrayDefinator;
 class Identifier;
 class Class;
 class Context;
-struct Type : public ASTNode {
+struct Type : public StructNode {
 	enum BaseType {
 		BYTE,
 		SHORT,
@@ -55,8 +55,10 @@ struct Type : public ASTNode {
 	static Type* higherType(Type *a, Type *b);
 	const char *getName() { return BaseTypeNames[baseType]; }
 	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
-	void writeJsymFile(FILE *f);
+	void writeJsymFile(std::ostream &os) override;
 	const std::string getMangleName();
+	void gen(Context &context) override {};
+	void genStruct(Context &context) override {};
 };
 
 #endif

@@ -40,14 +40,17 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	Visibility.cpp Context.cpp FunctionCall.cpp Qualifier.cpp \
-	CallArgumentList.cpp lex.yy.cpp jascal.tab.cpp Exception.cpp \
+	CallArgumentList.cpp lex.yy.cc jascal.tab.cc Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
 	ArrayAccessor.cpp Symbol.cpp Output.cpp New.cpp DebugInfo.cpp \
 	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
-	JsymFile.cpp MemberVariableDefination.cpp
+	JsymFile.cpp MemberVariableDefination.cpp compile.cpp Tokenizer.cpp \
+	Token.cpp CompileFile.cpp Parser.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
+OBJS := $(patsubst %.cc,objs/%.o,$(OBJS))
 OBJS += objs/HtmlTemplate.o
 DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
+DEPS := $(patsubst %.cc,deps/%.d,$(DEPS))
 PROG := jcc
 TESTS := $(wildcard tests/*.jas)
 TESTS_OUT := $(patsubst %.jas,%.ll,$(TESTS))
@@ -57,18 +60,27 @@ all: $(PROG)
 deps/%.d: src/%.cpp | flex bison
 	@echo "[DEP ] $< -> $@"
 	@$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$ || exit "$$?"; \
-	sed 's,\($*\)\.o[ :]*,objs/\1.o: $@ ,g' < $@.$$$$ > $@ || exit "$$?"; \
+	sed 's,\($*\)\.o[ :]*,objs/\1.o $@: ,g' < $@.$$$$ > $@ || exit "$$?"; \
+	$(RM) $@.$$$$ || exit "$$?"
+
+deps/%.d: src/%.cc | flex bison
+	@echo "[DEP ] $< -> $@"
+	@$(CXX) -MM $(CPPFLAGS) $< > $@.$$$$ || exit "$$?"; \
+	sed 's,\($*\)\.o[ :]*,objs/\1.o $@: ,g' < $@.$$$$ > $@ || exit "$$?"; \
 	$(RM) $@.$$$$ || exit "$$?"
 
 objs/%.o: 
-	@echo "[CXX ] src/$*.cpp -> $@"
-	@$(CXX) $(CPPFLAGS) -c -o $@ src/$*.cpp
+	@echo "[CXX ] $< -> $@"
+	@$(CXX) $(CPPFLAGS) -c -o $@ $<
 
-include/jascal.tab.hpp: src/jascal.y
+include/jascal.tab.hpp src/jascal.tab.cc: src/jascal.yy
 	@echo "[YACC] $<"
-	@$(YACC) -d src/jascal.y -v --report-file=bison-report.txt -o src/jascal.tab.cpp
-	@mv src/jascal.tab.hpp include/
+	@$(YACC) --defines=include/jascal.tab.hpp $< --report-file=bison-report.txt -o src/jascal.tab.cc
 
+src/lex.yy.cc: src/jascal.l
+	@echo "[LEX ] $< -> $@"
+	@$(LEX) --outfile=$@ $<
+	
 include $(DEPS)
 
 vars:
@@ -82,17 +94,13 @@ $(PROG): $(OBJS)
 	@echo "[LINK] $@"
 	@$(CXX) -o $@ $(LDFLAGS) $^ $(LIBS)
 
-bison: include/jascal.tab.hpp
+bison: src/jascal.tab.cc include/jascal.tab.hpp
 
-src/lex.yy.cpp: src/jascal.l
-	@echo "[LEX ] $< -> $@"
-	@$(LEX) --outfile=$@ $<
-	
-flex: src/lex.yy.cpp
+flex: src/lex.yy.cc
 
 clean:
 	@echo "CLEAN"
-	@$(RM) -rf src/jascal.tab.cpp include/jascal.tab.hpp src/lex.yy.cpp \
+	@$(RM) -rf src/jascal.tab.cc include/jascal.tab.hpp src/lex.yy.cc \
 		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o
 
 test: $(TESTS_OUT)

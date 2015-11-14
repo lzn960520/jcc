@@ -2,7 +2,8 @@
 #define _EXCEPTION_H_
 
 #include <string>
-#include "yyvaltypes.h"
+
+#include "location.h"
 
 class ArgumentException {
 protected:
@@ -45,12 +46,12 @@ public:
 };
 
 class SymbolNotFound : public CompileException {
-	YYLTYPE loc;
+	Location loc;
 	bool has_loc;
 public:
 	SymbolNotFound(const char *msg);
 	SymbolNotFound(const std::string &msg);
-	SymbolNotFound(const std::string &msg, YYLTYPE loc);
+	SymbolNotFound(const std::string &msg, Location loc);
 	std::string message() const;
 };
 

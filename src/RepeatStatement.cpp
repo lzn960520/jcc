@@ -28,8 +28,8 @@ void RepeatStatement::gen(Context &context) {
 	if (!until->getType(context)->isBool())
 		throw InvalidType("test expression of repeat must be bool");
 	llvm::BasicBlock *oriBlock = context.currentBlock();
-	llvm::BasicBlock *loopBlock = context.newBlock("repeat_" + itos(loc.first_line) + "@loop");
-	llvm::BasicBlock *afterBlock = context.newBlock("repeat_" + itos(loc.first_line) + "@after");
+	llvm::BasicBlock *loopBlock = context.newBlock("repeat_" + itos(loc.begin.line) + "@loop");
+	llvm::BasicBlock *afterBlock = context.newBlock("repeat_" + itos(loc.begin.line) + "@after");
 
 	context.setBlock(oriBlock);
 	context.getBuilder().CreateBr(loopBlock);

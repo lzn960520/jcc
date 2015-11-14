@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "JsymFile.h"
 #include "Class.h"
 #include "Function.h"
@@ -9,76 +11,81 @@
 #include "Namespace.h"
 #include "Module.h"
 #include "Qualifier.h"
-#include <cstdio>
+#include "CompileFile.h"
 
-void Qualifier::writeJsymFile(FILE *f) {
-	std::fwrite(isStatic() ? "S" : "s", 1, 1, f);
-	std::fwrite(isPublic() ? "U" : (isPrivate() ? "R" : "O"), 1, 1, f);
-	std::fwrite(isConst() ? "C" : "c", 1, 1, f);
+void Qualifier::writeJsymFile(std::ostream &os) {
+	os.write(isStatic() ? "S" : "s", 1);
+	os.write(isPublic() ? "U" : (isPrivate() ? "R" : "O"), 1);
+	os.write(isConst() ? "C" : "c", 1);
 }
 
-void Type::writeJsymFile(FILE *f) {
-	std::fwrite(getMangleName().c_str(), getMangleName().size(), 1, f);
+void Type::writeJsymFile(std::ostream &os) {
+	os << getMangleName();
 }
 
-void Function::writeJsymFile(FILE *f) {
-	std::fwrite("F", 1, 1, f);
-	qualifier->writeJsymFile(f);
+void Function::writeJsymFile(std::ostream &os) {
+	os.write("F", 1);
+	qualifier->writeJsymFile(os);
 	size_t len = getName().size();
-	std::fwrite(&len, 4, 1, f);
-	std::fwrite(getName().c_str(), getName().size(), 1, f);
+	os.write((char *) &len, 4);
+	os.write(getName().c_str(), len);
 	if (return_type)
-		return_type->writeJsymFile(f);
+		return_type->writeJsymFile(os);
 	else
-		fwrite("v", 1, 1, f);
+		os.write("v", 1);
 	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
-		it->first->writeJsymFile(f);
-	std::fwrite("EF", 2, 1, f);
+		it->first->writeJsymFile(os);
+	os.write("EF", 2);
 }
 
-void Class::writeJsymFile(FILE *f) {
+void Class::writeJsymFile(std::ostream &os) {
 	assert(module == NULL);
-	std::fwrite("C", 1, 1, f);
+	os.write("C", 1);
 	size_t len = getName().size();
-	std::fwrite(&len, 4, 1, f);
-	std::fwrite(getName().c_str(), len, 1, f);
+	os.write((char *) &len, 4);
+	os.write(getName().c_str(), len);
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
-		(*it)->writeJsymFile(f);
-	std::fwrite("EC", 2, 1, f);
+		(*it)->writeJsymFile(os);
+	os.write("EC", 2);
 }
 
-void MemberVariableDefination::writeJsymFile(FILE *f) {
-	std::fwrite("V", 1, 1, f);
-	qualifier->writeJsymFile(f);
-	vars->type->writeJsymFile(f);
+void MemberVariableDefination::writeJsymFile(std::ostream &os) {
+	os.write("V", 1);
+	qualifier->writeJsymFile(os);
+	vars->type->writeJsymFile(os);
 	size_t len = vars->list.size();
-	std::fwrite(&len, 4, 1, f);
+	os.write((char *) &len, 4);
 	for (std::list<std::pair<Identifier*, Expression*> >::iterator it = vars->list.begin(); it != vars->list.end(); it++) {
 		size_t len = it->first->getName().size();
-		std::fwrite(&len, 4, 1, f);
-		std::fwrite(it->first->getName().c_str(), len, 1, f);
+		os.write((char *) &len, 4);
+		os.write(it->first->getName().c_str(), len);
 	}
-	std::fwrite("EV", 2, 1, f);
+	os.write("EV", 2);
 }
 
-void Module::writeJsymFile(FILE *f) {
-	std::fwrite("M", 1, 1, f);
+void Module::writeJsymFile(std::ostream &os) {
+	os.write("M", 1);
 	std::string tmp = getFullName();
 	while (!tmp.empty()) {
 		size_t i = tmp.find(':');
 		if (i == std::string::npos)
 			i = tmp.size();
-		std::fwrite("N", 1, 1, f);
-		std::fwrite(&i, 4, 1, f);
-		std::fwrite(tmp.c_str(), i, 1, f);
+		os.write("N", 1);
+		os.write((char *) &i, 4);
+		os.write(tmp.c_str(), i);
 		if (i == tmp.size())
 			tmp = "";
 		else
 			tmp = tmp.substr(i + 2);
 	}
 	for (std::list<StructNode*>::iterator it = list.begin(); it != list.end(); it++)
-		(*it)->writeJsymFile(f);
-	std::fwrite("EM", 2, 1, f);
+		(*it)->writeJsymFile(os);
+	os.write("EM", 2);
+}
+
+void CompileFile::writeJsymFile(std::ostream &os) {
+	for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
+		(*it)->writeJsymFile(os);
 }
 
 static Qualifier* readQualifier(char *&p, char *end) {
@@ -371,23 +378,25 @@ JsymFile::JsymFile(const std::string &name, bool read) :
 void JsymFile::operator<<(Class *cls) {
 	if (path.empty() || isR)
 		return;
-	FILE *f = fopen(path.c_str(), "ab");
-	cls->writeJsymFile(f);
-	fclose(f);
+	std::ofstream ofs(path.c_str(), std::ofstream::binary | std::ofstream::app);
+	cls->writeJsymFile(ofs);
+	ofs.close();
 }
 
 void JsymFile::operator<<(Module *module) {
 	if (path.empty() || isR)
 		return;
-	FILE *f = fopen(path.c_str(), "ab");
-	module->writeJsymFile(f);
-	fclose(f);
+	std::ofstream ofs(path.c_str(), std::ofstream::binary | std::ofstream::app);
+	module->writeJsymFile(ofs);
+	ofs.close();
 }
 
 void JsymFile::operator>>(Context &context) {
 	if (path.empty() || !isR)
 		return;
 	FILE *f = fopen(path.c_str(), "rb");
+	if (f == NULL)
+		throw CompileException("Can't open jsym file '" + path + "'");
 	std::fseek(f, 0, SEEK_END);
 	size_t len = std::ftell(f);
 	std::fseek(f, 0, SEEK_SET);

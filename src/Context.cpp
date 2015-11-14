@@ -10,6 +10,7 @@
 #include "Class.h"
 #include "JsymFile.h"
 #include "Module.h"
+#include "util.h"
 
 void Context::SymbolContext::add(Symbol *symbol) {
 	map[symbol->name] = symbol;
@@ -27,7 +28,7 @@ Context::SymbolContext::~SymbolContext() {
 		delete it->second;
 }
 
-Context::Context(const std::string &filename, bool debug) : mallocFunc(NULL), DL(NULL), DI(NULL), isDebug(debug) {
+Context::Context(bool debug) : mallocFunc(NULL), DL(NULL), DI(NULL), isDebug(debug) {
 	llvmContext = &llvm::getGlobalContext();
 	module = new llvm::Module("top", getContext());
 	builder = new llvm::IRBuilder<>(getContext());
@@ -49,21 +50,9 @@ Context::Context(const std::string &filename, bool debug) : mallocFunc(NULL), DL
 				module
 		);
 	}
-
-	if (debug)
-		initDWARF(filename.empty() ? "stdin" : filename);
-
-	if (!filename.empty()) {
-		if (filename.rfind('.') == std::string::npos)
-			initJsymFile(filename + ".jsym");
-		else
-			initJsymFile(filename.substr(0, filename.rfind('.')) + ".jsym");
-	} else
-		initJsymFile("");
 }
 
 Context::~Context() {
-	delete jsymFile;
 	delete builder;
 	delete module;
 	delete llvmContext;
@@ -74,6 +63,8 @@ Context::~Context() {
 }
 
 void Context::initDWARF(const std::string &filename) {
+	if (!isDebug)
+		return;
 	getModule().addModuleFlag(llvm::Module::Warning, "Dwarf Version", llvm::ConstantInt::get(getBuilder().getInt32Ty(), 4, false));
 	getModule().addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::ConstantInt::get(getBuilder().getInt32Ty(), 3, false));
 	*const_cast<llvm::DIBuilder**>(&DI) = new llvm::DIBuilder(*module);
@@ -90,15 +81,10 @@ void Context::initDWARF(const std::string &filename) {
 				false, // optimized?
 				llvm::StringRef(""), // flags
 				1); // runtime version
-		DIfile = DI->createFile(llvm::StringRef(filename), llvm::StringRef(tmp));
+		llvm::DIFile *DIfile = DI->createFile(llvm::StringRef(filename), llvm::StringRef(tmp));
 		DI->createModule(DIfile, "top", "", "", "");
+		diScopeStack.push_back(DIfile);
 	}
-}
-
-void Context::initJsymFile(const std::string &filename) {
-	if (!filename.empty())
-		unlink(filename.c_str());
-	jsymFile = new JsymFile(filename, false);
 }
 
 llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType, Function *function) {
@@ -180,14 +166,12 @@ llvm::BasicBlock* Context::currentBlock() {
 }
 
 llvm::DIScope* Context::currentDIScope() {
-	return diScopeStack.empty() ? DIfile : diScopeStack.back();
+	return diScopeStack.back();
 }
 
-void Context::pushDIScope(YYLTYPE &loc) {
-	if (diScopeStack.empty())
-		diScopeStack.push_back(llvm::DILexicalBlock::get(getContext(), DIfile, DIfile, loc.first_line, loc.first_column));
-	else
-		diScopeStack.push_back(llvm::DILexicalBlock::get(getContext(), diScopeStack.back(), DIfile, loc.first_line, loc.first_column));
+void Context::pushDIScope(Location &loc) {
+	llvm::DIFile *DIfile = llvm::DIFile::get(getContext(), getFilename(loc.begin.filename), getDir(loc.begin.filename));
+	diScopeStack.push_back(llvm::DILexicalBlock::get(getContext(), diScopeStack.back(), DIfile, loc.begin.line, loc.begin.column));
 }
 
 void Context::pushDIScope(llvm::DIScope *scope) {

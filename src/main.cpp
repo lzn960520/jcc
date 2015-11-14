@@ -9,16 +9,15 @@
 #include "Output.h"
 #include "JsymFile.h"
 #include "util.h"
+#include "compile.h"
 
 // global
-std::string input_filename;
 std::string html_filename;
 
 // from flex
-extern FILE *yyin;
 typedef void (*lex_output_func)(char *fmt, ...);
 extern lex_output_func lex_output;
-extern void lex_only();
+extern void lex_only(void *yyscanner);
 
 // from bison
 extern void yyparse();
@@ -67,6 +66,7 @@ int main(int argc, char * const argv[]) {
 				opt_dump_html = false,
 				opt_as_only = false, opt_compile_only = false, opt_llvm_only = false;
 	std::string ast_filename, output_filename;
+	std::list<std::string> input_files;
 	for (CmdLine::Option opt; cmdline.next(opt) != -2;) {
 		switch (opt.id) {
 		case OPT_LEX_ONLY:
@@ -85,16 +85,7 @@ int main(int argc, char * const argv[]) {
 			opt_as_only = true;
 			break;
 		case -1:
-			if (yyin != NULL) {
-				fprintf(stderr, "Can't specify two input files at the same time\n");
-				exit(-1);
-			}
-			yyin = fopen(opt.arg.c_str(), "r");
-			if (yyin == NULL) {
-				fprintf(stderr, "Can't open input file \"%s\", errno %d\n", opt.arg.c_str(), errno);
-				exit(-1);
-			}
-			input_filename = opt.arg.c_str();
+			input_files.push_back(opt.arg.c_str());
 			break;
 		case OPT_OUTPUT_FILE:
 			if (!output_filename.empty()) {
@@ -123,80 +114,35 @@ int main(int argc, char * const argv[]) {
 		exit(-1);
 	}
 
-	// normalize filename
-	if (output_filename.empty() && input_filename.empty())
-		output_filename = "stdout";
-	else if (output_filename.empty()) {
-		if (opt_llvm_only)
-			output_filename = changeExtName(input_filename, "ll");
-		else if (opt_as_only)
-			output_filename = changeExtName(input_filename, "o");
-		else if (opt_compile_only)
-			output_filename = changeExtName(input_filename, "S");
-	}
-	if (input_filename.empty())
-		input_filename = "stdin";
-
 	bool success = true;
 	do {
 		try {
-			// prepare lex_output
-			if (opt_dump_html)
-				lex_output = _lex_output;
-			else
-				lex_output = _disable_lex_output;
-			if (opt_lex_only) {
-				lex_only();
-				break;
-			}
-			yyparse();
-			if (opt_parse_only)
-				break;
-
-			Context *context = new Context(input_filename, true);
-
-			// import jsym
-			for (std::list<std::string>::iterator it = usings.begin(); it != usings.end(); it++) {
-				if (input_filename.empty()) {
-					JsymFile jsymFile(*it, true);
-					jsymFile >> *context;
-				} else if (input_filename.rfind('/') == std::string::npos) {
-					JsymFile jsymFile(*it, true);
-					jsymFile >> *context;
-				} else {
-					JsymFile jsymFile(input_filename.substr(0, input_filename.rfind('/') + 1) + *it, true);
-					jsymFile >> *context;
+			for (std::list<std::string>::iterator it = input_files.begin(); it != input_files.end(); it++) {
+				std::ifstream ifs(it->c_str());
+				if (!ifs) {
+					fprintf(stderr, "Can't open input file '%s'\n", it->c_str());
+					continue;
 				}
-			}
-
-			// generate struct type
-			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++) {
-				context->addModule(*it);
-				context->getJsymFile() << (*it);
-			}
-
-			for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
-				(*it)->gen(*context);
-
-			context->DI->finalize();
-
-			if (opt_llvm_only) {
-				if (output_filename == "stdout")
-					outputLLVM(context->getModule(), std::cout);
-				else {
-					std::ofstream sys_ofs(output_filename);
-					outputLLVM(context->getModule(), sys_ofs);
-					sys_ofs.close();
+				std::list<Token*> tokens = tokenize(ifs);
+				ifs.close();
+				if (opt_lex_only)
+					break;
+				CompileFile *root = parse(tokens);
+				if (opt_parse_only)
+					break;
+				{
+					std::ofstream ofs(getTempName().c_str());
+					genSym(root, ofs);
+					ofs.close();
 				}
-			}
-
-			if (opt_compile_only) {
-				if (output_filename == "stdout")
-					outputAssemble(context->getModule(), std::cout);
-				else {
-					std::ofstream sys_ofs(output_filename);
-					outputAssemble(context->getModule(), sys_ofs);
-					sys_ofs.close();
+				Context context(true);
+				if (context.isDebug)
+					context.initDWARF(*it);
+				compile(root, context);
+				{
+					std::ofstream ofs(output_filename.c_str());
+					outputLLVM(context.getModule(), ofs);
+					ofs.close();
 				}
 			}
 		} catch (CompileException &e) {
@@ -205,22 +151,5 @@ int main(int argc, char * const argv[]) {
 		}
 	} while(0);
 
-	if (opt_dump_html) {
-		if (html_filename.empty())
-			html_filename = changeExtName(output_filename, "html");
-		std::ofstream ofs(html_filename.c_str());
-		if (!ofs) {
-			fprintf(stderr, "Can't open html output file %s\n", html_filename.c_str());
-			exit(-1);
-		}
-		Json::Value tmp;
-		tmp["name"] = "file";
-		tmp["modules"] = Json::Value(Json::arrayValue);
-		int i = 0;
-		for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); i++, it++)
-			tmp["modules"][i] = (*it)->json();
-		outputHtml(lex, tmp, ofs);
-		ofs.close();
-	}
 	return success ? 0 : -1;
 }

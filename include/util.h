@@ -33,4 +33,44 @@ static inline std::string replace_all(std::string source, const std::string &pat
 	return source;
 }
 
+static inline std::string getTempName(const std::string &ext = "") {
+	std::string ans = "/tmp/";
+	for (int i = 0; i < 8; i++) {
+		char c = rand();
+		while (!(isalpha(c) || isdigit(c)))
+			c = rand();
+		ans += c;
+	}
+	ans += ext;
+	return ans;
+}
+
+inline std::string getFilename(const std::string &path) {
+	if (path.rfind('/') == std::string::npos)
+		return path;
+	else
+		return path.substr(path.rfind('/'));
+}
+
+inline std::string getDir(const std::string &path) {
+	if (path.rfind('/') == std::string::npos)
+		return "";
+	else
+		return path.substr(0, path.rfind('/')) + "/";
+}
+
+inline std::string getAbsoluteDir(const std::string cwd, const std::string &path) {
+	if (path[0] == '/')
+		return path;
+	else
+		return cwd + getDir(path);
+}
+
+inline std::string resolveRelativePath(const std::string path, const std::string &relpath) {
+	if (relpath[0] == '/')
+		return relpath;
+	else
+		return getDir(path) + relpath;
+}
+
 #endif

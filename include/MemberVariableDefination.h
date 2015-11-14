@@ -14,7 +14,7 @@ public:
 	Json::Value json() override;
 	void gen(Context &context) override;
 	void genStruct(Context &context) override;
-	void writeJsymFile(FILE *f) override;
+	void writeJsymFile(std::ostream &os) override;
 };
 
 #endif

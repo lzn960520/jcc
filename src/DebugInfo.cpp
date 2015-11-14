@@ -2,6 +2,7 @@
 #include "Type.h"
 #include "Context.h"
 #include "Function.h"
+#include "util.h"
 
 using llvm::DIType;
 using llvm::SmallVector;
@@ -13,6 +14,7 @@ using llvm::DILocalVariable;
 using namespace llvm::dwarf;
 using std::string;
 using llvm::DILocation;
+using llvm::DIFile;
 
 DIType* getDIType(Context &context, Type *type) {
 	if (!type)
@@ -53,26 +55,34 @@ DISubroutineType* getDIType(Context &context, Function *function) {
 	argv.push_back(getDIType(context, function->getReturnType()));
 	for (Function::arg_iterator it = function->arg_begin(); it != function->arg_end(); it++)
 		argv.push_back(getDIType(context, it->first));
-	return context.DI->createSubroutineType(context.DIfile, context.DI->getOrCreateTypeArray(argv));
+	return context.DI->createSubroutineType(context.currentDIScope()->getFile(), context.DI->getOrCreateTypeArray(argv));
 }
 
-DISubprogram* getDIFunction(Context &context, Function *function, YYLTYPE &loc) {
+DIFile *getDIFile(Context &context, const std::string path) {
+	return llvm::DIFile::get(context.getContext(), getFilename(path), getDir(path));
+}
+
+DIFile *getDIFile(Context &context, Location &loc) {
+	return getDIFile(context, loc.begin.filename);
+}
+
+DISubprogram* getDIFunction(Context &context, Function *function, Location &loc) {
 	return context.DI->createFunction(
-			context.DIfile,
+			getDIFile(context, loc),
 			function->getName(),
 			function->getMangleName(),
-			context.DIfile,
-			loc.first_line,
+			getDIFile(context, loc),
+			loc.begin.line,
 			getDIType(context, function),
 			false,
 			function->body != NULL,
-			loc.first_line,
+			loc.begin.line,
 			0,
 			false,
 			function->llvmFunction != nullptr ? function->llvmFunction : nullptr);
 }
 
-void insertDeclareDebugInfo(Context &context, Type *type, const string &name, llvm::Value *val, YYLTYPE &loc, bool isArg) {
+void insertDeclareDebugInfo(Context &context, Type *type, const string &name, llvm::Value *val, Location &loc, bool isArg) {
 	addDebugLoc(
 			context,
 			context.DI->insertDeclare(
@@ -81,11 +91,11 @@ void insertDeclareDebugInfo(Context &context, Type *type, const string &name, ll
 							isArg ? DW_TAG_arg_variable : DW_TAG_auto_variable,
 							context.currentDIScope(),
 							name,
-							context.DIfile,
-							loc.first_line,
+							context.currentDIScope()->getFile(),
+							loc.begin.line,
 							getDIType(context, type)),
 					context.DI->createExpression(llvm::ArrayRef<uint64_t>(NULL, (uint32_t) 0)), 
-					DILocation::get(context.getContext(), loc.first_line, loc.first_column, context.currentDIScope()),
+					DILocation::get(context.getContext(), loc.begin.line, loc.begin.column, context.currentDIScope()),
 					context.currentBlock()),
 			loc);
 }

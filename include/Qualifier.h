@@ -1,9 +1,9 @@
 #ifndef _QUALIFIER_H_
 #define _QUALIFIER_H_
 
-#include "ASTNode.h"
+#include "StructNode.h"
 
-class Qualifier : public ASTNode {
+class Qualifier : public StructNode {
 	bool _isConst, _isStatic, _isPrivate, _isPublic, _isProtected;
 public:
 	Qualifier();
@@ -19,7 +19,8 @@ public:
 	inline bool isPublic() const { return _isPublic; }
 	inline bool isProtected() const { return _isProtected; }
 	Json::Value json() override;
-	void writeJsymFile(FILE *f);
+	void writeJsymFile(std::ostream &os) override;
+	void genStruct(Context &context) override {};
 };
 
 #endif

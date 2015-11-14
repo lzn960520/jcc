@@ -5,9 +5,11 @@ ast.json
 bison-report.txt
 jascal.tab.hpp
 jascal.tab.cpp
+jascal.tab.cc
 jcc*
 lex.txt
 lex.yy.cpp
+lex.yy.cc
 !test.jas
 /tests/*
 !/tests/*.jas

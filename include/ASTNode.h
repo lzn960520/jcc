@@ -2,12 +2,12 @@
 #define _ASTNODE_H_
 
 #include <json/json.h>
-#include "yyvaltypes.h"
+
+#include "location.h"
 
 class Context;
-
 struct ASTNode {
-	YYLTYPE loc;
+	Location loc;
 	ASTNode();
 	virtual Json::Value json() = 0;
 	virtual void gen(Context &context) {};

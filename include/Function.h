@@ -37,7 +37,7 @@ struct Function : public MemberNode {
 	inline bool isPrivate() const { return qualifier->isPrivate(); }
 	inline bool isProtected() const { return qualifier->isProtected(); }
 	void genStruct(Context &context) override;
-	void writeJsymFile(FILE *f) override;
+	void writeJsymFile(std::ostream &os) override;
 	bool isDeclaration() { return body == NULL; }
 };
 

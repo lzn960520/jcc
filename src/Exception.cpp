@@ -36,10 +36,10 @@ string FunctionNotFound::message() const {
 
 SymbolNotFound::SymbolNotFound(const char *msg) : CompileException(msg), has_loc(false) {}
 SymbolNotFound::SymbolNotFound(const string &msg) : CompileException(msg), has_loc(false) {}
-SymbolNotFound::SymbolNotFound(const string &msg, YYLTYPE loc) : CompileException(msg), loc(loc), has_loc(true) {}
+SymbolNotFound::SymbolNotFound(const string &msg, Location loc) : CompileException(msg), loc(loc), has_loc(true) {}
 string SymbolNotFound::message() const {
 	if (has_loc)
-		return "Symbol not found: " + msg + " (at " + itos(loc.first_line) + ")";
+		return "Symbol not found: " + msg + " (at " + itos(loc.begin.line) + ")";
 	else
 		return "Symbol not found: " + msg;
 }

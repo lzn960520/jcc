@@ -27,9 +27,9 @@ Json::Value WhileStatement::json() {
 
 void WhileStatement::gen(Context &context) {
 	llvm::BasicBlock *oriBlock = context.currentBlock();
-	llvm::BasicBlock *loopBlock = context.newBlock("while_" + itos(loc.first_line) + "@loop");
-	llvm::BasicBlock *bodyBlock = context.newBlock("while_" + itos(loc.first_line) + "@body");
-	llvm::BasicBlock *afterBlock = context.newBlock("while_" + itos(loc.first_line) + "@after");
+	llvm::BasicBlock *loopBlock = context.newBlock("while_" + itos(loc.begin.line) + "@loop");
+	llvm::BasicBlock *bodyBlock = context.newBlock("while_" + itos(loc.begin.line) + "@body");
+	llvm::BasicBlock *afterBlock = context.newBlock("while_" + itos(loc.begin.line) + "@after");
 
 	context.setBlock(oriBlock);
 	addDebugLoc(context, context.getBuilder().CreateBr(loopBlock), loc);
@@ -42,9 +42,8 @@ void WhileStatement::gen(Context &context) {
 
 	context.setBlock(bodyBlock);
 	body->gen(context);
-	YYLTYPE tmploc;
-	tmploc.first_line = loc.first_line;
-	tmploc.first_column = loc.first_column;
+	Location tmploc;
+	tmploc.begin = loc.end;
 	addDebugLoc(context, context.getBuilder().CreateBr(loopBlock), tmploc);
 
 	context.setBlock(afterBlock);
