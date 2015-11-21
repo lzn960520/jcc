@@ -145,8 +145,16 @@
 	return T_CONST; }
 "using" {
 	return T_USING; }
+"extends" {
+	return T_EXTENDS; }
+"implements" {
+	return T_IMPLEMENTS; }
+"[[" {
+	return T_LEFT_LEFT_SQUARE; }
+"]]" {
+	return T_RIGHT_RIGHT_SQUARE; }
 \"(\\\"|[^\"])*\"	{
-	str = YYText();
+	str = yytext;
 	return T_LITERAL_STRING; }
 [ ]+	{
 	return yylex(); }
@@ -163,15 +171,17 @@
 	else
 		return yylex(); }
 [0-9]+	{
+	str = yytext;
 	v = atoi(yytext);
 	b = false;
 	return T_LITERAL_INT; }
 [0-9]+(u|U) {
+	str = yytext;
 	v = atoi(yytext);
 	b = true;
 	return T_LITERAL_INT; }
 [a-zA-Z_][a-zA-Z_0-9]*	{
-	str = YYText();
+	str = yytext;
 	return T_IDENTIFIER; }
 . {
 	fprintf(stderr, "Unknown token %s\n", yytext);

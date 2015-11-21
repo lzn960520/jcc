@@ -42,7 +42,7 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	Visibility.cpp Context.cpp FunctionCall.cpp Qualifier.cpp \
 	CallArgumentList.cpp lex.yy.cc jascal.tab.cc Exception.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
-	ArrayAccessor.cpp Symbol.cpp Output.cpp New.cpp DebugInfo.cpp \
+	ArrayAccessor.cpp Symbol.cpp output.cpp New.cpp DebugInfo.cpp \
 	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
 	JsymFile.cpp MemberVariableDefination.cpp compile.cpp Tokenizer.cpp \
 	Token.cpp CompileFile.cpp Parser.cpp
@@ -75,7 +75,7 @@ objs/%.o:
 
 include/jascal.tab.hpp src/jascal.tab.cc: src/jascal.yy
 	@echo "[YACC] $<"
-	@$(YACC) --defines=include/jascal.tab.hpp $< --report-file=bison-report.txt -o src/jascal.tab.cc
+	@$(YACC) --defines=include/jascal.tab.hpp --report-file=bison-report.txt -o src/jascal.tab.cc $<
 
 src/lex.yy.cc: src/jascal.l
 	@echo "[LEX ] $< -> $@"
@@ -107,7 +107,7 @@ test: $(TESTS_OUT)
 
 tests/%.ll: tests/%.jas $(PROG)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
-	@./$(PROG) --dump-html --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
+	@./$(PROG) --dump-html tests/$*.html --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"
@@ -122,10 +122,10 @@ tools/bincc/bincc: tools/bincc/bincc.c
 	@echo "[CC  ] $< -> $@"
 	@$(CC) -o $@ $<
 
-objs/Output.o: src/Output.cpp
+objs/output.o: src/output.cpp
 	@echo "[G++ ] $< -> $@"
 	@g++ $(CPPFLAGS) -c -o $@ $<
 
 update-html:
-	@rm objs/index-comb.html
+	@rm -f objs/index-comb.html
 	@make all

@@ -1,9 +1,9 @@
-body {
-	background: url(texture-noise.png);
-	font-size: 14px;
-	font-family: "Helvetica Neue", Helvetica;
-	margin: 0;
-	overflow: hidden;
+.slide-container {
+    overflow: hidden
+}
+
+.slide-body {
+	margin: 0 40px;
 }
 
 #slide-left {

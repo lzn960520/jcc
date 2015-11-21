@@ -19,7 +19,7 @@ std::list<Token*> tokenize(std::istream &is) {
 			ans.push_back(new Token(T_LITERAL_STRING, tokenizer.yylloc, tokenizer.str));
 			break;
 		case T_LITERAL_INT:
-			ans.push_back(new Token(T_LITERAL_INT, tokenizer.yylloc, tokenizer.v, tokenizer.b));
+			ans.push_back(new Token(T_LITERAL_INT, tokenizer.yylloc, tokenizer.str, tokenizer.v, tokenizer.b));
 			break;
 		default:
 			ans.push_back(new Token(type, tokenizer.yylloc));

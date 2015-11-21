@@ -1,0 +1,10 @@
+module test
+begin
+	class A
+	begin
+	end;
+
+	class B extends A
+	begin
+	end;
+end;

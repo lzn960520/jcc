@@ -129,6 +129,7 @@ void Context::pushContext() {
 }
 
 void Context::popContext() {
+	assert(contextStack.size() >= 2);
 	delete contextStack.back();
 	contextStack.pop_back();
 }

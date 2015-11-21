@@ -6,10 +6,12 @@
 #include "exception.h"
 #include "cmdline.h"
 #include "Module.h"
-#include "Output.h"
+#include "output.h"
 #include "JsymFile.h"
 #include "util.h"
 #include "compile.h"
+#include "CompileFile.h"
+#include "Token.h"
 
 // global
 std::string html_filename;
@@ -54,7 +56,7 @@ void _disable_lex_output(char *fmt, ...) {
 int main(int argc, char * const argv[]) {
 	// process cmdline
 	CmdLine cmdline(argc, argv);
-	cmdline.registerOpt(OPT_DUMP_HTML, "--dump-html", CmdLine::OPT_ARG);
+	cmdline.registerOpt(OPT_DUMP_HTML, "--dump-html", CmdLine::REQUIRE_ARG);
 	cmdline.registerOpt(OPT_LEX_ONLY, "--lex", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_PARSE_ONLY, "--parse", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_OUTPUT_FILE, "-o", CmdLine::REQUIRE_ARG);
@@ -115,6 +117,8 @@ int main(int argc, char * const argv[]) {
 	}
 
 	bool success = true;
+	std::map<std::string, std::string> lex;
+	std::map<std::string, Json::Value> ast;
 	do {
 		try {
 			for (std::list<std::string>::iterator it = input_files.begin(); it != input_files.end(); it++) {
@@ -123,18 +127,29 @@ int main(int argc, char * const argv[]) {
 					fprintf(stderr, "Can't open input file '%s'\n", it->c_str());
 					continue;
 				}
+
 				std::list<Token*> tokens = tokenize(ifs);
 				ifs.close();
+				if (opt_dump_html) {
+					std::ostringstream os;
+					os << tokens;
+					lex[*it] = os.str();
+				}
 				if (opt_lex_only)
 					break;
+
 				CompileFile *root = parse(tokens);
+				if (opt_dump_html)
+					ast[*it] = root->json();
 				if (opt_parse_only)
 					break;
+
 				{
 					std::ofstream ofs(getTempName().c_str());
 					genSym(root, ofs);
 					ofs.close();
 				}
+
 				Context context(true);
 				if (context.isDebug)
 					context.initDWARF(*it);
@@ -151,5 +166,10 @@ int main(int argc, char * const argv[]) {
 		}
 	} while(0);
 
+	if (opt_dump_html && success) {
+		std::ofstream ofs(html_filename);
+		outputHtml(lex, ast, ofs);
+		ofs.close();
+	}
 	return success ? 0 : -1;
 }

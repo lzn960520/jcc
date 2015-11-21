@@ -3,6 +3,8 @@
 %define parse.error verbose
 %define parse.lac full
 %parse-param {Parser &parser} {CompileFile *&root}
+%token-table
+%verbose
 
 %code requires {
 	#include <list>
@@ -141,15 +143,28 @@
 %type <identifier> class_name
 %type <string> using
 
-%token <expression> T_LITERAL_INT
-%token <literal_string> T_LITERAL_STRING
-%token <identifier> T_IDENTIFIER
-%token T_MODULE T_BEGIN T_END T_LEFT_CURLY T_RIGHT_CURLY T_SEMICOLON
-		T_IF T_THEN T_ELSE T_WHILE T_DO T_COMMA T_UNSIGNED T_BYTE T_VAR
-		T_SHORT T_INT T_CHAR T_FLOAT T_DOUBLE T_RETURN T_INTERFACE
-		T_REPEAT T_UNTIL T_COLON T_FUNCTION T_PROCEDURE T_DOTDOT T_STRING
-		T_CLASS T_NS T_PUBLIC T_PRIVATE T_PROTECTED T_CONST T_STATIC T_USING
-		T_COMMENT T_TAB T_NEWLINE
+%token <expression> T_LITERAL_INT "literal_int"
+%token <literal_string> T_LITERAL_STRING "literal_string"
+%token <identifier> T_IDENTIFIER "identifier"
+%token T_MODULE "module" T_BEGIN "begin" T_END "end" T_LEFT_CURLY "{"
+		T_RIGHT_CURLY "}" T_SEMICOLON ";" T_IF "if" T_THEN "then"
+		T_ELSE "else" T_WHILE "while" T_DO "do" T_COMMA ","
+		T_UNSIGNED "unsigned" T_BYTE "byte" T_VAR "var"	T_SHORT "short"
+		T_INT "int" T_CHAR "char" T_FLOAT "float" T_DOUBLE "double"
+		T_RETURN "return" T_INTERFACE "interface" T_REPEAT "repeat" 
+		T_UNTIL "until" T_COLON ":" T_FUNCTION "function"
+		T_PROCEDURE "procedure" T_DOTDOT ".." T_STRING "string"
+		T_CLASS "class" T_NS "::" T_PUBLIC "public" T_PRIVATE "private"
+		T_PROTECTED "protected" T_CONST "const" T_STATIC "static"
+		T_USING "using" T_COMMENT "comment" T_TAB "\t" T_NEWLINE "\n"
+		T_EXTENDS "extends" T_IMPLEMENTS "implements" T_ASSIGN "="
+		T_LOG_OR "||" T_LOG_AND "&&" T_LOG_XOR "^^" T_LT "<" T_GT ">"
+		T_LEQ "<=" T_GEQ ">=" T_EQ "==" T_NEQ "!=" T_LTGT "<>" T_ADD "+"
+		T_SUB "-" T_MUL "*" T_DIV "/" T_MOD "%" T_PWR "**"
+		T_BIT_OR_ASSIGN "|=" T_BIT_AND_ASSIGN "&=" T_BIT_XOR_ASSIGN "^="
+		T_SELF_INC "++" T_SELF_DEC "--" T_LEFT_SQUARE "["
+		T_RIGHT_SQUARE "]" T_LEFT_LEFT_SQUARE "[[" T_RIGHT_RIGHT_SQUARE "]]"
+		T_NEW "new" T_DOT "." T_LEFT_PARENTHESIS "(" T_RIGHT_PARENTHESIS ")"
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -164,7 +179,7 @@
 %right T_BIT_AND_ASSIGN
 %right T_BIT_XOR_ASSIGN
 %left T_SELF_INC T_SELF_DEC
-%left T_LEFT_SQUARE T_RIGHT_SQUARE
+%left T_LEFT_SQUARE T_RIGHT_SQUARE T_LEFT_LEFT_SQUARE T_RIGHT_RIGHT_SQUARE
 %right T_NEW
 %left T_DOT
 %left T_LEFT_PARENTHESIS T_RIGHT_PARENTHESIS
@@ -195,7 +210,6 @@ using:
 module_defination:
 	T_MODULE ns_identifier T_BEGIN inmodule_definations T_END T_SEMICOLON {
 		$$ = new Module($2, $4);
-		GEN_LOC(@$, @1, @5);
 		SAVE_LOC($$, @$); }
 
 ns_identifier:
@@ -230,9 +244,24 @@ inmodule_definations:
 		$1->push_back($2); }
 
 class_defination:
-	T_CLASS T_IDENTIFIER T_BEGIN inclass_definations T_END {
-		$$ = new Class($2, $4);
+	T_CLASS T_IDENTIFIER class_implements T_BEGIN inclass_definations T_END {
+		$$ = new Class($2, $5);
 		SAVE_LOC($$, @$); }
+	| T_CLASS T_IDENTIFIER T_EXTENDS class_name class_implements T_BEGIN inclass_definations T_END {
+		$$ = new Class($2, $7);
+		SAVE_LOC($$, @$); }
+
+class_implements:
+	{
+		}
+	| T_IMPLEMENTS implement_list {
+		}
+
+implement_list:
+	class_name {
+		}
+	| implement_list T_COMMA class_name {
+		}
 
 qualifier:
 	T_PUBLIC {
@@ -277,7 +306,9 @@ qualifier:
 		SAVE_LOC($$, @$); }
 
 inclass_definations:
-	class_member_defination {
+	{
+		$$ = new std::list<MemberNode*>(); }
+	| class_member_defination {
 		$$ = new std::list<MemberNode*>();
 		$$->push_back($1); }
 	| inclass_definations class_member_defination {
@@ -295,7 +326,9 @@ interface_defination:
 	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END
 
 ininterface_definations:
-	function_declaration T_SEMICOLON {
+	{
+		$$ = new std::list<MemberNode*>(); }
+	| function_declaration T_SEMICOLON {
 		$$ = new std::list<MemberNode*>();
 		$$->push_back($1); }
 	| ininterface_definations function_declaration T_SEMICOLON {
@@ -368,6 +401,14 @@ expression:
 	| expression T_DOT T_IDENTIFIER {
 		$$ = new MemberAccess($1, $3);
 		SAVE_LOC($$, @2); }
+	| T_LEFT_LEFT_SQUARE tuple_list T_RIGHT_RIGHT_SQUARE {
+		}
+
+tuple_list:
+	expression {
+		}
+	| tuple_list T_COMMA expression {
+		}
 
 object_create:
 	T_NEW type_name {
@@ -570,6 +611,8 @@ call_arg_list:
 		SAVE_LOC($$, @$); }
 
 %%
+
+const char * const *tokenNames = yytname;
 
 void yyerror(YYLTYPE *yylloc, Parser &, CompileFile *&, const char *s) {
 	if (!yylloc->begin.filename.empty()) {

@@ -5,34 +5,86 @@
   <link rel="stylesheet" href="css/ast.css" type="text/css">
   <link rel="stylesheet" href="css/slide.css" type="text/css">
   <link rel="stylesheet" href="css/ide.css" type="text/css">
+  <link rel="stylesheet" href="lib/jstree/style.min.css" type="text/css">
   <script src="lib/jquery/jquery-1.11.3.min.js"></script>
   <script src="lib/d3/d3.min.js"></script>
   <script src="lib/d3/d3-tip.js"></script>
   <script src="lib/ace/ace.js"></script>
   <script src="js/ace-mode-jascal-token.js"></script>
   <script src="lib/ace/theme-tomorrow.js"></script>
+  <script src="lib/jstree/jstree.min.js"></script>
+  <script src="js/sha1.js"></script>
   <script src="js/slide.js"></script>
   <script src="js/AST.js"></script>
   <script src="js/tree.js"></script>
+  <script src="js/files.js"></script>
   <script>
-    ast = HAHAHA_JASCAL_PLACEHOLDER_AST;
+    var lex = {};
+    var ast = {};
+    HAHAHA_JASCAL_PLACEHOLDER;
     $(function() {
-      drawTree($("#ast-div").get(0), ast);
+      window.onresize = function() {
+        $(".slide-container").css({
+            width: document.documentElement.clientWidth - $("#tree").width(),
+            height: document.documentElement.clientHeight
+        });
+        $(".slide-container").get(0).onresize();
+        $("#tree").css({
+          height: document.documentElement.clientHeight
+        });
+      }
+      $(".slide-container").css({
+        width: document.documentElement.clientWidth - $("#tree").width(),
+        height: document.documentElement.clientHeight
+      });
+      $(".slide-container").get(0).onresize();
+      $("#tree").css({
+        height: document.documentElement.clientHeight
+      });
       var editor = ace.edit("editor");
       editor.setTheme("ace/theme/tomorrow");
       editor.session.setMode("ace/mode/jascal_token");
       editor.setFontSize(16);
+      editor.setReadOnly(true);
+      function addFile(path) {
+        var oripath = path;
+        var root = $("#tree-ul");
+        while (path.indexOf('/') != -1) {
+          var subdir = path.substr(0, path.indexOf('/'));
+          if (root.children('li#' + hex_sha1(subdir)).size() === 0)
+            root.append("<li id='" + hex_sha1(subdir) + "' data-jstree='{disabled:true}'>" + subdir + "<ul></ul></li>");
+          root = root.children('li#' + hex_sha1(subdir)).children();
+          path = path.substr(path.indexOf('/') + 1);
+        }
+        if (root.children('li#' + hex_sha1(path)).size() === 0)
+          root.append("<li id='" + hex_sha1(path) + "' data-jstree='{\"icon\":\"jstree-file\"}' path='" + oripath + "'>" + path + "</a></li>");
+      }
+      for (path in lex)
+        addFile(path);
+      for (path in ast)
+        addFile(path);
+	  $('#tree').jstree({core:{multiple:false}});
+      $("#tree").on('changed.jstree', function (e, data) {
+        if (typeof data.node.li_attr.path === "undefined")
+          return;
+        editor.session.setValue(lex[data.node.li_attr.path]);
+        drawTree($("#ast-div").get(0), ast[data.node.li_attr.path]);
+      });
     })
   </script>
 </head>
 <body>
-  <div class="slide-container">
+  <div id='tree'>
+    <ul id='tree-ul'>
+    </ul>
+  </div>
+  <div class="slide-container" style="display: inline-block">
     <div class="slide-body" id="code-div">
       <div class="footer">
         Token stream
         <div class="hint">powered by ace.js, authored by rododo</div>
       </div>
-      <pre id="editor">HAHAHA_JASCAL_PLACEHOLDER_TOKEN</pre>
+      <pre id="editor"></pre>
     </div>
     <div class="slide-body" id="ast-div">
       <div class="footer">

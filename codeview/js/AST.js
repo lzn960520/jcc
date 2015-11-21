@@ -56,9 +56,9 @@ var AST;
 	function Statements(data, parent) {
 		this.parent = parent;
 		this.name = "statements";
-		var children = data.statements;
+		var children = [];
 		for (i in children)
-			children[i] = AST(children[i], this);
+			children[i] = AST(data.statements[i], this);
 		this.getChildren = function() {
 			return children;
 		}
@@ -81,7 +81,7 @@ var AST;
 	}
 	function VariableDefination(data, parent) {
 		this.parent = parent;
-		this.name = "variable defination";
+		this.name = "variable_defination";
 		var children = [ AST(data.type, this) ];
 		for (i in data.list)
 			children.push(AST({

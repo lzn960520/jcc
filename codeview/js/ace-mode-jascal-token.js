@@ -41,11 +41,11 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
                     next : "expect_out_token"
                 }, {
                     token : "support.type",
-                    regex : /INT|BYTE|SHORT|CHAR|UNSIGNED|STRING|FLOAT|DOUBLE/,
+                    regex : /int|byte|short|char|unsigned|string|float|double/,
                     next : "expect_out_token"
                 }, {
                     token : "keyword",
-                    regex : /[A-Z_]*/,
+                    regex : /[a-z_]*/,
                     next : "expect_out_token"
                 }
             ],
@@ -57,7 +57,7 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
                 }
             ]
         };
-        
+
         this.normalizeRules();
     };
 
@@ -86,7 +86,7 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
     oop.inherits(JascalTokenFoldMode, BaseFoldMode);
 
     (function() {
-        
+
         this.foldingStartMarker = /<BEGIN>/;
         this.foldingStopMarker = /<END>/;
         this.singleLineBlockCommentRe= /^\s*(\/\*).*\*\/\s*$/;
@@ -94,20 +94,20 @@ define("ace/mode/folding/jascal_token",["require","exports","module","ace/lib/oo
         this._getFoldWidgetBase = this.getFoldWidget;
         this.getFoldWidget = function(session, foldStyle, row) {
             var line = session.getLine(row);
-        
+
             if (this.singleLineBlockCommentRe.test(line)) {
                 if (!this.startRegionRe.test(line) && !this.tripleStarBlockCommentRe.test(line))
                     return "";
             }
-        
+
             var fw = this._getFoldWidgetBase(session, foldStyle, row);
-        
+
             return fw;
         };
 
         this.getFoldWidgetRange = function(session, foldStyle, row, forceMultiline) {
             var line = session.getLine(row);
-            
+
             var match = line.match(this.foldingStartMarker);
             if (match) {
                 var i = match.index;
@@ -198,8 +198,8 @@ define("ace/mode/jascal_token", [ "require", "exports", "module", "ace/mode/matc
         // configure comment start/end characters
         this.lineCommentStart = "//";
         this.blockComment = {start: "/*", end: "*/"};
-        
-        // special logic for indent/outdent. 
+
+        // special logic for indent/outdent.
         // By default ace keeps indentation of previous line
         this.getNextLineIndent = function(state, line, tab) {
             var indent = this.$getIndent(line);
@@ -213,12 +213,12 @@ define("ace/mode/jascal_token", [ "require", "exports", "module", "ace/mode/matc
         this.autoOutdent = function(state, doc, row) {
             this.$outdent.autoOutdent(doc, row);
         };
-        
+
         // create worker for live syntax checking
         this.createWorker = function(session) {
             return null;
         };
-        
+
         this.$id = "ace/mode/jascal_token";
     }).call(Mode.prototype);
 

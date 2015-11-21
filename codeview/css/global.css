@@ -7,6 +7,25 @@
   text-shadow: 0 1px 0 #fff;
   position: absolute;
   top: 30px;
-  left: 50px;
+  left: 30px;
   font-style: italic;
+}
+
+body {
+	background: url(texture-noise.png);
+	font-size: 14px;
+	font-family: "Helvetica Neue", Helvetica;
+	margin: 0;
+	overflow: hidden;
+}
+
+#tree {
+    width: 150px;
+    overflow: auto;
+}
+
+.slide-container {
+    left: 150px;
+    position: absolute;
+    top: 0;
 }

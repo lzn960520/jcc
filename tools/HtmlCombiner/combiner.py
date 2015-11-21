@@ -7,11 +7,12 @@ import base64
 def relpath(base, rel):
     return '/'.join(base.split('/')[:-1]) + '/' + rel
 
-def processPng(path):
+def processPic(path):
     f = open(path)
     content = f.read()
     f.close()
-    return "data:image/png;base64," + base64.b64encode(content)
+    ext = re.search('[^.]*$', path).group(0)
+    return "data:image/" + ext + ";base64," + base64.b64encode(content)
 
 def processJs(path):
     f = open(path)
@@ -24,13 +25,13 @@ def processCss(path):
     content = f.read()
     f.close()
 
-    #process all png
-    pattern = re.compile(r'url\((.*\.png)\)')
+    #process all pic
+    pattern = re.compile(r'url\(([^)]*\.(png|gif))\)')
     mo = pattern.search(content)
     while mo != None:
         content = content[0:mo.start()] +\
                 'url(' +\
-                processPng(relpath(path, mo.group(1))) +\
+                processPic(relpath(path, mo.group(1))) +\
                 ')' +\
                 content[mo.end():]
         mo = pattern.search(content)
