@@ -165,22 +165,40 @@
 		T_SELF_INC "++" T_SELF_DEC "--" T_LEFT_SQUARE "["
 		T_RIGHT_SQUARE "]" T_LEFT_LEFT_SQUARE "[[" T_RIGHT_RIGHT_SQUARE "]]"
 		T_NEW "new" T_DOT "." T_LEFT_PARENTHESIS "(" T_RIGHT_PARENTHESIS ")"
+		T_LOG_OR_ASSIGN "||=" T_LOG_AND_ASSIGN "&&=" T_LOG_XOR_ASSIGN "^^="
+		T_LOG_NOT "!" T_ADD_ASSIGN "+=" T_SUB_ASSIGN "-=" T_MUL_ASSIGN "*="
+		T_DIV_ASSIGN "/=" T_MOD_ASSIGN "%=" T_PWR_ASSIGN "**=" T_LSH "<<"
+		T_RSH ">>" T_LSH_ASSIGN "<<=" T_RSH_ASSIGN ">>=" T_BIT_OR "|"
+		T_BIT_AND "&" T_BIT_XOR "^" T_BIT_NOT "~"
 
 %right T_ASSIGN
 %left T_LOG_OR
 %left T_LOG_AND
 %left T_LOG_XOR
-%left T_LT T_GT T_LEQ T_GEQ T_EQ T_NEQ
+%right T_LOG_OR_ASSIGN
+%right T_LOG_AND_ASSIGN
+%right T_LOG_XOR_ASSIGN
+%precedence T_LOG_NOT
+%left T_LT T_GT T_LEQ T_GEQ T_EQ T_NEQ T_LTGT
 %left T_ADD T_SUB
-%left T_MUL T_DIV
-%left T_MOD
+%left T_MUL T_DIV T_MOD
 %left T_PWR
+%right T_ADD_ASSIGN T_SUB_ASSIGN
+%right T_MUL_ASSIGN T_DIV_ASSIGN T_MOD_ASSIGN
+%right T_PWR_ASSIGN
+%left T_LSH T_RSH
+%right T_LSH_ASSIGN T_RSH_ASSIGN
+%left T_BIT_OR
+%left T_BIT_AND
+%left T_BIT_XOR
+%precedence T_BIT_NOT
 %right T_BIT_OR_ASSIGN
 %right T_BIT_AND_ASSIGN
 %right T_BIT_XOR_ASSIGN
 %left T_SELF_INC T_SELF_DEC
-%left T_LEFT_SQUARE T_RIGHT_SQUARE T_LEFT_LEFT_SQUARE T_RIGHT_RIGHT_SQUARE
+%precedence T_NEG
 %right T_NEW
+%left T_LEFT_SQUARE T_RIGHT_SQUARE T_LEFT_LEFT_SQUARE T_RIGHT_RIGHT_SQUARE
 %left T_DOT
 %left T_LEFT_PARENTHESIS T_RIGHT_PARENTHESIS
 
@@ -247,8 +265,14 @@ class_defination:
 	T_CLASS T_IDENTIFIER class_implements T_BEGIN inclass_definations T_END {
 		$$ = new Class($2, $5);
 		SAVE_LOC($$, @$); }
+	| T_CLASS T_IDENTIFIER class_implements T_BEGIN T_END {
+		$$ = new Class($2, new std::list<MemberNode*>());
+		SAVE_LOC($$, @$); }
 	| T_CLASS T_IDENTIFIER T_EXTENDS class_name class_implements T_BEGIN inclass_definations T_END {
 		$$ = new Class($2, $7);
+		SAVE_LOC($$, @$); }
+	| T_CLASS T_IDENTIFIER T_EXTENDS class_name class_implements T_BEGIN T_END {
+		$$ = new Class($2, new std::list<MemberNode*>());
 		SAVE_LOC($$, @$); }
 
 class_implements:
@@ -306,9 +330,7 @@ qualifier:
 		SAVE_LOC($$, @$); }
 
 inclass_definations:
-	{
-		$$ = new std::list<MemberNode*>(); }
-	| class_member_defination {
+	class_member_defination {
 		$$ = new std::list<MemberNode*>();
 		$$->push_back($1); }
 	| inclass_definations class_member_defination {
@@ -324,11 +346,10 @@ class_member_defination:
 
 interface_defination:
 	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END
+	| T_INTERFACE T_IDENTIFIER T_BEGIN T_END
 
 ininterface_definations:
-	{
-		$$ = new std::list<MemberNode*>(); }
-	| function_declaration T_SEMICOLON {
+	function_declaration T_SEMICOLON {
 		$$ = new std::list<MemberNode*>();
 		$$->push_back($1); }
 	| ininterface_definations function_declaration T_SEMICOLON {
@@ -336,8 +357,16 @@ ininterface_definations:
 		$1->push_back($2); }
 
 function_declaration:
-	qualifier T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name
-	| qualifier T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS
+	T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name {
+		Qualifier *qul = new Qualifier();
+		qul->setPublic();
+		$$ = new Function(qul, $7, $2, $4, (ASTNode *) NULL);
+		SAVE_LOC($$, @$); }
+	| T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS {
+		Qualifier *qul = new Qualifier();
+		qul->setPublic();
+		$$ = new Function(qul, NULL, $2, $4, (ASTNode *) NULL);
+		SAVE_LOC($$, @$); }
 
 expression:
 	expression T_ADD expression {
@@ -379,6 +408,9 @@ expression:
 	| expression T_NEQ expression {
 		$$ = new Op2($1, Op2::NEQ, $3);
 		SAVE_LOC($$, @2); }
+	| expression T_LTGT expression {
+		$$ = new Op2($1, Op2::NEQ, $3);
+		SAVE_LOC($$, @2); }
 	| expression T_LOG_AND expression {
 		$$ = new Op2($1, Op2::LOG_AND, $3);
 		SAVE_LOC($$, @2); }
@@ -388,6 +420,78 @@ expression:
 	| expression T_LOG_XOR expression {
 		$$ = new Op2($1, Op2::LOG_XOR, $3);
 		SAVE_LOC($$, @2); }
+	| expression T_MOD expression {
+		$$ = new Op2($1, Op2::MOD, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_PWR expression {
+		$$ = new Op2($1, Op2::PWR, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_BIT_OR_ASSIGN expression {
+		$$ = new Op2($1, Op2::BIT_OR_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_BIT_AND_ASSIGN expression {
+		$$ = new Op2($1, Op2::BIT_AND_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_BIT_XOR_ASSIGN expression {
+		$$ = new Op2($1, Op2::BIT_XOR_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_LOG_OR_ASSIGN expression {
+		$$ = new Op2($1, Op2::LOG_OR_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_LOG_AND_ASSIGN expression {
+		$$ = new Op2($1, Op2::LOG_AND_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_LOG_XOR_ASSIGN expression {
+		$$ = new Op2($1, Op2::LOG_XOR_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_ADD_ASSIGN expression {
+		$$ = new Op2($1, Op2::ADD_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_SUB_ASSIGN expression {
+		$$ = new Op2($1, Op2::SUB_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_MUL_ASSIGN expression {
+		$$ = new Op2($1, Op2::MUL_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_DIV_ASSIGN expression {
+		$$ = new Op2($1, Op2::DIV_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_MOD_ASSIGN expression {
+		$$ = new Op2($1, Op2::MOD_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_PWR_ASSIGN expression {
+		$$ = new Op2($1, Op2::PWR_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_LSH expression {
+		$$ = new Op2($1, Op2::LSH, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_RSH expression {
+		$$ = new Op2($1, Op2::RSH, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_LSH_ASSIGN expression {
+		$$ = new Op2($1, Op2::LSH_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_RSH_ASSIGN expression {
+		$$ = new Op2($1, Op2::RSH_ASSIGN, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_BIT_OR expression {
+		$$ = new Op2($1, Op2::BIT_OR, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_BIT_AND expression {
+		$$ = new Op2($1, Op2::BIT_AND, $3);
+		SAVE_LOC($$, @2); }
+	| expression T_BIT_XOR expression {
+		$$ = new Op2($1, Op2::BIT_XOR, $3);
+		SAVE_LOC($$, @2); }
+	| T_SUB expression %prec T_NEG {
+		$$ = new Op1($2, Op1::NEG);
+		SAVE_LOC($$, @1); }
+	| T_BIT_NOT expression {
+		$$ = new Op1($2, Op1::BIT_NOT);
+		SAVE_LOC($$, @1); }
+	| T_LOG_NOT expression {
+		$$ = new Op1($2, Op1::LOG_NOT);
+		SAVE_LOC($$, @1); }
 	| T_LEFT_PARENTHESIS expression T_RIGHT_PARENTHESIS {
 		$$ = $2; }
 	| literal
@@ -402,6 +506,10 @@ expression:
 		$$ = new MemberAccess($1, $3);
 		SAVE_LOC($$, @2); }
 	| T_LEFT_LEFT_SQUARE tuple_list T_RIGHT_RIGHT_SQUARE {
+		}
+	| T_LEFT_CURLY T_RIGHT_CURLY {
+		}
+	| T_LEFT_CURLY tuple_list T_RIGHT_CURLY {
 		}
 
 tuple_list:
@@ -459,7 +567,8 @@ array_definator_list:
 
 literal:
 	T_LITERAL_INT
-	| T_LITERAL_STRING
+	| T_LITERAL_STRING {
+		$$ = $1; }
 
 statement:
 	expression {

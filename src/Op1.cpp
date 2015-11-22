@@ -61,7 +61,7 @@ llvm::Value* Op1::load(Context &context) {
 								loc)),
 				loc);
 		return ohs;
-	case LOGIC_NOT:
+	case LOG_NOT:
 		if (!operand->getType(context)->isBool())
 			throw InvalidType("Logical-not only allowed to bool");
 		return addDebugLoc(context, context.getBuilder().CreateNot(ohs), loc);
@@ -80,7 +80,7 @@ Type* Op1::getType(Context &context) {
 	switch (op) {
 	case SELF_INC:
 	case SELF_DEC:
-	case LOGIC_NOT:
+	case LOG_NOT:
 		return &Type::Bool;
 	case BIT_NOT:
 		return operand->getType(context);
@@ -97,7 +97,7 @@ Expression::Constant Op1::loadConstant() {
 	case SELF_INC:
 	case SELF_DEC:
 		throw NotConstant("self operator");
-	case LOGIC_NOT:
+	case LOG_NOT:
 		if (!operand->getTypeConstant()->isBool())
 			throw InvalidType("Logical not is only allowed to bool");
 		ans._bool = !operand->loadConstant()._bool;
@@ -114,7 +114,7 @@ Type* Op1::getTypeConstant() {
 	switch (op) {
 	case SELF_INC:
 	case SELF_DEC:
-	case LOGIC_NOT:
+	case LOG_NOT:
 		return &Type::Bool;
 	case BIT_NOT:
 		return operand->getTypeConstant();

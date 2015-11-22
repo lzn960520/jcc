@@ -9,7 +9,8 @@ struct Op1 : public Expression {
 		SELF_INC,
 		SELF_DEC,
 		BIT_NOT,
-		LOGIC_NOT
+		LOG_NOT,
+		NEG
 	} op;
 	Op1(Expression *operand, OpType op);
 	static const char *OpNames[];

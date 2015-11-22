@@ -120,7 +120,7 @@
 "!=" {
 	return T_NEQ; }
 "<>" {
-	return T_NEQ; }
+	return T_LTGT; }
 "&&" {
 	return T_LOG_AND; }
 "||" {
@@ -153,6 +153,52 @@
 	return T_LEFT_LEFT_SQUARE; }
 "]]" {
 	return T_RIGHT_RIGHT_SQUARE; }
+"%" {
+	return T_MOD; }
+"**" {
+	return T_PWR; }
+"|=" {
+	return T_BIT_OR_ASSIGN; }
+"&=" {
+	return T_BIT_AND_ASSIGN; }
+"^=" {
+	return T_BIT_XOR_ASSIGN; }
+"||=" {
+	return T_LOG_OR_ASSIGN; }
+"&&=" {
+	return T_LOG_AND_ASSIGN; }
+"^^=" {
+	return T_LOG_XOR_ASSIGN; }
+"!" {
+	return T_LOG_NOT; }
+"+=" {
+	return T_ADD_ASSIGN; }
+"-=" {
+	return T_SUB_ASSIGN; }
+"*=" {
+	return T_MUL_ASSIGN; }
+"/=" {
+	return T_DIV_ASSIGN; }
+"%=" {
+	return T_MOD_ASSIGN; }
+"**=" {
+	return T_PWR_ASSIGN; }
+"<<" {
+	return T_LSH; }
+">>" {
+	return T_RSH; }
+"<<=" {
+	return T_LSH_ASSIGN; }
+">>=" {
+	return T_RSH_ASSIGN; }
+"|" {
+	return T_BIT_OR; }
+"&" {
+	return T_BIT_AND; }
+"^" {
+	return T_BIT_XOR; }
+"~" {
+	return T_BIT_NOT; }
 \"(\\\"|[^\"])*\"	{
 	str = yytext;
 	return T_LITERAL_STRING; }

@@ -21,7 +21,26 @@ struct Op2 : public Expression {
 		NEQ,
 		LOG_AND,
 		LOG_OR,
-		LOG_XOR
+		LOG_XOR,
+		BIT_OR_ASSIGN,
+		BIT_AND_ASSIGN,
+		BIT_XOR_ASSIGN,
+		LOG_OR_ASSIGN,
+		LOG_AND_ASSIGN,
+		LOG_XOR_ASSIGN,
+		ADD_ASSIGN,
+		SUB_ASSIGN,
+		MUL_ASSIGN,
+		DIV_ASSIGN,
+		MOD_ASSIGN,
+		PWR_ASSIGN,
+		LSH,
+		RSH,
+		LSH_ASSIGN,
+		RSH_ASSIGN,
+		BIT_OR,
+		BIT_AND,
+		BIT_XOR
 	} op;
 	Op2(Expression *left, OpType op, Expression *right);
 	static const char *OpNames[];
