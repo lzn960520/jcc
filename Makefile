@@ -1,4 +1,4 @@
-.PHONY: all clean test vars deps flex bison update-html
+.PHONY: all clean test vars deps flex bison update-html archive
 
 CXX := clang++
 CC := clang
@@ -129,3 +129,7 @@ objs/output.o: src/output.cpp
 update-html:
 	@rm -f objs/index-comb.html
 	@make all
+
+archive:
+	@echo ARCHIVE
+	@git archive --format tar.gz --prefix jcc/ HEAD -o jcc.tar.gz

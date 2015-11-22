@@ -26,7 +26,7 @@
 ----------------------------
 ## Usage
 * Command line parameters for jcc<br>
-    jcc [options] &lt;input_file1&gt; [input_file2] [input_file3] ...<br>
+    `jcc [options] <input_file1> [input_file2] [input_file3] ...`<br>
     Options:
     * `--dump-html <html_filename>`<br>
         Output the token stream and AST to a HTML file to view
