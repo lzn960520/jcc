@@ -45,7 +45,7 @@ SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	ArrayAccessor.cpp Symbol.cpp output.cpp New.cpp DebugInfo.cpp \
 	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
 	JsymFile.cpp MemberVariableDefination.cpp compile.cpp Tokenizer.cpp \
-	Token.cpp CompileFile.cpp Parser.cpp
+	Token.cpp CompileFile.cpp Parser.cpp LiteralBool.cpp Interface.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 OBJS := $(patsubst %.cc,objs/%.o,$(OBJS))
 OBJS += objs/HtmlTemplate.o
@@ -107,7 +107,7 @@ test: $(TESTS_OUT)
 
 tests/%.ll: tests/%.jas $(PROG)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
-	@./$(PROG) --dump-html tests/$*.html --llvm -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
+	@./$(PROG) --dump-html tests/$*.html --parse -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"

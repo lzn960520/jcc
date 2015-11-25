@@ -11,19 +11,17 @@ var AST;
 			return null;
 		}
 	}
-	function Literal(data, parent) {
+	function LiteralInt(data, parent) {
 		this.parent = parent;
-		this.name = "literal";
-		this.type = data.type;
-		this.literal = AST(data.literal, this);
+		this.name = data.val.toString();
 		this.getChildren = function() {
-			return [ this.literal ];
+			return null;
 		}
 		this.getTips = function() {
 			return null;
 		}
 	}
-	function LiteralInt(data, parent) {
+	function LiteralBool(data, parent) {
 		this.parent = parent;
 		this.name = data.val.toString();
 		this.getChildren = function() {
@@ -57,7 +55,7 @@ var AST;
 		this.parent = parent;
 		this.name = "statements";
 		var children = [];
-		for (i in children)
+		for (i in data.statements)
 			children[i] = AST(data.statements[i], this);
 		this.getChildren = function() {
 			return children;
@@ -336,6 +334,25 @@ var AST;
 		this.parent = parent;
 		this.name = "class";
 		var children = [ AST(data.identifier, this) ];
+		if (data.extends)
+			children.push(AST(data.extends, this));
+		else
+			children.push(AST({name:"dummy",content:"No parent class"}, this));
+		for (i in data.implements)
+			children.push(AST(data.implements[i], this));
+		for (i in data.definations)
+			children.push(AST(data.definations[i], this));
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
+	function Interface(data, parent) {
+		this.parent = parent;
+		this.name = "interface";
+		var children = [ AST(data.identifier, this) ];
 		for (i in data.definations)
 			children.push(AST(data.definations[i], this));
 		this.getChildren = function() {
@@ -396,7 +413,6 @@ var AST;
 	}
 	var ASTtypes = {
 		"op2": Op2,
-		"literal": Literal,
 		"literal_int": LiteralInt,
 		"literal_string": LiteralString,
 		"identifier": Identifier,
@@ -424,7 +440,9 @@ var AST;
 		"dummy": Dummy,
 		"new": New,
 		"member_access": MemberAccess,
-		"member_var": MemberVariableDefination
+		"member_var": MemberVariableDefination,
+		"literal_bool": LiteralBool,
+		"interface": Interface
 	};
 	AST = function(data, parent) {
 		if (!parent)

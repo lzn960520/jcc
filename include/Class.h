@@ -18,6 +18,8 @@ class MemberVariableDefination;
 class Class : public StructNode {
 	Identifier *identifier;
 	std::list<MemberNode*> &list;
+	std::list<Identifier*> &implements;
+	Identifier *extends;
 	Type *type;
 	llvm::StructType *llvmType;
 	Context::SymbolContext symbols;
@@ -27,7 +29,8 @@ class Class : public StructNode {
 	friend class MemberVariableDefination;
 public:
 	Module *module;
-	Class(Identifier *identifier, std::list<MemberNode*> *definations);
+	Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
+	Class(Identifier *identifier, Identifier *extends, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
 	~Class();
 	Json::Value json() override;
 	void genStruct(Context &context) override;

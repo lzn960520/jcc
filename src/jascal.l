@@ -199,6 +199,12 @@
 	return T_BIT_XOR; }
 "~" {
 	return T_BIT_NOT; }
+"bool" {
+	return T_BOOL; }
+"true" {
+	return T_TRUE; }
+"false" {
+	return T_FALSE; }
 \"(\\\"|[^\"])*\"	{
 	str = yytext;
 	return T_LITERAL_STRING; }

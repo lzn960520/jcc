@@ -28,8 +28,16 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
                     regex : /\.\./,
                     next : "expect_out_token"
                 }, {
+					token : "keyword.operator",
+					regex : /<<=|>>=|\*\*=|\|\|=|&&=|^^=/,
+					next : "expect_out_token"
+				}, {
+					token : "keyword.operator",
+					regex : /\+\+|--|&&|\^\^|\|\||<=|>=|\*\*|==|!=|&=|^=|\|=|\+=|-=|\*=|\/=|%=|<<|>>(?=>)|<>(?=>)/,
+					next : "expect_out_token"
+				}, {
                     token : "keyword.operator",
-                    regex : /\+\+|--|&&|^^|\|\||[+-\/*&^%<>()\[\]=]/,
+                    regex : /[+-\/*\|&^%<>()\[\]=~!]/,
                     next : "expect_out_token"
                 }, {
                     token : "constant.numeric",
@@ -40,6 +48,10 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
                     regex : /literal_string \"(\\\"|[^\"])*\"/,
                     next : "expect_out_token"
                 }, {
+					token : "keyword",
+					regex : /interface/,
+					next : "expect_out_token"
+				}, {
                     token : "support.type",
                     regex : /int|byte|short|char|unsigned|string|float|double/,
                     next : "expect_out_token"

@@ -67,6 +67,7 @@
 	#include "Parser.h"
 	#include "CompileFile.h"
 	#include "LiteralInt.h"
+	#include "LiteralBool.h"
 }
 
 %union {
@@ -92,6 +93,7 @@
 	MemberNode *member;
 	LiteralString *literal_string;
 	std::string *string;
+	std::list<Identifier*> *implement_list;
 }
 
 %code {
@@ -142,6 +144,7 @@
 %type <member> class_member_defination
 %type <identifier> class_name
 %type <string> using
+%type <implement_list> class_implements implement_list
 
 %token <expression> T_LITERAL_INT "literal_int"
 %token <literal_string> T_LITERAL_STRING "literal_string"
@@ -169,7 +172,8 @@
 		T_LOG_NOT "!" T_ADD_ASSIGN "+=" T_SUB_ASSIGN "-=" T_MUL_ASSIGN "*="
 		T_DIV_ASSIGN "/=" T_MOD_ASSIGN "%=" T_PWR_ASSIGN "**=" T_LSH "<<"
 		T_RSH ">>" T_LSH_ASSIGN "<<=" T_RSH_ASSIGN ">>=" T_BIT_OR "|"
-		T_BIT_AND "&" T_BIT_XOR "^" T_BIT_NOT "~"
+		T_BIT_AND "&" T_BIT_XOR "^" T_BIT_NOT "~" T_BOOL "bool" T_TRUE "true"
+		T_FALSE "false"
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -263,29 +267,31 @@ inmodule_definations:
 
 class_defination:
 	T_CLASS T_IDENTIFIER class_implements T_BEGIN inclass_definations T_END {
-		$$ = new Class($2, $5);
+		$$ = new Class($2, $3, $5);
 		SAVE_LOC($$, @$); }
 	| T_CLASS T_IDENTIFIER class_implements T_BEGIN T_END {
-		$$ = new Class($2, new std::list<MemberNode*>());
+		$$ = new Class($2, $3, new std::list<MemberNode*>());
 		SAVE_LOC($$, @$); }
 	| T_CLASS T_IDENTIFIER T_EXTENDS class_name class_implements T_BEGIN inclass_definations T_END {
-		$$ = new Class($2, $7);
+		$$ = new Class($2, $4, $5, $7);
 		SAVE_LOC($$, @$); }
 	| T_CLASS T_IDENTIFIER T_EXTENDS class_name class_implements T_BEGIN T_END {
-		$$ = new Class($2, new std::list<MemberNode*>());
+		$$ = new Class($2, $4, $5, new std::list<MemberNode*>());
 		SAVE_LOC($$, @$); }
 
 class_implements:
 	{
-		}
+		$$ = new std::list<Identifier*>(); }
 	| T_IMPLEMENTS implement_list {
-		}
+		$$ = $2; }
 
 implement_list:
 	class_name {
-		}
+		$$ = new std::list<Identifier*>();
+		$$->push_back($1); }
 	| implement_list T_COMMA class_name {
-		}
+		$$ = $1;
+		$$->push_back($3); }
 
 qualifier:
 	T_PUBLIC {
@@ -345,8 +351,12 @@ class_member_defination:
 		SAVE_LOC($$, @$); }
 
 interface_defination:
-	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END
-	| T_INTERFACE T_IDENTIFIER T_BEGIN T_END
+	T_INTERFACE T_IDENTIFIER T_BEGIN ininterface_definations T_END {
+		$$ = new Interface($2, $4);
+		SAVE_LOC($$, @$); }
+	| T_INTERFACE T_IDENTIFIER T_BEGIN T_END {
+		$$ = new Interface($2, new std::list<MemberNode*>());
+		SAVE_LOC($$, @$); }
 
 ininterface_definations:
 	function_declaration T_SEMICOLON {
@@ -569,6 +579,12 @@ literal:
 	T_LITERAL_INT
 	| T_LITERAL_STRING {
 		$$ = $1; }
+	| T_TRUE {
+		$$ = new LiteralBool(true);
+		SAVE_LOC($$, @$); }
+	| T_FALSE {
+		$$ = new LiteralBool(false);
+		SAVE_LOC($$, @$); }
 
 statement:
 	expression {
@@ -680,6 +696,9 @@ base_type:
 		SAVE_LOC($$, @$); }
 	| T_STRING {
 		$$ = new Type(Type::STRING);
+		SAVE_LOC($$, @$); }
+	| T_BOOL {
+		$$ = new Type(Type::BOOL);
 		SAVE_LOC($$, @$); }
 
 function_defination:

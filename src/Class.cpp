@@ -12,12 +12,21 @@
 #include "MemberNode.h"
 #include "JsymFile.h"
 
-Class::Class(Identifier *identifier, std::list<MemberNode*> *definations) :
-	identifier(identifier), list(*definations), type(new Type(this)), llvmType(NULL) {
+Class::Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations) :
+	identifier(identifier), extends(NULL), implements(*implements), list(*definations), type(new Type(this)), llvmType(NULL) {
+}
+
+Class::Class(Identifier *identifier, Identifier *extends, std::list<Identifier*> *implements, std::list<MemberNode*> *definations) :
+	identifier(identifier), extends(extends), implements(*implements), list(*definations), type(new Type(this)), llvmType(NULL) {
 }
 
 Class::~Class() {
 	delete identifier;
+	if (extends)
+		delete extends;
+	for (std::list<Identifier*>::iterator it = implements.begin(); it != implements.end(); it++)
+		delete *it;
+	delete &implements;
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
 		delete *it;
 	delete &list;
@@ -27,8 +36,14 @@ Json::Value Class::json() {
 	Json::Value root;
 	root["name"] = "class";
 	root["identifier"] = identifier->json();
-	root["definations"] = Json::Value(Json::arrayValue);
+	if (extends)
+		root["extends"] = extends->json();
+	root["implements"] = Json::Value(Json::arrayValue);
 	int i = 0;
+	for (std::list<Identifier*>::iterator it = implements.begin(); it != implements.end(); i++, it++)
+		root["implements"][i] = (*it)->json();
+	i = 0;
+	root["definations"] = Json::Value(Json::arrayValue);
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); i++, it++)
 		root["definations"][i] = (*it)->json();
 	return root;

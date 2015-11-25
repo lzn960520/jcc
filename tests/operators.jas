@@ -1,0 +1,47 @@
+module test
+begin
+	class Main
+	begin
+		public function main() : int
+		begin
+			var int a = 1, b = 2, c = 3;
+			c = a + b;
+			c = a - b;
+			c = a * b;
+			c = a / b;
+			c = a % b;
+			c = a ** b;
+			c = a << b;
+			c = a >> b;
+			c = a | b;
+			c = a & b;
+			c = a ^ b;
+			c += a;
+			c -= a;
+			c *= a;
+			c /= a;
+			c %= a;
+			c **= a;
+			c <<= a;
+			c >>= a;
+			c++;
+			c--;
+			c = ~c;
+			c = -c;
+			var bool d = true, e = true, f = true;
+			f = e || f;
+			f = e && f;
+			f = e ^^ f;
+			f = a < b;
+			f = a > b;
+			f = a <= b;
+			f = a >= b;
+			f = a <> b;
+			f = a != b;
+			f &&= d;
+			f ||= d;
+			f ^^= d;
+			f = !f;
+		end;
+	end;
+end;

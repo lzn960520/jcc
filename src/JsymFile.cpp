@@ -12,6 +12,7 @@
 #include "Module.h"
 #include "Qualifier.h"
 #include "CompileFile.h"
+#include "Interface.h"
 
 void Qualifier::writeJsymFile(std::ostream &os) {
 	os.write(isStatic() ? "S" : "s", 1);
@@ -47,6 +48,17 @@ void Class::writeJsymFile(std::ostream &os) {
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
 		(*it)->writeJsymFile(os);
 	os.write("EC", 2);
+}
+
+void Interface::writeJsymFile(std::ostream &os) {
+	assert(module == NULL);
+	os.write("I", 1);
+	size_t len = getName().size();
+	os.write((char *) &len, 4);
+	os.write(getName().c_str(), len);
+	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
+		(*it)->writeJsymFile(os);
+	os.write("EI", 2);
 }
 
 void MemberVariableDefination::writeJsymFile(std::ostream &os) {
@@ -328,7 +340,7 @@ static Class* readClass(char *&p, char *end) {
 		if (p + 1 >= end || *p != 'E' || *(p + 1) != 'C')
 			throw CompileException("Error reading Jsym file");
 		p += 2;
-		return new Class(id, defs);
+		return new Class(id, NULL, NULL, defs);
 	} catch(...) {
 		if (id)
 			delete id;

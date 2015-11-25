@@ -10,7 +10,8 @@ const char* Op1::OpNames[] = {
 	"++",
 	"--",
 	"~",
-	"!"
+	"!",
+	"-"
 };
 
 Op1::Op1(Expression *operand, OpType op) :

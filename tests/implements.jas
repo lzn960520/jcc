@@ -1,0 +1,14 @@
+module test
+begin
+	interface IA
+	begin
+	end;
+
+	interface IB
+	begin
+	end;
+
+	class A implements IA, IB
+	begin
+	end;
+end;
