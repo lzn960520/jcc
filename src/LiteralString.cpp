@@ -35,7 +35,7 @@ static inline int char2hex(const char a) {
 	}
 }
 LiteralString::LiteralString(const char *ori_text) :
-	text(strlen(ori_text), '\0') {
+	text(strlen(ori_text), '\0'), ori_text(ori_text) {
 	ori_text++;
 	char *p;
 	for (p = (char *) text.data(); *ori_text && (*ori_text) != '\"'; ori_text++, p++) {
@@ -115,7 +115,7 @@ LiteralString::LiteralString(const char *ori_text) :
 Json::Value LiteralString::json() {
 	Json::Value root;
 	root["name"] = "literal_string";
-	root["text"] = Json::Value(text);
+	root["text"] = Json::Value(ori_text);
 	return root;
 }
 

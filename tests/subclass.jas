@@ -2,9 +2,35 @@ module test
 begin
 	class A
 	begin
+		public int a;
+		static int sa;
+		public procedure access_a()
+		begin
+			a = 0;
+		end;
+		public procedure access_sa()
+		begin
+			sa = 0;
+		end;
+		public static procedure saccess_sa()
+		begin
+			sa = 0;
+		end;
 	end;
 
 	class B extends A
 	begin
+		public int b;
+		static int sb;
+		public static A sa_in_b;
+	end;
+
+	class Main
+	begin
+		static public function main() : int
+		begin
+			var B b = new B;
+			return 0;
+		end;
 	end;
 end;

@@ -16,7 +16,7 @@ public:
 	inline bool isConst() const { return _isConst; }
 	inline bool isStatic() const { return _isStatic; }
 	inline bool isPrivate() const { return _isPrivate; }
-	inline bool isPublic() const { return _isPublic; }
+	inline bool isPublic() const { return _isPublic || (!_isPrivate && !_isProtected); }
 	inline bool isProtected() const { return _isProtected; }
 	Json::Value json() override;
 	void writeJsymFile(std::ostream &os) override;

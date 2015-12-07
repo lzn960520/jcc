@@ -5,6 +5,7 @@
 #include "Symbol.h"
 #include "Identifier.h"
 #include "Type.h"
+#include "util.h"
 
 MemberVariableDefination::MemberVariableDefination(Qualifier *qualifier, VariableDefination *vars) :
 		qualifier(qualifier), vars(vars) {
@@ -22,11 +23,17 @@ Json::Value MemberVariableDefination::json() {
 }
 
 void MemberVariableDefination::gen(Context &context) {
-	for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
-		context.addSymbol(new Symbol(it->first->getName(), vars->type, cls->symbols.find(it->first->getName())->data.member.index));
+	if (!qualifier->isStatic())
+		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
+			context.addSymbol(new Symbol(it->first->getName(), vars->type, cls->symbols.find(it->first->getName())->data.member.index));
+	else
+		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
+			context.addSymbol(new Symbol(it->first->getName(), Symbol::STATIC_MEMBER_VAR, vars->type, new llvm::GlobalVariable(context.getModule(), vars->type->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, context.getBuilder().getInt32(0), cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
 }
 
 void MemberVariableDefination::genStruct(Context &context) {
+	if (qualifier->isStatic())
+		return;
 	for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
 		cls->members.push_back(vars->type->getType(context));
 		cls->symbols.add(new Symbol(it->first->getName(), vars->type, cls->members.size() - 1));

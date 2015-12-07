@@ -1,0 +1,11 @@
+using System::IO;
+module Test
+begin
+	class Main
+	begin
+		public static function main(string[0..] argv) : int
+		begin
+			System::IO::writeln("Hello world!");
+		end;
+	end;
+end;

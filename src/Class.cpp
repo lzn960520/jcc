@@ -11,6 +11,7 @@
 #include "util.h"
 #include "MemberNode.h"
 #include "JsymFile.h"
+#include "exception.h"
 
 Class::Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations) :
 	identifier(identifier), extends(NULL), implements(*implements), list(*definations), type(new Type(this)), llvmType(NULL) {
@@ -56,6 +57,17 @@ void Class::genStruct(Context &context) {
 	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
 	members.push_back(llvm::PointerType::get(vtableType, 0));
 
+	if (extends) {
+		extendsClass = context.findClass(extends->getName());
+		if (extendsClass == NULL)
+			throw SymbolNotFound("Class '" + extends->getName() + "'");
+		llvm::StructType *extendsLLVM = extendsClass->getLLVMType();
+		llvm::StructType::element_iterator it = extendsLLVM->element_begin();
+		it++; // jump over the vtable
+		for (; it != extendsLLVM->element_end(); it++)
+			members.push_back(*it);
+	}
+
 	llvm::SmallVector<llvm::Type*, 16> destructor_arg;
 	destructor_arg.push_back(llvmType);
 	vtable.push_back(llvm::PointerType::get(llvm::FunctionType::get(context.getBuilder().getVoidTy(), destructor_arg, false), 0));
@@ -94,7 +106,7 @@ const std::string Class::getFullName() {
 
 const std::string Class::getMangleName() {
 	if (module)
-		return module->getMangleName() + "C" + itos(getName().length()) + getName();
+		return "C" + module->getMangleName() + "C" + itos(getName().length()) + getName();
 	else
 		return "C" + itos(getName().length()) + getName();
 }

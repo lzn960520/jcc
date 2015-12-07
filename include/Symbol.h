@@ -13,7 +13,7 @@ struct Symbol {
 		MEMBER_VAR,
 		ARGUMENT,
 		FUNCTION,
-		CLASS
+		STATIC_MEMBER_VAR
 	} type;
 	std::string name;
 	union {

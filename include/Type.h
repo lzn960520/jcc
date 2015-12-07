@@ -11,6 +11,7 @@ class ArrayDefinator;
 class Identifier;
 class Class;
 class Context;
+class Expression;
 struct Type : public StructNode {
 	enum BaseType {
 		BYTE,
@@ -30,7 +31,7 @@ struct Type : public StructNode {
 	static Type Int32;
 	static Type UInt32;
 	bool isUnsigned;
-	std::vector<std::pair<int, int> > arrayDim;
+	std::vector<std::pair<Expression*, Expression*> > arrayDim;
 	Type *internal;
 	Class *cls;
 	Identifier *identifier;
@@ -52,6 +53,7 @@ struct Type : public StructNode {
 	bool isString() { return baseType == STRING; }
 	bool isObject() { return baseType == OBJECT; }
 	Class* getClass() { return cls; }
+	Class* getClass(Context &context);
 	static Type* higherType(Type *a, Type *b);
 	const char *getName() { return BaseTypeNames[baseType]; }
 	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
@@ -59,6 +61,7 @@ struct Type : public StructNode {
 	const std::string getMangleName();
 	void gen(Context &context) override {};
 	void genStruct(Context &context) override {};
+	llvm::Constant* getDefault(Context &context);
 };
 
 #endif

@@ -11,6 +11,7 @@
 #include "DebugInfo.h"
 #include "Module.h"
 #include "util.h"
+#include "LiteralInt.h"
 
 const char *Type::BaseTypeNames[] = {
 	"byte",
@@ -38,24 +39,15 @@ Type::Type(BaseType baseType, bool isUnsigned) :
 }
 
 Type::Type(Type *baseType, ArrayDefinator *definator) :
-			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
-	for (std::vector<std::pair<Expression *, Expression *> >::iterator it = definator->list.begin(); it != definator->list.end(); it++) {
-		if (it->first && !it->first->isConstant())
-			throw InvalidType("Dim expression must be constant");
-		if (it->second && !it->second->isConstant())
-			throw InvalidType("Dim expression must be constant");
-		if (!it->first)
-			throw NotImplemented("dynamic array");
-		if (!it->second)
-			throw NotImplemented("dynamic array");
-		if (it->first->getTypeConstant()->isFloat() || it->second->getTypeConstant()->isFloat())
-			throw InvalidType("Dim expression must be integer");
-		arrayDim.push_back(std::pair<unsigned int, unsigned int>(it->first->loadConstant()._uint64, it->second->loadConstant()._uint64));
-	}
+			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL), arrayDim(definator->list) {
+	definator->list.clear();
+	delete definator;
 }
 
 Type::Type(Type *baseType, const std::vector<std::pair<int, int> > &dims) :
-			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL), arrayDim(dims) {
+			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
+	for (std::vector<std::pair<int, int> >::const_iterator it = dims.begin(); it != dims.end(); it++)
+		arrayDim.push_back(std::pair<Expression*, Expression*>(new LiteralInt(it->first, true), new LiteralInt(it->second, true)));
 }
 
 Type::Type(Class *cls) :
@@ -82,18 +74,13 @@ Json::Value Type::json() {
 		root["internal"] = internal->json();
 		root["dim"] = Json::Value(Json::arrayValue);
 		int i = 0;
-		for (std::vector<std::pair<int, int> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++, i++) {
+		for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++, i++) {
 			root["dim"][i] = Json::Value();
-			if (it->first > it->second) {
-				root["dim"][i]["lower"] = "dym";
-				root["dim"][i]["upper"] = "dym";
-			} else if (it->first == it->second) {
-				root["dim"][i]["lower"] = it->first;
-				root["dim"][i]["upper"] = "dym";
-			} else {
-				root["dim"][i]["lower"] = it->first;
-				root["dim"][i]["upper"] = it->second;
-			}
+			root["dim"][i]["lower"] = it->first->json();
+			if (it->second)
+				root["dim"][i]["upper"] = it->second->json();
+			else
+				root["dim"][i]["upper"] = "dynamic";
 		}
 		break;
 	}
@@ -123,10 +110,14 @@ llvm::Type* Type::getType(Context &context) {
 	case ARRAY:
 		{
 			size_t totalSize = 1;
-			for (std::vector<std::pair<int, int> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
-				if (it->first >= it->second)
+			for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
+				if (!it->second)
 					throw NotImplemented("dynamic array");
-				totalSize *= it->second - it->first + 1;
+				if (!it->first->isConstant() || !it->second->isConstant())
+					throw NotImplemented("dynamic dim expression");
+				if (!it->first->getTypeConstant()->isInt() || !it->second->getTypeConstant()->isInt())
+					throw InvalidType("dim expression must be integer");
+				totalSize *= it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1;
 			}
 			return llvm::ArrayType::get(internal->getType(context), totalSize);
 		}
@@ -135,10 +126,8 @@ llvm::Type* Type::getType(Context &context) {
 		if (!cls)
 			cls = context.findClass(identifier->getName());
 		if (!cls)
-			cls = context.findClass(context.currentModule->getFullName() + "::" + identifier->getName());
-		if (!cls)
 			throw SymbolNotFound("No such cls '" + context.currentModule->getFullName() + "::" + identifier->getName());
-		return cls->getLLVMType();
+		return llvm::PointerType::get(cls->getLLVMType(), 0);
 	}
 	throw NotImplemented(std::string("type '") + getName() + "'");
 }
@@ -257,15 +246,56 @@ const std::string Type::getMangleName() {
 	case ARRAY: {
 		std::string tmp = "A";
 		tmp += itos(arrayDim.size());
-		for (std::vector<std::pair<int, int> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
-			if (it->first >= it->second)
+		for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
+			if (!it->first->isConstant() || !it->second || !it->second->isConstant())
 				tmp += "D";
 			else
-				tmp += "S" + itos(it->second - it->first + 1);
+				tmp += "S" + itos(it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1);
 		tmp += internal->getMangleName();
 		return tmp;
 	}
 	case OBJECT:
+		if (getClass() == NULL)
+			throw SymbolNotFound("Class '" + identifier->getName() + "'");
 		return getClass()->getMangleName();
 	}
+}
+
+llvm::Constant* Type::getDefault(Context &context) {
+	switch (baseType) {
+	case BYTE:
+		return context.getBuilder().getInt8(0);
+	case SHORT:
+		return context.getBuilder().getInt16(0);
+	case INT:
+		return context.getBuilder().getInt32(0);
+	case ARRAY:
+		{
+			size_t totalSize = 1;
+			for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
+				if (!it->second)
+					throw NotImplemented("dynamic array");
+				if (!it->first->isConstant() || !it->second->isConstant())
+					throw NotImplemented("dynamic dim expression");
+				if (!it->first->getTypeConstant()->isInt() || !it->second->getTypeConstant()->isInt())
+					throw InvalidType("dim expression must be integer");
+				totalSize *= it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1;
+			}
+			llvm::SmallVector<llvm::Constant*, 16> tmp;
+			llvm::Constant *internal_default = internal->getDefault(context);
+			for (size_t i = 0; i < totalSize; i++)
+				tmp.push_back(internal_default);
+			return llvm::ConstantArray::get((llvm::ArrayType *) getType(context), tmp);
+		}
+		break;
+	case OBJECT:
+		return llvm::ConstantPointerNull::get((llvm::PointerType *) getType(context));
+	}
+	throw NotImplemented(std::string("type '") + getName() + "'");
+}
+
+Class* Type::getClass(Context &context) {
+	if (!cls)
+		cls = context.findClass(identifier->getName());
+	return cls;
 }

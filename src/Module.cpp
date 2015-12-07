@@ -28,11 +28,8 @@ Json::Value Module::json() {
 void Module::genStruct(Context &context) {
 	context.currentModule = this;
 	for (std::list<StructNode*>::iterator it = list.begin(); it != list.end(); it++) {
-		Class *cls = dynamic_cast<Class*>(*it);
-		if (cls) {
-			cls->module = this;
-			cls->genStruct(context);
-		}
+		(*it)->module = this;
+		(*it)->genStruct(context);
 	}
 	context.currentModule = parent;
 }

@@ -5,6 +5,8 @@ module:
 
 class:
 	'C' len(cname) cname
+	[ 'S' len(mangled_superclass_name) mangled_superclass_name ]
+	{ 'I' len(mangled_interface_name) mangled_interface_name }
 	definations
 	'EC'
 

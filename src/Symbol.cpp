@@ -8,7 +8,7 @@ Symbol::Symbol(const std::string &name, Function *function, size_t index) :
 
 Symbol::Symbol(const std::string &name, SymbolType st, Type *type, llvm::Value *value) :
 		name(name), type(st) {
-	assert(st == LOCAL_VAR || st == ARGUMENT);
+	assert(st == LOCAL_VAR || st == ARGUMENT || st == STATIC_MEMBER_VAR);
 	data.identifier.type = type;
 	data.identifier.value = value;
 }
@@ -19,7 +19,3 @@ Symbol::Symbol(const std::string &name, Type *type, size_t index) :
 	data.member.index = index;
 }
 
-Symbol::Symbol(const std::string &name, Class *cls) :
-		name(name), type(CLASS) {
-	data.cls.cls = cls;
-}

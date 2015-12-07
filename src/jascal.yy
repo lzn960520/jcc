@@ -15,7 +15,6 @@
 	class Expression;
 	class Statements;
 	class Type;
-	class CallArgumentList;
 	class Identifier;
 	class Function;
 	class VariableDefination;
@@ -37,7 +36,6 @@
 
 %code top {
 	#include "Type.h"
-	#include "CallArgumentList.h"
 	#include "VariableDefination.h"
 	#include "FunctionCall.h"
 	#include "Function.h"
@@ -75,7 +73,7 @@
 	Expression *expression;
 	Statements *statements;
 	Type *type;
-	CallArgumentList *call_arg_list;
+	std::list<Expression*> *call_arg_list;
 	Identifier *identifier;
 	Function *function;
 	VariableDefination *var_def;
@@ -228,6 +226,9 @@ using:
 	T_USING T_LITERAL_STRING T_SEMICOLON {
 		$$ = new std::string($2->text);
         delete $2; }
+	| T_USING ns_identifier T_SEMICOLON {
+		$$ = new std::string($2->getFullName());
+		delete $2; }
 
 module_defination:
 	T_MODULE ns_identifier T_BEGIN inmodule_definations T_END T_SEMICOLON {
@@ -720,23 +721,23 @@ arg_list:
 		$$->push_back(std::pair<Type*, Identifier*>($3, $4)); }
 
 function_call:
-	T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
-		$$ = new FunctionCall(NULL, $1, $3);
-		SAVE_LOC($$, @$); }
-	| expression T_DOT T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
+	expression T_DOT T_IDENTIFIER T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
 		$$ = new FunctionCall($1, $3, $5);
+		SAVE_LOC($$, @$); }
+	| ns_identifier T_LEFT_PARENTHESIS call_arg_list T_RIGHT_PARENTHESIS {
+		$$ = new FunctionCall(NULL, new Identifier($1->getFullName().c_str()), $3);
+		delete $1;
 		SAVE_LOC($$, @$); }
 
 call_arg_list:
-	{ $$ = new CallArgumentList();
-		SAVE_LOC($$, @$); }
+	{
+		$$ = new std::list<Expression*>(); }
 	| expression {
-		$$ = new CallArgumentList($1);
-		SAVE_LOC($$, @$); }
+		$$ = new std::list<Expression*>();
+		$$->push_back($1); }
 	| call_arg_list T_COMMA expression {
 		$$ = $1;
-		$$->push_back($3);
-		SAVE_LOC($$, @$); }
+		$$->push_back($3); }
 
 %%
 

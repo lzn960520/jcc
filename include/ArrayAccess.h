@@ -19,6 +19,7 @@ struct ArrayAccess : public Expression {
 	bool isConstant() override;
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
+	llvm::Value* getPointer(Context &context);
 };
 
 #endif

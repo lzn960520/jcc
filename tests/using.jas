@@ -1,4 +1,4 @@
-using "qsort.jsym";
+using "subclass.jsym";
 
 module Main
 begin
@@ -7,6 +7,7 @@ class Main
 begin
 	public static function main() : int
 	begin
+		var test::A a = new test::A;
 		return 0;
 	end;
 end;

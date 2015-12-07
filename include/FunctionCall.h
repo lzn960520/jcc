@@ -1,16 +1,17 @@
 #ifndef _FUNCTION_CALL_H_
 #define _FUNCTION_CALL_H_
 
+#include <list>
+
 #include "Expression.h"
 
 class Identifier;
-class CallArgumentList;
 class Expression;
 struct FunctionCall : public Expression {
 	Identifier *identifier;
-	CallArgumentList *arg_list;
+	std::list<Expression*> &arg_list;
 	Expression *target;
-	FunctionCall(Expression *target, Identifier *identifier, CallArgumentList *arg_list);
+	FunctionCall(Expression *target, Identifier *identifier, std::list<Expression*> *arg_list);
 	~FunctionCall();
 	Json::Value json() override;
 	llvm::Value* load(Context &context) override;

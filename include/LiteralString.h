@@ -7,6 +7,7 @@
 
 struct LiteralString : public Expression {
 	std::string text;
+	std::string ori_text;
 	LiteralString(const char *text);
 	~LiteralString();
 	Json::Value json() override;

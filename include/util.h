@@ -59,18 +59,25 @@ inline std::string getDir(const std::string &path) {
 		return path.substr(0, path.rfind('/')) + "/";
 }
 
-inline std::string getAbsoluteDir(const std::string cwd, const std::string &path) {
+inline std::string getAbsoluteDir(const std::string &cwd, const std::string &path) {
 	if (path[0] == '/')
 		return path;
 	else
 		return cwd + getDir(path);
 }
 
-inline std::string resolveRelativePath(const std::string path, const std::string &relpath) {
+inline std::string resolveRelativePath(const std::string &path, const std::string &relpath) {
 	if (relpath[0] == '/')
 		return relpath;
 	else
 		return getDir(path) + relpath;
+}
+
+inline std::string replaceExt(const std::string &path, const std::string &newExt) {
+	if (path.rfind(".") == std::string::npos)
+		return path + "." + newExt;
+	else
+		return path.substr(0, path.rfind(".") + 1) + newExt;
 }
 
 #endif

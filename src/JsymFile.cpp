@@ -45,6 +45,18 @@ void Class::writeJsymFile(std::ostream &os) {
 	size_t len = getName().size();
 	os.write((char *) &len, 4);
 	os.write(getName().c_str(), len);
+	if (extendsClass) {
+		os.write("S", 1);
+		len = extendsClass->getFullName().size();
+		os.write((char *) &len, 4);
+		os.write(extendsClass->getFullName().c_str(), len);
+	}
+	for (std::list<Interface*>::iterator it = implementsType.begin(); it != implementsType.end(); it++) {
+		os.write("I", 1);
+		len = (*it)->getFullName().size();
+		os.write((char *) &len, 4);
+		os.write((*it)->getFullName().c_str(), len);
+	}
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
 		(*it)->writeJsymFile(os);
 	os.write("EC", 2);
@@ -156,6 +168,48 @@ static Identifier* readIdentifier(char *&p, char *end) {
 	return ans;
 }
 
+static const std::string readMangleName(char *&p, char *end) {
+	char * const save_p = p;
+	std::string ans;
+	try {
+		if (p >= end)
+			throw CompileException("Error reading Jsym file");
+		if (p < end + 1 && p[0] == '_' && p[1] == 'F') {
+			// Function
+			return "";
+		} else {
+			// Class or Interface
+			char type = *p++;
+			while (p < end && *p != type) {
+				if (*p != 'N')
+					throw CompileException("Error reading Jsym file");
+				p++;
+				size_t len = 0;
+				while (p < end && isdigit(*p))
+					len = len * 10 + (*p++ - '0');
+				if (len == 0 || p + len >= end)
+					throw CompileException("Error reading Jsym file");
+				ans += std::string(p, len) + "::";
+				p += len;
+			}
+			if (p >= end || *p != type)
+				throw CompileException("Error reading Jsym file");
+			p++;
+			size_t len = 0;
+			while (p < end && isdigit(*p))
+				len = len * 10 + (*p++ - '0');
+			if (len == 0 || p + len >= end)
+				throw CompileException("Error reading Jsym file");
+			ans += std::string(p, len);
+			p += len;
+			return ans;
+		}
+	} catch (...) {
+		p = save_p;
+		throw;
+	}
+}
+
 static Type* readType(char *&p, char *end) {
 	char * const save_p = p;
 	try {
@@ -219,9 +273,10 @@ static Type* readType(char *&p, char *end) {
 			}
 			return new Type(readType(p, end), dims);
 		}
+		case 'N':
+		case 'J':
 		case 'C': {
-			p++;
-			return new Type(readIdentifier(p, end));
+			return new Type(new Identifier(readMangleName(p, end).c_str()));
 		}
 		default:
 			throw CompileException("Error reading Jsym file");
@@ -319,12 +374,24 @@ static MemberVariableDefination* readMemberVariableDefination(char *&p, char *en
 static Class* readClass(char *&p, char *end) {
 	char * const save_p = p;
 	Identifier *id = NULL;
+	Identifier *extends = NULL;
 	std::list<MemberNode*> *defs = new std::list<MemberNode*>();
+	std::list<Identifier*> *implements = new std::list<Identifier*>();
 	try {
 		if (p >= end || *p != 'C')
 			throw CompileException("Error reading Jsym file");
 		p++;
 		id = readIdentifier(p, end);
+		if (*p == 'S') {
+			p++;
+			extends = readIdentifier(p, end);
+		}
+		while (p < end && *p == 'I') {
+			p++;
+			implements->push_back(readIdentifier(p, end));
+		}
+		if (p >= end)
+			throw CompileException("Error reading Jsym file");
 		while (p < end && *p != 'E') {
 			switch (*p) {
 			case 'F':
@@ -340,10 +407,15 @@ static Class* readClass(char *&p, char *end) {
 		if (p + 1 >= end || *p != 'E' || *(p + 1) != 'C')
 			throw CompileException("Error reading Jsym file");
 		p += 2;
-		return new Class(id, NULL, NULL, defs);
+		return new Class(id, extends, implements, defs);
 	} catch(...) {
 		if (id)
 			delete id;
+		if (extends)
+			delete extends;
+		for (std::list<Identifier*>::iterator it = implements->begin(); it != implements->end(); it++)
+			delete *it;
+		delete implements;
 		for (std::list<MemberNode*>::iterator it = defs->begin(); it != defs->end(); it++)
 			delete *it;
 		delete defs;

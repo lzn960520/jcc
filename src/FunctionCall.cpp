@@ -2,29 +2,33 @@
 #include "exception.h"
 #include "Context.h"
 #include "Identifier.h"
-#include "CallArgumentList.h"
 #include "Function.h"
 #include "Symbol.h"
 #include "Type.h"
 #include "Class.h"
 #include "DebugInfo.h"
 
-FunctionCall::FunctionCall(Expression *target, Identifier *identifier, CallArgumentList *arg_list) :
-	target(target), identifier(identifier), arg_list(arg_list) {
+FunctionCall::FunctionCall(Expression *target, Identifier *identifier, std::list<Expression*> *arg_list) :
+	target(target), identifier(identifier), arg_list(*arg_list) {
 }
 
 FunctionCall::~FunctionCall() {
-	if (identifier)
-		delete identifier;
-	if (arg_list)
-		delete arg_list;
+	if (target)
+		delete target;
+	delete identifier;
+	delete &arg_list;
 }
 
 Json::Value FunctionCall::json() {
 	Json::Value root;
 	root["name"] = "call";
+	if (target)
+		root["target"] = target->json();
 	root["identifier"] = identifier->json();
-	root["arg_list"] = arg_list->json();
+	root["arg_list"] = Json::Value(Json::arrayValue);
+	int i = 0;
+	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++, i++)
+		root["arg_list"][i] = (*it)->json();
 	return root;
 }
 
@@ -54,7 +58,6 @@ llvm::Value* FunctionCall::load(Context &context) {
 		arg_code.push_back(tmpTarget->load(context));
 		delete tmpTarget;
 	}
-	std::list<Expression*> &arg_list = this->arg_list->list;
 	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_code.push_back((*it)->load(context));
 	llvm::Value *ans = addDebugLoc(

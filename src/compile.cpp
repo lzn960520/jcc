@@ -6,8 +6,8 @@
 #include "util.h"
 #include "Identifier.h"
 
-std::list<Token*> tokenize(std::istream &is) {
-	Tokenizer tokenizer(is);
+std::list<Token*> tokenize(std::istream &is, const std::string &path) {
+	Tokenizer tokenizer(is, path);
 	std::list<Token*> ans;
 	int type;
 	while ((type = tokenizer.yylex()) != 0)
@@ -28,7 +28,7 @@ std::list<Token*> tokenize(std::istream &is) {
 	return ans;
 }
 
-CompileFile* parse(const std::list<Token*> tokens) {
+CompileFile* parse(const std::list<Token*> &tokens) {
 	if (tokens.empty())
 		return NULL;
 	if (!tokens.front()->getLocation().begin.filename.empty()) {

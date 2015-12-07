@@ -39,7 +39,7 @@ llvm::Value *New::load(Context &context) {
 									context.currentBlock()
 							),
 							loc),
-					llvm::PointerType::get(type->getType(context), 0)),
+					type->getType(context)),
 			loc);
 }
 

@@ -24,6 +24,9 @@ array:
 class:
 	N1::N2::Class # CN2N1N2N2C5Class
 
+interface:
+	N1::Interface # JN2N2J9Interface
+
 procedure:
 	N1::Class1::func() # _FN2N1C6Class1F4func0
 	N1::Class1::func(int) # _FN2N1C6Class1F4func1i

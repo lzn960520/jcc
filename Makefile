@@ -35,17 +35,18 @@ endif
 
 CPPFLAGS += -frtti -fexceptions
 
+TEST_LEVEL ?= --llvm
 # jascal
 SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
 	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
 	Visibility.cpp Context.cpp FunctionCall.cpp Qualifier.cpp \
-	CallArgumentList.cpp lex.yy.cc jascal.tab.cc Exception.cpp \
+	lex.yy.cc jascal.tab.cc Exception.cpp Interface.cpp \
 	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
 	ArrayAccessor.cpp Symbol.cpp output.cpp New.cpp DebugInfo.cpp \
 	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
 	JsymFile.cpp MemberVariableDefination.cpp compile.cpp Tokenizer.cpp \
-	Token.cpp CompileFile.cpp Parser.cpp LiteralBool.cpp Interface.cpp
+	Token.cpp CompileFile.cpp Parser.cpp LiteralBool.cpp
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 OBJS := $(patsubst %.cc,objs/%.o,$(OBJS))
 OBJS += objs/HtmlTemplate.o
@@ -107,7 +108,7 @@ test: $(TESTS_OUT)
 
 tests/%.ll: tests/%.jas $(PROG)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
-	@./$(PROG) --dump-html tests/$*.html --parse -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
+	@./$(PROG) --dump-html tests/$*.html $(TEST_LEVEL) -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"

@@ -36,10 +36,14 @@ void VariableDefination::gen(Context &context) {
 		if (this->type->internal->isArray())
 			throw NotImplemented("nested array");
 		size_t totalSize = 1;
-		for (std::vector<std::pair<int, int> >::iterator it = this->type->arrayDim.begin(); it != this->type->arrayDim.end(); it++) {
-			if (it->first >= it->second)
+		for (std::vector<std::pair<Expression*, Expression*> >::iterator it = this->type->arrayDim.begin(); it != this->type->arrayDim.end(); it++) {
+			if (it->second == NULL)
 				throw NotImplemented("dynamic array");
-			totalSize = totalSize * (it->second - it->first + 1);
+			if (!it->first->isConstant() || !it->second->isConstant())
+				throw NotImplemented("dynamic dim expression");
+			if (!it->first->getTypeConstant()->isInt() || !it->second->getTypeConstant()->isInt())
+				throw InvalidType("dim expression must be integer");
+			totalSize = totalSize * (it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1);
 		}
 		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
 			llvm::AllocaInst *tmp = addDebugLoc(
@@ -55,7 +59,7 @@ void VariableDefination::gen(Context &context) {
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
 		}
 	} else if (this->type->isObject()) {
-		llvm::Type *type = llvm::PointerType::get(this->type->getType(context), 0);
+		llvm::Type *type = this->type->getType(context);
 		for (std::list<std::pair<Identifier*, Expression*> >::iterator it = list.begin(); it != list.end(); it++) {
 			llvm::AllocaInst *tmp = addDebugLoc(context, context.getBuilder().CreateAlloca(type, NULL, it->first->getName()), it->first->loc);
 			insertDeclareDebugInfo(context, this->type, it->first->getName(), tmp, it->first->loc, false);

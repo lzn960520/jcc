@@ -14,9 +14,9 @@ class Tokenizer : public yyFlexLexer {
 	std::string str;
 	int v;
 	bool b;
-	friend std::list<Token*> tokenize(std::istream &is);
+	friend std::list<Token*> tokenize(std::istream &is, const std::string &path);
 public:
-	Tokenizer(std::istream &is);
+	Tokenizer(std::istream &is, const std::string &path);
 	int yylex();
 	~Tokenizer();
 };

@@ -30,6 +30,7 @@ llvm::Value* Identifier::load(Context &context) {
 		throw SymbolNotFound(text, loc);
 	switch (ans->type) {
 	case Symbol::ARGUMENT:
+	case Symbol::STATIC_MEMBER_VAR:
 		return ans->data.identifier.value;
 	case Symbol::LOCAL_VAR: {
 		return addDebugLoc(
@@ -65,6 +66,7 @@ llvm::Instruction* Identifier::store(Context &context, llvm::Value *value) {
 		throw SymbolNotFound(text, loc);
 	switch (ans->type) {
 	case Symbol::ARGUMENT:
+	case Symbol::STATIC_MEMBER_VAR:
 		return context.getBuilder().CreateStore(value, ans->data.identifier.value);
 		break;
 	case Symbol::LOCAL_VAR:

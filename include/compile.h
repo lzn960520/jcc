@@ -10,8 +10,8 @@ class CompileFile;
 class Token;
 class Context;
 
-std::list<Token*> tokenize(std::istream &is);
-CompileFile* parse(const std::list<Token*> tokens);
+std::list<Token*> tokenize(std::istream &is, const std::string &path = "");
+CompileFile* parse(const std::list<Token*> &tokens);
 void genSym(CompileFile *root, std::ostream &os);
 void compile(CompileFile *root, Context &context);
 

@@ -190,7 +190,9 @@ void Context::addClass(Class *cls) {
 Class* Context::findClass(const std::string &name) {
 	if (classes.count(name))
 		return classes[name];
-	else
+	else if (classes.count(currentModule->getFullName() + "::" + name))
+		return classes[currentModule->getFullName() + "::" + name];
+	else	
 		return NULL;
 }
 

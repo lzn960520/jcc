@@ -15,11 +15,14 @@ class Type;
 class MemberNode;
 class Function;
 class MemberVariableDefination;
+class Interface;
 class Class : public StructNode {
 	Identifier *identifier;
 	std::list<MemberNode*> &list;
 	std::list<Identifier*> &implements;
+	std::list<Interface*> implementsType;
 	Identifier *extends;
+	Class *extendsClass;
 	Type *type;
 	llvm::StructType *llvmType;
 	Context::SymbolContext symbols;
@@ -28,7 +31,6 @@ class Class : public StructNode {
 	friend class Function;
 	friend class MemberVariableDefination;
 public:
-	Module *module;
 	Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
 	Class(Identifier *identifier, Identifier *extends, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
 	~Class();
@@ -36,7 +38,7 @@ public:
 	void genStruct(Context &context) override;
 	void gen(Context &context) override;
 	Type* getType() { return type; }
-	llvm::Type* getLLVMType() { return llvmType; }
+	llvm::StructType* getLLVMType() { return llvmType; }
 	Symbol* findSymbol(const std::string &name);
 	const std::string& getName();
 	const std::string getFullName();

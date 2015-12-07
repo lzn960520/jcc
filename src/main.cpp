@@ -54,6 +54,8 @@ void _disable_lex_output(char *fmt, ...) {
 }
 
 int main(int argc, char * const argv[]) {
+	srand(time(NULL));
+
 	// process cmdline
 	CmdLine cmdline(argc, argv);
 	cmdline.registerOpt(OPT_DUMP_HTML, "--dump-html", CmdLine::REQUIRE_ARG);
@@ -128,7 +130,7 @@ int main(int argc, char * const argv[]) {
 					continue;
 				}
 
-				std::list<Token*> tokens = tokenize(ifs);
+				std::list<Token*> tokens = tokenize(ifs, *it);
 				ifs.close();
 				if (opt_dump_html) {
 					std::ostringstream os;
@@ -144,16 +146,16 @@ int main(int argc, char * const argv[]) {
 				if (opt_parse_only)
 					break;
 
-				{
-					std::ofstream ofs(getTempName().c_str());
-					genSym(root, ofs);
-					ofs.close();
-				}
-
 				Context context(true);
 				if (context.isDebug)
 					context.initDWARF(*it);
 				compile(root, context);
+				{
+					std::ofstream ofs(replaceExt(output_filename, "jsym"));
+					genSym(root, ofs);
+					ofs.close();
+				}
+				context.DI->finalize();
 				{
 					std::ofstream ofs(output_filename.c_str());
 					outputLLVM(context.getModule(), ofs);

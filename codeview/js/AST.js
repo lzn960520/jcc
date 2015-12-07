@@ -127,10 +127,11 @@ var AST;
 			this.name = "[]";
 			children = [ AST(data.internal, this) ];
 			for (var i in data.dim) {
-				children.push(AST({
-					name: "dummy",
-					content: data.dim[i].lower + ".." + data.dim[i].upper
-				}, this));
+				children.push(AST(data.dim[i].lower, this));
+				if (data.dim[i].upper === "dynamic")
+					children.push(AST({name: "dummy", content: "dynamic"}, this));
+				else
+					children.push(AST(data.dim[i].upper, this));
 			}
 			break;
 		case "int":
@@ -213,7 +214,11 @@ var AST;
 	function Call(data, parent) {
 		this.parent = parent;
 		this.name = "call";
-		var children = [ AST(data.identifier, this), AST(data.arg_list, this) ];
+		var children = [ AST(data.identifier, this) ];
+		if (data.target)
+			children.unshift(AST(data.target, this));
+		for (i in data.arg_list)
+			children.push(AST(data.arg_list[i], this));
 		this.getChildren = function() {
 			return children;
 		}
@@ -298,6 +303,8 @@ var AST;
 		this.parent = parent;
 		this.name = "file";
 		var children = [];
+		for (i in data.usings)
+			children.push(AST({name: "dummy", content: "using " + data.usings[i]}, this));
 		for (i in data.modules)
 			children.push(AST(data.modules[i], this));
 		this.getChildren = function() {
