@@ -8,7 +8,7 @@ begin
 	public static function main() : int
 	begin
 		var test::A a = new test::A;
-		return 0;
+		return test::B::sb;
 	end;
 end;
 

@@ -8,7 +8,11 @@
 #include "Symbol.h"
 
 MemberAccess::MemberAccess(Expression *target, Identifier *identifier) :
-		target(target), identifier(identifier), isStatic(false) {
+		target(target), targetClass(NULL), identifier(identifier), isStatic(false) {
+}
+
+MemberAccess::MemberAccess(Type *cls, Identifier *identifier) :
+		target(NULL), targetClass(cls), identifier(identifier), isStatic(true) {
 }
 
 MemberAccess::~MemberAccess() {
@@ -33,7 +37,20 @@ Json::Value MemberAccess::json() {
 
 llvm::Value* MemberAccess::load(Context &context) {
 	if (isStatic) {
-		throw NotImplemented("Static member variable");
+		Class *cls = targetClass->getClass(context);
+		if (!cls)
+			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
+		if (cls->getMangleName()[0] == 'I')
+			throw InvalidType("'" + cls->getFullName() + "' is an interface");
+		Symbol *symbol = cls->findSymbol(identifier->getName());
+		if (!symbol)
+			throw SymbolNotFound("No such static member '" + identifier->getName() + "' in class '" + cls->getFullName() + "'");
+		return addDebugLoc(
+				context,
+				context.getBuilder().CreateLoad(
+						symbol->data.identifier.value
+				),
+				loc);
 	} else {
 		if (!target->getType(context)->isObject())
 			throw InvalidType(std::string("Access member of a ") + target->getType(context)->getName());
@@ -60,7 +77,15 @@ llvm::Value* MemberAccess::load(Context &context) {
 
 Type* MemberAccess::getType(Context &context) {
 	if (isStatic) {
-		throw NotImplemented("Static member variable");
+		Class *cls = targetClass->getClass(context);
+		if (!cls)
+			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
+		if (cls->getMangleName()[0] == 'I')
+			throw InvalidType("'" + cls->getFullName() + "' is an interface");
+		Symbol *symbol = cls->findSymbol(identifier->getName());
+		if (!symbol)
+			throw SymbolNotFound("No such static member '" + identifier->getName() + "' in class '" + cls->getFullName() + "'");
+		return symbol->data.identifier.type;
 	} else {
 		if (!target->getType(context)->isObject())
 			throw InvalidType(std::string("Access member of a ") + target->getType(context)->getName());
@@ -74,7 +99,18 @@ Type* MemberAccess::getType(Context &context) {
 
 llvm::Instruction* MemberAccess::store(Context &context, llvm::Value *value) {
 	if (isStatic) {
-		throw NotImplemented("Static member variable");
+		Class *cls = targetClass->getClass(context);
+		if (!cls)
+			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
+		if (cls->getMangleName()[0] == 'I')
+			throw InvalidType("'" + cls->getFullName() + "' is an interface");
+		Symbol *symbol = cls->findSymbol(identifier->getName());
+		if (!symbol)
+			throw SymbolNotFound("No such static member '" + identifier->getName() + "' in class '" + cls->getFullName() + "'");
+		return context.getBuilder().CreateStore(
+				value,
+				symbol->data.identifier.value
+		);
 	} else {
 		if (!target->getType(context)->isObject())
 			throw InvalidType(std::string("Access member of a ") + target->getType(context)->getName());

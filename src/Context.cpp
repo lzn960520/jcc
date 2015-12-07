@@ -36,8 +36,6 @@ Context::Context(bool debug) : mallocFunc(NULL), DL(NULL), DI(NULL), isDebug(deb
 
 	currentFunction = NULL;
 
-	contextStack.push_back(new SymbolContext());
-
 	{
 		llvm::Type *tmp[] = { llvm::Type::getInt64Ty(*llvmContext) };
 		*const_cast<llvm::Function **>(&mallocFunc) = llvm::Function::Create(
@@ -56,8 +54,7 @@ Context::~Context() {
 	delete builder;
 	delete module;
 	delete llvmContext;
-	for (SymbolContextStack::iterator it = contextStack.begin(); it != contextStack.end(); it++)
-		delete *it;
+	assert(contextStack.size() == 0);
 	for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
 		delete *it;
 }
@@ -129,8 +126,18 @@ void Context::pushContext() {
 }
 
 void Context::popContext() {
-	assert(contextStack.size() >= 2);
+	assert(contextStack.size() >= 1);
 	delete contextStack.back();
+	contextStack.pop_back();
+}
+
+void Context::pushContext(SymbolContext *context) {
+	contextStack.push_back(context);
+}
+
+void Context::popContext(SymbolContext *context) {
+	assert(contextStack.size() >= 1);
+	assert(contextStack.back() == context);
 	contextStack.pop_back();
 }
 
@@ -139,12 +146,14 @@ Context::SymbolContext* Context::currentContext() {
 }
 
 void Context::addSymbol(Symbol *symbol) {
+	assert(contextStack.size() != 0);
 	if (contextStack.back()->find(symbol->name))
 		throw Redefination(symbol->name);
 	contextStack.back()->add(symbol);
 }
 
 Symbol* Context::findSymbol(const std::string &name) {
+	assert(contextStack.size() != 0);
 	for (SymbolContextStack::reverse_iterator it = contextStack.rbegin(); it != contextStack.rend(); it++)
 		if ((*it)->find(name))
 			return (*it)->find(name);

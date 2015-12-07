@@ -1,0 +1,25 @@
+module Test
+begin
+	interface IA
+	begin
+		function a() : int;
+	end;
+
+	class A implements IA
+	begin
+		public function a() : int
+		begin
+			return 0;
+		end;
+	end;
+
+	class Main
+	begin
+		public static function main() : int
+		begin
+			var IA a = new A;
+			a.a();
+			return 0;
+		end;
+	end;
+end;

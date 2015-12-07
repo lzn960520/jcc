@@ -54,38 +54,50 @@ void Class::genStruct(Context &context) {
 	llvmType = llvm::StructType::create(context.getContext(), getMangleName());
 	context.addClass(this);
 
-	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
-	members.push_back(llvm::PointerType::get(vtableType, 0));
-
 	if (extends) {
 		extendsClass = context.findClass(extends->getName());
 		if (extendsClass == NULL)
 			throw SymbolNotFound("Class '" + extends->getName() + "'");
-		llvm::StructType *extendsLLVM = extendsClass->getLLVMType();
+		if (extendsClass->getMangleName()[0] == 'I')
+			throw InvalidType("'" + extends->getName() + "' is an interface");
+		llvm::StructType *extendsLLVM = (llvm::StructType *) extendsClass->getLLVMType();
 		llvm::StructType::element_iterator it = extendsLLVM->element_begin();
-		it++; // jump over the vtable
 		for (; it != extendsLLVM->element_end(); it++)
 			members.push_back(*it);
+	} else {
+		llvm::SmallVector<llvm::Type*, 16> destructor_arg;
+		destructor_arg.push_back(llvmType);
+		members.push_back(llvm::PointerType::get(llvm::FunctionType::get(context.getBuilder().getVoidTy(), destructor_arg, false), 0));
 	}
 
-	llvm::SmallVector<llvm::Type*, 16> destructor_arg;
-	destructor_arg.push_back(llvmType);
-	vtable.push_back(llvm::PointerType::get(llvm::FunctionType::get(context.getBuilder().getVoidTy(), destructor_arg, false), 0));
+	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
+	members.push_back(llvm::PointerType::get(vtableType, 0));
+	
+	for (std::list<Identifier*>::iterator it = implements.begin(); it != implements.end(); it++) {
+		Class *cls = context.findClass((*it)->getName());
+		if (cls == NULL)
+			throw SymbolNotFound("Interface '" + (*it)->getName() + "'");
+		if (cls->getMangleName()[0] != 'I')
+			throw InvalidType("'" + (*it)->getName() + "' is not an interface");
+		members.push_back(cls->llvmType);
+		implementsType.push_back(std::pair<Interface*, int>((Interface *) cls, members.size() - 1));
+	}
 
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++) {
 		(*it)->cls = this;
 		(*it)->genStruct(context);
 	}
+
 	vtableType->setBody(vtable);
-	llvmType->setBody(members);
+	((llvm::StructType *) llvmType)->setBody(members);
 }
 
 void Class::gen(Context &context) {
 	context.currentClass = this;
-	context.pushContext();
+	context.pushContext(&symbols);
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
 		(*it)->gen(context);
-	context.popContext();
+	context.popContext(&symbols);
 	context.currentClass = NULL;
 }
 

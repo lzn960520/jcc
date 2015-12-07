@@ -2,8 +2,6 @@ module test
 begin
 	class A
 	begin
-		public int a;
-		static int sa;
 		public procedure access_a()
 		begin
 			a = 0;
@@ -16,10 +14,20 @@ begin
 		begin
 			sa = 0;
 		end;
+		public int a;
+		public static int sa;
 	end;
 
 	class B extends A
 	begin
+		public procedure access_b()
+		begin
+			b = 0;
+		end;
+		public procedure access_sb()
+		begin
+			sb = 0;
+		end;
 		public int b;
 		static int sb;
 		public static A sa_in_b;

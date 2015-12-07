@@ -4,14 +4,11 @@
 #include <list>
 #include <llvm/IR/DerivedTypes.h>
 
-#include "StructNode.h"
+#include "Class.h"
 
 class Identifier;
 class MemberNode;
-class Interface : public StructNode {
-	Identifier *identifier;
-	std::list<MemberNode*> &list;
-	llvm::StructType *llvmType;
+class Interface : public Class {
 public:
 	Interface(Identifier *identifier, std::list<MemberNode*> *list);
 	~Interface();
@@ -19,9 +16,7 @@ public:
 	void gen(Context &context) override;
 	void genStruct(Context &context) override;
 	void writeJsymFile(std::ostream &os) override;
-	const std::string getName();
-	const std::string getMangleName();
-	const std::string getFullName();
+	const std::string getMangleName() override;
 };
 
 #endif

@@ -41,7 +41,7 @@ void Function::writeJsymFile(std::ostream &os) {
 
 void Class::writeJsymFile(std::ostream &os) {
 	assert(module == NULL);
-	os.write("C", 1);
+	os.write(getMangleName().c_str(), 1);
 	size_t len = getName().size();
 	os.write((char *) &len, 4);
 	os.write(getName().c_str(), len);
@@ -51,15 +51,16 @@ void Class::writeJsymFile(std::ostream &os) {
 		os.write((char *) &len, 4);
 		os.write(extendsClass->getFullName().c_str(), len);
 	}
-	for (std::list<Interface*>::iterator it = implementsType.begin(); it != implementsType.end(); it++) {
+	for (std::list<std::pair<Interface*, int> >::iterator it = implementsType.begin(); it != implementsType.end(); it++) {
 		os.write("I", 1);
-		len = (*it)->getFullName().size();
+		len = it->first->getFullName().size();
 		os.write((char *) &len, 4);
-		os.write((*it)->getFullName().c_str(), len);
+		os.write(it->first->getFullName().c_str(), len);
 	}
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
 		(*it)->writeJsymFile(os);
-	os.write("EC", 2);
+	os.write("E", 1);
+	os.write(getMangleName().c_str(), 1);
 }
 
 void Interface::writeJsymFile(std::ostream &os) {

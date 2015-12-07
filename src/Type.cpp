@@ -126,13 +126,13 @@ llvm::Type* Type::getType(Context &context) {
 		if (!cls)
 			cls = context.findClass(identifier->getName());
 		if (!cls)
-			throw SymbolNotFound("No such cls '" + context.currentModule->getFullName() + "::" + identifier->getName());
+			throw SymbolNotFound("No such class '" + context.currentModule->getFullName() + "::" + identifier->getName() + "'");
 		return llvm::PointerType::get(cls->getLLVMType(), 0);
 	}
 	throw NotImplemented(std::string("type '") + getName() + "'");
 }
 
-size_t Type::getSize() {
+size_t Type::getSize(Context &context) {
 	switch (baseType) {
 	case BYTE:
 		return 1;
@@ -140,8 +140,9 @@ size_t Type::getSize() {
 		return 2;
 	case INT:
 		return 4;
-	case OBJECT:
-		throw NotImplemented("caculate size of object");
+	case OBJECT: {
+		llvm::DataLayout DL(&context.getModule());
+		return DL.getTypeAllocSize(getType(context)); }
 	}
 }
 
@@ -194,7 +195,7 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 	case BYTE:
 	case BOOL:
 		if (otype->isInt())
-			if (otype->getSize() == dtype->getSize())
+			if (otype->getSize(context) == dtype->getSize(context))
 				return val;
 			else
 				return context.getBuilder().CreateTruncOrBitCast(val, dtype->getType(context));
@@ -208,12 +209,44 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		break;
 	case CHAR:
 	case STRING:
+		throw NotImplemented("type cast about char or string");
 		break;
 	case OBJECT:
+		if (otype->isObject()) {
+			Class *ocls = otype->getClass();
+			Class *dcls = dtype->getClass();
+			if (ocls == dcls)
+				return val;
+			if (dcls->getMangleName()[0] == 'I') {
+				if (ocls->getMangleName()[0] == 'I')
+					break;
+				for (std::list<std::pair<Interface*, int> >::iterator it = ocls->implementsType.begin(); it != ocls->implementsType.end(); it++)
+					if (it->first == (Interface *) dcls) {
+						llvm::SmallVector<llvm::Value*, 1> tmp;
+						tmp.push_back(context.getBuilder().getInt32(it->second));
+						return context.getBuilder().CreatePointerCast(
+								context.getBuilder().CreateSub(
+										context.getBuilder().CreatePtrToInt(
+												val,
+												context.getBuilder().getInt32Ty()
+										),
+										context.getBuilder().getInt32(context.DL->getIndexedOffset(
+												ocls->getLLVMType(),
+												tmp
+										))
+								),
+								dcls->getLLVMType()
+						);
+					}
+			} else {
+			}
+		}
+		break;
 	case ARRAY:
+		throw NotImplemented("type cast about array");
 		break;
 	}
-	throw IncompatibleType(std::string("convert ") + BaseTypeNames[otype->baseType] + " to " + BaseTypeNames[dtype->baseType]);
+	throw IncompatibleType(std::string("can't cast ") + otype->getName() + " to " + dtype->getName());
 }
 
 const std::string Type::getMangleName() {
@@ -298,4 +331,18 @@ Class* Type::getClass(Context &context) {
 	if (!cls)
 		cls = context.findClass(identifier->getName());
 	return cls;
+}
+
+const std::string Type::getName() {
+	switch (baseType) {
+	case ARRAY:
+		return internal->getName() + "[]";
+	case OBJECT:
+		if (cls)
+			return cls->getFullName();
+		else
+			return identifier->getName();
+	default:
+		return BaseTypeNames[baseType];
+	}
 }

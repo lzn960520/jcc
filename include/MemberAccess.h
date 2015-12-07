@@ -9,7 +9,7 @@ class MemberAccess : public Expression {
 	Expression *target;
 	Identifier *identifier;
 	bool isStatic;
-	Class *targetClass;
+	Type *targetClass;
 public:
 	MemberAccess(Expression *target, Identifier *identifier);
 	MemberAccess(Type *type, Identifier *identifier);

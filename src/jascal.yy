@@ -522,6 +522,10 @@ expression:
 		}
 	| T_LEFT_CURLY tuple_list T_RIGHT_CURLY {
 		}
+	| ns_identifier T_NS T_IDENTIFIER {
+		$$ = new MemberAccess(new Type(new Identifier($1->getFullName().c_str())), $3);
+		delete $1;
+		SAVE_LOC($$, @2); }
 
 tuple_list:
 	expression {

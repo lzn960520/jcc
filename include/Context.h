@@ -55,7 +55,9 @@ public:
 	llvm::IRBuilder<>& getBuilder() { return *builder; }
 	llvm::LLVMContext& getContext() { return *llvmContext; }
 	void pushContext();
+	void pushContext(SymbolContext *context);
 	void popContext();
+	void popContext(SymbolContext *context);
 	SymbolContext* currentContext();
 	llvm::Function* createFunction(const std::string &name, llvm::FunctionType *funcType, Function *function);
 	void endFunction();

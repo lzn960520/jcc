@@ -95,8 +95,8 @@ Type* Identifier::getType(Context &context) {
 		throw SymbolNotFound(text, loc);
 	switch (ans->type) {
 	case Symbol::LOCAL_VAR:
-		return ans->data.identifier.type;
 	case Symbol::ARGUMENT:
+	case Symbol::STATIC_MEMBER_VAR:
 		return ans->data.identifier.type;
 	case Symbol::MEMBER_VAR:
 		return ans->data.member.type;

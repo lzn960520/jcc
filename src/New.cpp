@@ -21,12 +21,7 @@ Json::Value New::json() {
 }
 
 llvm::Value *New::load(Context &context) {
-	llvm::DataLayout DL(&context.getModule());
-	llvm::Value *arg[] = {
-			llvm::ConstantInt::get(
-					context.getBuilder().getInt64Ty(),
-					DL.getTypeAllocSize(type->getType(context)),
-					false) };
+	llvm::Value *arg[] = { context.getBuilder().getInt64(type->getSize(context)) };
 	return addDebugLoc(
 			context,
 			context.getBuilder().CreateBitCast(

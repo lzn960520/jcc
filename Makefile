@@ -35,7 +35,7 @@ endif
 
 CPPFLAGS += -frtti -fexceptions
 
-TEST_LEVEL ?= --llvm
+TEST_LEVEL ?= --llvm --jsym
 # jascal
 SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
 	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \

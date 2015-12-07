@@ -43,7 +43,7 @@ struct Type : public StructNode {
 	~Type();
 	Json::Value json() override;
 	llvm::Type *getType(Context &context);
-	size_t getSize();
+	size_t getSize(Context &context);
 	bool isInt() { return baseType == BYTE || baseType == SHORT || baseType == INT || baseType == BOOL; }
 	bool isBool() { return baseType == BOOL; }
 	bool isFloat() { return baseType == FLOAT || baseType == DOUBLE; }
@@ -55,7 +55,7 @@ struct Type : public StructNode {
 	Class* getClass() { return cls; }
 	Class* getClass(Context &context);
 	static Type* higherType(Type *a, Type *b);
-	const char *getName() { return BaseTypeNames[baseType]; }
+	const std::string getName();
 	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
 	void writeJsymFile(std::ostream &os) override;
 	const std::string getMangleName();

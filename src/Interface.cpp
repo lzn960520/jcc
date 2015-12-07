@@ -1,29 +1,25 @@
 #include <llvm/IR/Type.h>
 
 #include "Interface.h"
-#include "Identifier.h"
 #include "MemberNode.h"
 #include "Context.h"
 #include "util.h"
+#include "Function.h"
 #include "Module.h"
+#include "exception.h"
 
 Interface::Interface(Identifier *identifier, std::list<MemberNode*> *list) :
-		identifier(identifier), list(*list) {
+		Class(identifier, NULL, new std::list<Identifier*>(), list) {
 }
 
 Interface::~Interface() {
-	delete identifier;
-	delete &list;
 }
 
 Json::Value Interface::json() {
-	Json::Value root;
+	Json::Value root = Class::json();
 	root["name"] = "interface";
-	root["identifier"] = identifier->json();
-	root["definations"] = Json::Value(Json::arrayValue);
-	int i = 0;
-	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++, i++)
-		root["definations"][i] = (*it)->json();
+	root.removeMember("extends");
+	root.removeMember("implements");
 	return root;
 }
 
@@ -31,23 +27,26 @@ void Interface::gen(Context &context) {
 }
 
 void Interface::genStruct(Context &context) {
-	llvmType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
-}
+	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
+	llvmType = llvm::PointerType::get(vtableType, 0);
+	context.addClass(this);
 
-const std::string Interface::getName() {
-	return identifier->getName();
+	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++) {
+		Function *func = dynamic_cast<Function*>(*it);
+		if (!func)
+			throw CompileException("Interface can only have function declaration");
+		if (func->isStatic() || !func->isPublic() || func->isPrivate() || !func->isDeclaration() || func->isProtected())
+			throw CompileException("Function declaration can only be public, non-static");
+		func->cls = this;
+		func->genStruct(context);
+	}
+
+	vtableType->setBody(vtable);
 }
 
 const std::string Interface::getMangleName() {
 	if (module)
-		return module->getMangleName() + "I" + itos(getName().length()) + getName();
+		return "I" + module->getMangleName() + "I" + itos(getName().length()) + getName();
 	else
 		return "I" + itos(getName().length()) + getName();
-}
-
-const std::string Interface::getFullName() {
-	if (module)
-		return module->getFullName() + "::" + getName();
-	else
-		return getName();
 }

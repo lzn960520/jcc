@@ -70,7 +70,7 @@ llvm::Value* Op2::load(Context &context) {
 		llvm::Value *tmp = right->load(context);
 		addDebugLoc(
 				context,
-				left->store(context, tmp),
+				left->store(context, Type::cast(context, right->getType(context), tmp, left->getType(context))),
 				loc);
 		return tmp;
 	}

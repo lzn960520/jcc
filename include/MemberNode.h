@@ -4,8 +4,10 @@
 #include "StructNode.h"
 
 class Class;
+class Interface;
 class MemberNode : public StructNode {
 	friend class Class;
+	friend class Interface;
 protected:
 	Class *cls;
 public:

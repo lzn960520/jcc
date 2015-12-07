@@ -7,7 +7,6 @@
 #include "cmdline.h"
 #include "Module.h"
 #include "output.h"
-#include "JsymFile.h"
 #include "util.h"
 #include "compile.h"
 #include "CompileFile.h"
@@ -35,6 +34,7 @@ extern std::list<std::string> usings;
 #define OPT_COMPILE_ONLY 261
 #define OPT_AS_ONLY 262
 #define OPT_LLVM_ONLY 263
+#define OPT_JSYM 264
 
 // for store lex txt
 static std::string lex;
@@ -65,10 +65,12 @@ int main(int argc, char * const argv[]) {
 	cmdline.registerOpt(OPT_COMPILE_ONLY, "-S", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_AS_ONLY, "-c", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_LLVM_ONLY, "--llvm", CmdLine::NO_ARG);
+	cmdline.registerOpt(OPT_JSYM, "--jsym", CmdLine::NO_ARG);
 
 	bool opt_lex_only = false, opt_parse_only = false,
 				opt_dump_html = false,
-				opt_as_only = false, opt_compile_only = false, opt_llvm_only = false;
+				opt_as_only = false, opt_compile_only = false, opt_llvm_only = false,
+				opt_jsym = false;
 	std::string ast_filename, output_filename;
 	std::list<std::string> input_files;
 	for (CmdLine::Option opt; cmdline.next(opt) != -2;) {
@@ -87,6 +89,9 @@ int main(int argc, char * const argv[]) {
 			break;
 		case OPT_AS_ONLY:
 			opt_as_only = true;
+			break;
+		case OPT_JSYM:
+			opt_jsym = true;
 			break;
 		case -1:
 			input_files.push_back(opt.arg.c_str());
@@ -122,6 +127,14 @@ int main(int argc, char * const argv[]) {
 	std::map<std::string, std::string> lex;
 	std::map<std::string, Json::Value> ast;
 	do {
+		if (opt_jsym) {
+			std::ofstream ofs(replaceExt(output_filename, "jsym"));
+			if (!ofs) {
+				fprintf(stderr, "Can't open jsym output file '%s'\n", replaceExt(output_filename, "jsym").c_str());
+				exit(-1);
+			}
+			ofs.close();
+		}
 		try {
 			for (std::list<std::string>::iterator it = input_files.begin(); it != input_files.end(); it++) {
 				std::ifstream ifs(it->c_str());
@@ -150,10 +163,15 @@ int main(int argc, char * const argv[]) {
 				if (context.isDebug)
 					context.initDWARF(*it);
 				compile(root, context);
-				{
-					std::ofstream ofs(replaceExt(output_filename, "jsym"));
-					genSym(root, ofs);
-					ofs.close();
+				if (opt_jsym) {
+					std::ofstream ofs(replaceExt(output_filename, "jsym"), std::ofstream::app | std::ofstream::binary);
+					try {
+						genSym(root, ofs);
+						ofs.close();
+					} catch (...) {
+						ofs.close();
+						throw;
+					}
 				}
 				context.DI->finalize();
 				{
