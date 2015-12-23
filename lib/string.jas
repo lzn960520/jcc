@@ -1,0 +1,6 @@
+module System
+begin
+	class string
+	begin
+	end;
+end;

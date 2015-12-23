@@ -49,7 +49,7 @@ inline std::string getFilename(const std::string &path) {
 	if (path.rfind('/') == std::string::npos)
 		return path;
 	else
-		return path.substr(path.rfind('/'));
+		return path.substr(path.rfind('/') + 1);
 }
 
 inline std::string getDir(const std::string &path) {

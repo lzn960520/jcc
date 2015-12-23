@@ -12,8 +12,9 @@ class Identifier;
 class Class;
 class Context;
 class Expression;
-struct Type : public StructNode {
-	enum BaseType {
+class Type : public StructNode {
+public:
+	const enum BaseType {
 		BYTE,
 		SHORT,
 		INT,
@@ -30,11 +31,14 @@ struct Type : public StructNode {
 	static Type String;
 	static Type Int32;
 	static Type UInt32;
-	bool isUnsigned;
-	std::vector<std::pair<Expression*, Expression*> > arrayDim;
-	Type *internal;
-	Class *cls;
-	Identifier *identifier;
+private:
+	Type(Identifier *identifier, int);
+	Class * const cls;
+public:
+	const bool isUnsigned;
+	const std::vector<std::pair<Expression*, Expression*> > arrayDim;
+	Type * const internal;
+	Identifier * const identifier;
 	Type(BaseType baseType, bool isUnsigned = false);
 	Type(Type *internal, ArrayDefinator *definator);
 	Type(Type *internal, const std::vector<std::pair<int, int> > &dims);

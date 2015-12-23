@@ -16,7 +16,9 @@ public:
 	void gen(Context &context) override;
 	void genStruct(Context &context) override;
 	void writeJsymFile(std::ostream &os) override;
-	const std::string getMangleName() override;
+	const std::string getMangleName() const override;
+	void addFunction(const std::string &mangleName, llvm::Function *function) override;
+	void addFunctionStruct(const std::string &mangleName, Symbol *symbol) override;
 };
 
 #endif

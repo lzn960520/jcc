@@ -15,3 +15,7 @@ lex.yy.cc
 !/tests/*.jas
 /.ycm*
 /tools/bincc/bincc
+/.exvim
+/files.exproject
+/lib/*.jsym
+/lib/*.ll

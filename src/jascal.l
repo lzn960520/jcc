@@ -23,6 +23,10 @@
 
 %%
 
+^#lib {
+	return T_LIB; }
+^#entry {
+	return T_ENTRY; }
 \/\/.*	{
 	return T_COMMENT; }
 \/\*(.|\n)*\*\/	{
@@ -113,8 +117,6 @@
 	return T_DOT; }
 ".." {
 	return T_DOTDOT; }
-"string" {
-	return T_STRING; }
 "==" {
 	return T_EQ; }
 "!=" {

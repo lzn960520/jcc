@@ -1,3 +1,5 @@
+using System::IO;
+
 module sort begin
 
 /***
@@ -7,11 +9,6 @@ class Main
 begin
 	private int[0..10] a; // the array
 
-	// stub of writeInt	
-	private static procedure writeInt(int a)
-	begin
-	end;
-	
 	private procedure sort(int l, int r)
 	begin
 		var int i = l;
@@ -45,12 +42,12 @@ begin
 		that.a[4] = 10;
 		that.a[5] = 8;
 		that.sort(0, 5);
-		writeInt(that.a[0]);
-		writeInt(that.a[1]);
-		writeInt(that.a[2]);
-		writeInt(that.a[3]);
-		writeInt(that.a[4]);
-		writeInt(that.a[5]);
+		System::IO::writeInt(that.a[0]);
+		System::IO::writeInt(that.a[1]);
+		System::IO::writeInt(that.a[2]);
+		System::IO::writeInt(that.a[3]);
+		System::IO::writeInt(that.a[4]);
+		System::IO::writeInt(that.a[5]);
 		return 0;
 	end;
 end;

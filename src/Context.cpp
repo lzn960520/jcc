@@ -28,6 +28,20 @@ Context::SymbolContext::~SymbolContext() {
 		delete it->second;
 }
 
+Context::SymbolContext::iterator Context::SymbolContext::begin() const {
+	return map.begin();
+}
+
+Context::SymbolContext::iterator Context::SymbolContext::end() const {
+	return map.end();
+}
+
+std::ostream& operator << (std::ostream &os, const Context::SymbolContext &context) {
+	for (Context::SymbolContext::iterator it = context.begin(); it != context.end(); it++)
+		os << it->first << std::endl;
+	return os;
+}
+
 Context::Context(bool debug) : mallocFunc(NULL), DL(NULL), DI(NULL), isDebug(debug) {
 	llvmContext = &llvm::getGlobalContext();
 	module = new llvm::Module("top", getContext());
@@ -54,7 +68,6 @@ Context::~Context() {
 	delete builder;
 	delete module;
 	delete llvmContext;
-	assert(contextStack.size() == 0);
 	for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
 		delete *it;
 }
@@ -126,7 +139,6 @@ void Context::pushContext() {
 }
 
 void Context::popContext() {
-	assert(contextStack.size() >= 1);
 	delete contextStack.back();
 	contextStack.pop_back();
 }
@@ -136,8 +148,6 @@ void Context::pushContext(SymbolContext *context) {
 }
 
 void Context::popContext(SymbolContext *context) {
-	assert(contextStack.size() >= 1);
-	assert(contextStack.back() == context);
 	contextStack.pop_back();
 }
 
@@ -146,14 +156,14 @@ Context::SymbolContext* Context::currentContext() {
 }
 
 void Context::addSymbol(Symbol *symbol) {
-	assert(contextStack.size() != 0);
 	if (contextStack.back()->find(symbol->name))
 		throw Redefination(symbol->name);
 	contextStack.back()->add(symbol);
 }
 
 Symbol* Context::findSymbol(const std::string &name) {
-	assert(contextStack.size() != 0);
+	if (contextStack.size() == 0)
+		return NULL;
 	for (SymbolContextStack::reverse_iterator it = contextStack.rbegin(); it != contextStack.rend(); it++)
 		if ((*it)->find(name))
 			return (*it)->find(name);
@@ -197,15 +207,23 @@ void Context::addClass(Class *cls) {
 }
 
 Class* Context::findClass(const std::string &name) {
-	if (classes.count(name))
-		return classes[name];
-	else if (classes.count(currentModule->getFullName() + "::" + name))
+	if (classes.count(currentModule->getFullName() + "::" + name))
 		return classes[currentModule->getFullName() + "::" + name];
-	else	
+	else if (aliases.count(name))
+		return findClass(aliases[name]);
+	else if (classes.count(name))
+		return classes[name];
+	else
 		return NULL;
 }
 
 void Context::addModule(Module *module) {
 	module->genStruct(*this);
 	modules.push_back(module);
+}
+
+void Context::addAlias(const std::string &aliasName, const std::string &fullName) {
+	if (findSymbol(aliasName) != NULL)
+		throw Redefination(aliasName);
+	aliases.insert(std::make_pair(aliasName, fullName));
 }

@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <set>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
@@ -24,9 +25,12 @@ public:
 	class SymbolContext {
 		std::map<std::string, Symbol*> map;
 	public:
+		typedef std::map<std::string, Symbol*>::const_iterator iterator;
 		Symbol* find(const std::string &name);
 		void add(Symbol *symbol);
 		~SymbolContext();
+		iterator begin() const;
+		iterator end() const;
 	};
 private:
 	typedef std::list<SymbolContext*> SymbolContextStack;
@@ -35,10 +39,13 @@ private:
 	DIScopeStack diScopeStack;
 	std::map<std::string, Class*> classes;
 	std::list<Module*> modules;
+	std::map<std::string, std::string> aliases;
+	std::list<std::string> raws;
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
 public:
+	std::set<std::string> usingFiles;
 	const bool isDebug;
 	Context(bool debug);
 	void initDWARF(const std::string &filename);
@@ -76,6 +83,9 @@ public:
 	Class* findClass(const std::string &name);
 	void addClass(Class *cls);
 	void addModule(Module *module);
+	void addAlias(const std::string &aliasName, const std::string &fullName);
 };
+
+std::ostream& operator << (std::ostream &os, const Context::SymbolContext &context);
 
 #endif

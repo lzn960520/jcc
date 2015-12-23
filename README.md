@@ -10,6 +10,7 @@
     * libjsoncpp-dev
     * llvm-3.7-dev
     * pkg-config
+    * Pcre++
 * Tested on
     * Ubuntu Server 15.10/16.04 AMD64
     * Make 4.0-8.2

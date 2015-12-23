@@ -36,7 +36,7 @@ void VariableDefination::gen(Context &context) {
 		if (this->type->internal->isArray())
 			throw NotImplemented("nested array");
 		size_t totalSize = 1;
-		for (std::vector<std::pair<Expression*, Expression*> >::iterator it = this->type->arrayDim.begin(); it != this->type->arrayDim.end(); it++) {
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = this->type->arrayDim.begin(); it != this->type->arrayDim.end(); it++) {
 			if (it->second == NULL)
 				throw NotImplemented("dynamic array");
 			if (!it->first->isConstant() || !it->second->isConstant())

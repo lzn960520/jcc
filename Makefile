@@ -1,4 +1,4 @@
-.PHONY: all clean test vars deps flex bison update-html archive
+.PHONY: all clean test vars deps flex bison update-html archive lib
 
 CXX := clang++
 CC := clang
@@ -6,11 +6,10 @@ LEX := flex
 LLVM_COMPONENTS := all
 
 CPPFLAGS ?=
-CPPFLAGS += -Iinclude -frtti -g -DDEBUG
+CPPFLAGS += -Iinclude -g -DDEBUG
 ifeq ($(DEBUG), 1)
-CPPFLAGS += -g
+CPPFLAGS += -g -DDEBUG
 endif
-CPPFLAGS += -std=c++11
 OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
 # libjsoncpp
@@ -26,27 +25,23 @@ endif
 ifeq ($(OS_NAME), cygwin)
 LIBS += -lLLVM-3.5
 else
-CPPFLAGS += `llvm-config-3.7 --cppflags`
-LDFLAGS += `llvm-config-3.7 --ldflags`
-#LIBS += `llvm-config-3.7 --libs $(LLVM_COMPONENTS)`
-LIBS += -lLLVM-3.7
-LIBS += `llvm-config-3.7 --system-libs $(LLVM_COMPONENTS)`
+CPPFLAGS += `llvm-config --cxxflags`
+LDFLAGS += `llvm-config --ldflags`
+LIBS += `llvm-config --libs $(LLVM_COMPONENTS)`
+#LIBS += -lLLVM-3.7
+LIBS += `llvm-config --system-libs $(LLVM_COMPONENTS)`
 endif
 
-CPPFLAGS += -frtti -fexceptions
+# pcre
+LIBS += `pcre++-config --libs`
+CPPFLAGS += `pcre++-config --cflags`
+
+CPPFLAGS += -fno-rtti -fexceptions -std=c++11
 
 TEST_LEVEL ?= --llvm --jsym
 # jascal
-SOURCES := main.cpp Return.cpp Op2.cpp LiteralInt.cpp CmdLine.cpp \
-	LiteralString.cpp Identifier.cpp Statements.cpp IfStatement.cpp \
-	WhileStatement.cpp VariableDefination.cpp Type.cpp Function.cpp \
-	Visibility.cpp Context.cpp FunctionCall.cpp Qualifier.cpp \
-	lex.yy.cc jascal.tab.cc Exception.cpp Interface.cpp \
-	Block.cpp ASTNode.cpp RepeatStatement.cpp Op1.cpp ArrayAccess.cpp \
-	ArrayAccessor.cpp Symbol.cpp output.cpp New.cpp DebugInfo.cpp \
-	ArrayDefinator.cpp Namespace.cpp Module.cpp Class.cpp MemberAccess.cpp \
-	JsymFile.cpp MemberVariableDefination.cpp compile.cpp Tokenizer.cpp \
-	Token.cpp CompileFile.cpp Parser.cpp LiteralBool.cpp
+SOURCES := $(patsubst src/%,%,$(wildcard src/*.cpp))
+SOURCES += jascal.tab.cc lex.yy.cc
 OBJS := $(patsubst %.cpp,objs/%.o,$(SOURCES))
 OBJS := $(patsubst %.cc,objs/%.o,$(OBJS))
 OBJS += objs/HtmlTemplate.o
@@ -55,6 +50,9 @@ DEPS := $(patsubst %.cc,deps/%.d,$(DEPS))
 PROG := jcc
 TESTS := $(wildcard tests/*.jas)
 TESTS_OUT := $(patsubst %.jas,%.ll,$(TESTS))
+JASCAL_LIB_SRC := $(wildcard lib/*.jas)
+JASCAL_LIB := $(patsubst %.jas,%.jsym,$(JASCAL_LIB_SRC))
+JASCAL_LIB_OBJ := $(patsubst %.jas,%.ll,$(JASCAL_LIB_SRC))
 
 all: $(PROG)
 
@@ -85,9 +83,10 @@ src/lex.yy.cc: src/jascal.l
 include $(DEPS)
 
 vars:
-	@echo "$$(SOURCES)" $(SOURCES)
-	@echo $(DEPS)
-	@echo $(OBJS)
+	@echo "SOURCES=" $(SOURCES)
+	@echo "DEPS=" $(DEPS)
+	@echo "OBJS=" $(OBJS)
+	@echo "JASCAL_LIB=" $(JASCAL_LIB)
 	
 deps: $(DEPS)
 
@@ -102,11 +101,11 @@ flex: src/lex.yy.cc
 clean:
 	@echo "CLEAN"
 	@$(RM) -rf src/jascal.tab.cc include/jascal.tab.hpp src/lex.yy.cc \
-		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o
+		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o $(JASCAL_LIB_OBJ) $(JASCAL_LIB)
 
 test: $(TESTS_OUT)
 
-tests/%.ll: tests/%.jas $(PROG)
+tests/%.ll: tests/%.jas $(PROG) $(JASCAL_LIB)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
 	@./$(PROG) --dump-html tests/$*.html $(TEST_LEVEL) -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
 
@@ -134,3 +133,11 @@ update-html:
 archive:
 	@echo ARCHIVE
 	@git archive --format tar.gz --prefix jcc/ HEAD -o jcc.tar.gz
+
+lib/%.jsym: lib/%.jas $(PROG)
+	@echo "[LIB ] $< -> $@"
+	@./$(PROG) --jsym -o lib/$*.ll --llvm -fno-builtin $<
+
+lib: $(JASCAL_LIB)
+
+lib/io.jsym: lib/string.jsym

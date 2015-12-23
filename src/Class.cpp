@@ -64,6 +64,10 @@ void Class::genStruct(Context &context) {
 		llvm::StructType::element_iterator it = extendsLLVM->element_begin();
 		for (; it != extendsLLVM->element_end(); it++)
 			members.push_back(*it);
+		for (Context::SymbolContext::iterator it = extendsClass->symbols.begin(); it != extendsClass->symbols.end(); it++)
+			symbols.add(new Symbol(it->second));
+		for (VtableEntryLookup::iterator it = extendsClass->vtableEntryLookup.begin(); it != extendsClass->vtableEntryLookup.end(); it++)
+			vtableEntryLookup.insert(*it);
 	} else {
 		llvm::SmallVector<llvm::Type*, 16> destructor_arg;
 		destructor_arg.push_back(llvmType);
@@ -72,6 +76,7 @@ void Class::genStruct(Context &context) {
 
 	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
 	members.push_back(llvm::PointerType::get(vtableType, 0));
+	ownVtableOffset = members.size() - 1;
 	
 	for (std::list<Identifier*>::iterator it = implements.begin(); it != implements.end(); it++) {
 		Class *cls = context.findClass((*it)->getName());
@@ -80,7 +85,7 @@ void Class::genStruct(Context &context) {
 		if (cls->getMangleName()[0] != 'I')
 			throw InvalidType("'" + (*it)->getName() + "' is not an interface");
 		members.push_back(cls->llvmType);
-		implementsType.push_back(std::pair<Interface*, int>((Interface *) cls, members.size() - 1));
+		implementsType.push_back(std::pair<Interface*, size_t>((Interface *) cls, members.size() - 1));
 	}
 
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++) {
@@ -88,15 +93,21 @@ void Class::genStruct(Context &context) {
 		(*it)->genStruct(context);
 	}
 
-	vtableType->setBody(vtable);
+	vtableType->setBody(ownVtableContent);
 	((llvm::StructType *) llvmType)->setBody(members);
 }
 
 void Class::gen(Context &context) {
 	context.currentClass = this;
 	context.pushContext(&symbols);
-	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
-		(*it)->gen(context);
+	try {
+		for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++)
+			(*it)->gen(context);
+	} catch (...) {
+		context.popContext(&symbols);
+		context.currentClass = NULL;
+		throw;
+	}
 	context.popContext(&symbols);
 	context.currentClass = NULL;
 }
@@ -105,20 +116,49 @@ Symbol* Class::findSymbol(const std::string &name) {
 	return symbols.find(name);
 }
 
-const std::string& Class::getName() {
+const std::string& Class::getName() const {
 	return identifier->getName();
 }
 
-const std::string Class::getFullName() {
+const std::string Class::getFullName() const {
 	if (module)
 		return module->getFullName() + "::" + getName();
 	else
 		return getName();
 }
 
-const std::string Class::getMangleName() {
+const std::string Class::getMangleName() const {
 	if (module)
 		return "C" + module->getMangleName() + "C" + itos(getName().length()) + getName();
 	else
 		return "C" + itos(getName().length()) + getName();
+}
+
+void Class::addFunction(const std::string &mangleName, llvm::Function *function) {
+	assert(vtableEntryLookup.count(mangleName) != 0);
+	VtableEntryList &velist = vtableEntryLookup[mangleName];
+	for (VtableEntryList::iterator it = velist.begin(); it != velist.end(); it++) {
+		if (vtableEntry[it->first].size() <= it->second)
+			vtableEntry[it->first].resize(it->second + 1);
+		vtableEntry[it->first][it->second] = function;
+	}
+}
+
+void Class::addFunctionStruct(const std::string &mangleName, Symbol *symbol) {
+	if (vtableEntryLookup.count(mangleName) == 0) {
+		symbols.add(symbol);
+		switch (symbol->type) {
+		case Symbol::FUNCTION:
+			ownVtableContent.push_back(llvm::PointerType::get(symbol->data.function.funcProto, 0));
+			vtableEntryLookup[mangleName].push_back(VtableEntryPointer(ownVtableOffset, ownVtableContent.size() - 1));
+			symbol->data.function.vtableOffset = ownVtableOffset;
+			symbol->data.function.funcPtrOffset = ownVtableContent.size() - 1;
+			break;
+		case Symbol::STATIC_FUNCTION:
+			break;
+		default:
+			throw CompileException("Try to add something strange as function");
+		}
+	} else
+		delete symbol;
 }

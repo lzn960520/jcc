@@ -1,4 +1,4 @@
-using "subclass.jsym";
+using test::A;
 
 module Main
 begin

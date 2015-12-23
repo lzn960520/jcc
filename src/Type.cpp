@@ -27,7 +27,7 @@ const char *Type::BaseTypeNames[] = {
 };
 
 Type Type::Bool(Type::BOOL);
-Type Type::String(Type::STRING);
+Type Type::String(new Identifier("string"), 0);
 Type Type::Int32(Type::INT);
 Type Type::UInt32(Type::INT, true);
 
@@ -47,15 +47,24 @@ Type::Type(Type *baseType, ArrayDefinator *definator) :
 Type::Type(Type *baseType, const std::vector<std::pair<int, int> > &dims) :
 			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
 	for (std::vector<std::pair<int, int> >::const_iterator it = dims.begin(); it != dims.end(); it++)
-		arrayDim.push_back(std::pair<Expression*, Expression*>(new LiteralInt(it->first, true), new LiteralInt(it->second, true)));
+		const_cast<std::vector<std::pair<Expression*, Expression*> >*>(&arrayDim)->push_back(std::pair<Expression*, Expression*>(new LiteralInt(it->first, true), new LiteralInt(it->second, true)));
 }
 
 Type::Type(Class *cls) :
 		baseType(OBJECT), cls(cls), internal(NULL), isUnsigned(false), identifier(NULL) {
 }
 
+Type::Type(Identifier *identifier, int) :
+		baseType(OBJECT), cls(NULL), internal(NULL), isUnsigned(false), identifier(identifier) {
+}
+
 Type::Type(Identifier *identifier) :
 		baseType(OBJECT), cls(NULL), internal(NULL), isUnsigned(false), identifier(identifier) {
+	if (identifier->getName() == "string") {
+		*const_cast<enum BaseType*>(&baseType) = STRING;
+		delete identifier;
+		*const_cast<Identifier**>(&this->identifier) = NULL;
+	}
 }
 
 Type::~Type() {
@@ -74,7 +83,7 @@ Json::Value Type::json() {
 		root["internal"] = internal->json();
 		root["dim"] = Json::Value(Json::arrayValue);
 		int i = 0;
-		for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++, i++) {
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++, i++) {
 			root["dim"][i] = Json::Value();
 			root["dim"][i]["lower"] = it->first->json();
 			if (it->second)
@@ -95,6 +104,9 @@ Json::Value Type::json() {
 	case INT:
 		root["is_unsigned"] = isUnsigned;
 		break;
+	case STRING:
+	case CHAR:
+		break;
 	}
 	return root;
 }
@@ -110,7 +122,7 @@ llvm::Type* Type::getType(Context &context) {
 	case ARRAY:
 		{
 			size_t totalSize = 1;
-			for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
+			for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
 				if (!it->second)
 					throw NotImplemented("dynamic array");
 				if (!it->first->isConstant() || !it->second->isConstant())
@@ -124,10 +136,12 @@ llvm::Type* Type::getType(Context &context) {
 		break;
 	case OBJECT:
 		if (!cls)
-			cls = context.findClass(identifier->getName());
+			*const_cast<Class**>(&cls) = context.findClass(identifier->getName());
 		if (!cls)
 			throw SymbolNotFound("No such class '" + context.currentModule->getFullName() + "::" + identifier->getName() + "'");
 		return llvm::PointerType::get(cls->getLLVMType(), 0);
+	case STRING:
+		return String.getType(context);
 	}
 	throw NotImplemented(std::string("type '") + getName() + "'");
 }
@@ -141,8 +155,11 @@ size_t Type::getSize(Context &context) {
 	case INT:
 		return 4;
 	case OBJECT: {
-		llvm::DataLayout DL(&context.getModule());
-		return DL.getTypeAllocSize(getType(context)); }
+		return context.DL->getTypeAllocSize(getType(context)); }
+	case STRING:
+		return String.getSize(context);
+	default:
+		throw NotImplemented("type '" + getName() + "'");
 	}
 }
 
@@ -207,10 +224,6 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		if (otype->isNumber())
 			return context.getBuilder().CreateFPCast(val, dtype->getType(context));
 		break;
-	case CHAR:
-	case STRING:
-		throw NotImplemented("type cast about char or string");
-		break;
 	case OBJECT:
 		if (otype->isObject()) {
 			Class *ocls = otype->getClass();
@@ -220,7 +233,7 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 			if (dcls->getMangleName()[0] == 'I') {
 				if (ocls->getMangleName()[0] == 'I')
 					break;
-				for (std::list<std::pair<Interface*, int> >::iterator it = ocls->implementsType.begin(); it != ocls->implementsType.end(); it++)
+				for (std::list<std::pair<Interface*, size_t> >::iterator it = ocls->implementsType.begin(); it != ocls->implementsType.end(); it++)
 					if (it->first == (Interface *) dcls) {
 						llvm::SmallVector<llvm::Value*, 1> tmp;
 						tmp.push_back(context.getBuilder().getInt32(it->second));
@@ -279,7 +292,7 @@ const std::string Type::getMangleName() {
 	case ARRAY: {
 		std::string tmp = "A";
 		tmp += itos(arrayDim.size());
-		for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
 			if (!it->first->isConstant() || !it->second || !it->second->isConstant())
 				tmp += "D";
 			else
@@ -305,7 +318,7 @@ llvm::Constant* Type::getDefault(Context &context) {
 	case ARRAY:
 		{
 			size_t totalSize = 1;
-			for (std::vector<std::pair<Expression*, Expression*> >::iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
+			for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
 				if (!it->second)
 					throw NotImplemented("dynamic array");
 				if (!it->first->isConstant() || !it->second->isConstant())
@@ -321,6 +334,7 @@ llvm::Constant* Type::getDefault(Context &context) {
 			return llvm::ConstantArray::get((llvm::ArrayType *) getType(context), tmp);
 		}
 		break;
+	case STRING:
 	case OBJECT:
 		return llvm::ConstantPointerNull::get((llvm::PointerType *) getType(context));
 	}
@@ -329,7 +343,7 @@ llvm::Constant* Type::getDefault(Context &context) {
 
 Class* Type::getClass(Context &context) {
 	if (!cls)
-		cls = context.findClass(identifier->getName());
+		*const_cast<Class**>(&cls) = context.findClass(identifier->getName());
 	return cls;
 }
 

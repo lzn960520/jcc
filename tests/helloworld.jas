@@ -3,7 +3,7 @@ module Test
 begin
 	class Main
 	begin
-		public static function main(string[0..] argv) : int
+		public static function main() : int
 		begin
 			System::IO::writeln("Hello world!");
 		end;

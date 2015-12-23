@@ -7,6 +7,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "exception.h"
+#include "Symbol.h"
 
 Interface::Interface(Identifier *identifier, std::list<MemberNode*> *list) :
 		Class(identifier, NULL, new std::list<Identifier*>(), list) {
@@ -32,21 +33,36 @@ void Interface::genStruct(Context &context) {
 	context.addClass(this);
 
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++) {
-		Function *func = dynamic_cast<Function*>(*it);
-		if (!func)
-			throw CompileException("Interface can only have function declaration");
+		Function *func = (Function *) *it;
 		if (func->isStatic() || !func->isPublic() || func->isPrivate() || !func->isDeclaration() || func->isProtected())
 			throw CompileException("Function declaration can only be public, non-static");
 		func->cls = this;
 		func->genStruct(context);
 	}
 
-	vtableType->setBody(vtable);
+	vtableType->setBody(ownVtableContent);
 }
 
-const std::string Interface::getMangleName() {
+const std::string Interface::getMangleName() const {
 	if (module)
 		return "I" + module->getMangleName() + "I" + itos(getName().length()) + getName();
 	else
 		return "I" + itos(getName().length()) + getName();
+}
+
+void Interface::addFunction(const std::string &mangleName, llvm::Function *function) {
+	throw CompileException("Can't add function defination to interface");
+}
+
+void Interface::addFunctionStruct(const std::string &mangleName, Symbol *symbol) {
+	switch (symbol->type) {
+	case Symbol::FUNCTION:
+		ownVtableContent.push_back(llvm::PointerType::get(symbol->data.function.funcProto, 0));
+		symbol->data.function.vtableOffset = 0;
+		symbol->data.function.funcPtrOffset = ownVtableContent.size() - 1;
+		symbols.add(symbol);
+		break;
+	default:
+		throw CompileException("Try to add strange things to interface");
+	}
 }

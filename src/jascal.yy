@@ -171,7 +171,7 @@
 		T_DIV_ASSIGN "/=" T_MOD_ASSIGN "%=" T_PWR_ASSIGN "**=" T_LSH "<<"
 		T_RSH ">>" T_LSH_ASSIGN "<<=" T_RSH_ASSIGN ">>=" T_BIT_OR "|"
 		T_BIT_AND "&" T_BIT_XOR "^" T_BIT_NOT "~" T_BOOL "bool" T_TRUE "true"
-		T_FALSE "false"
+		T_FALSE "false" T_ENTRY "#entry" T_LIB "#lib"
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -207,26 +207,26 @@
 %%
 
 compile_unit:
-	using {
-		root = new CompileFile(parser.getDirPath());
+	{ root = new CompileFile(parser.getDirPath()); } _compile_unit
+
+_compile_unit:
+	compile_unit_entry
+	| _compile_unit compile_unit_entry
+
+compile_unit_entry:
+	T_LIB T_LITERAL_STRING {
+		root->addLib($2->text);
+		delete $2; }
+	| T_ENTRY ns_identifier {
+		root->setEntry($2->getFullName()); }
+	| using {
 		root->addUsing(*$1);
 		delete $1; }
-    | module_defination {
-		root = new CompileFile(parser.getDirPath());
+	| module_defination {
 		root->addModule($1); }
-    | compile_unit using {
-		root->addUsing(*$2);
-		delete $2;
-		SAVE_LOC(root, @$); }
-    | compile_unit module_defination {
-		root->addModule($2);
-		SAVE_LOC(root, @$); }
 
 using:
-	T_USING T_LITERAL_STRING T_SEMICOLON {
-		$$ = new std::string($2->text);
-        delete $2; }
-	| T_USING ns_identifier T_SEMICOLON {
+	T_USING ns_identifier T_SEMICOLON {
 		$$ = new std::string($2->getFullName());
 		delete $2; }
 
@@ -698,9 +698,6 @@ base_type:
 		SAVE_LOC($$, @$); }
 	| T_DOUBLE {
 		$$ = new Type(Type::DOUBLE);
-		SAVE_LOC($$, @$); }
-	| T_STRING {
-		$$ = new Type(Type::STRING);
 		SAVE_LOC($$, @$); }
 	| T_BOOL {
 		$$ = new Type(Type::BOOL);

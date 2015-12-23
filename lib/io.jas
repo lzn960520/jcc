@@ -1,0 +1,15 @@
+#lib "string.jsym"
+
+module System
+begin
+	class IO
+	begin
+		static public procedure writeInt(int a)
+		begin
+		end;
+
+		static public procedure writeln(string s)
+		begin
+		end;
+	end;
+end;

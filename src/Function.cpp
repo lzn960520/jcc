@@ -53,7 +53,7 @@ Json::Value Function::json() {
 void Function::gen(Context &context) {
 	std::vector<llvm::Type*> arg_type;
 	if (!isStatic())
-		arg_type.push_back(llvm::PointerType::get(cls->getLLVMType(), 0));
+		arg_type.push_back(context.getBuilder().getInt8PtrTy(0));
 	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_type.push_back(it->first->getType(context));
 	llvmFunction = context.createFunction(
@@ -69,9 +69,9 @@ void Function::gen(Context &context) {
 	arg_iterator it = arg_list.begin();
 	llvm::Function::arg_iterator it2 = llvmFunction->arg_begin();
 	if (!isStatic()) {
-		it2->setName("this");
-		insertDeclareDebugInfo(context, cls->getType(), "this", &(*it2), loc, true);
-		context.addSymbol(new Symbol("this", Symbol::ARGUMENT, cls->getType(), &(*it2)));
+		llvm::Value *thisval = context.getBuilder().CreatePointerCast(&(*it2), llvm::PointerType::get(cls->getLLVMType(), 0), "this");
+		insertDeclareDebugInfo(context, cls->getType(), "this", thisval, loc, true);
+		context.addSymbol(new Symbol("this", Symbol::ARGUMENT, cls->getType(), thisval));
 		it2++;
 	}
 	for (; it != arg_list.end(); it++, it2++) {
@@ -91,7 +91,7 @@ llvm::Function* Function::getLLVMFunction(Context &context) {
 	if (!llvmFunction && !body) {
 		std::vector<llvm::Type*> arg_type;
 		if (!isStatic())
-			arg_type.push_back(llvm::PointerType::get(cls->getLLVMType(), 0));
+			arg_type.push_back(context.getBuilder().getInt8PtrTy(0));
 		for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 			arg_type.push_back(it->first->getType(context));
 		llvmFunction = context.createFunction(
@@ -120,7 +120,8 @@ const std::string Function::getMangleName() {
 
 llvm::FunctionType* Function::getLLVMType(Context &context) {
 	std::vector<llvm::Type*> arg_type;
-	arg_type.push_back(llvm::PointerType::get(cls->getLLVMType(), 0));
+	if (!isStatic())
+		arg_type.push_back(context.getBuilder().getInt8PtrTy(0));
 	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_type.push_back(it->first->getType(context));
 	return llvm::FunctionType::get(
@@ -130,9 +131,8 @@ llvm::FunctionType* Function::getLLVMType(Context &context) {
 }
 
 void Function::genStruct(Context &context) {
-	if (!qualifier->isStatic()) {
-		cls->vtable.push_back(llvm::PointerType::get(getLLVMType(context), 0));
-		cls->symbols.add(new Symbol(getName(), this, cls->vtable.size() - 1));
-	} else
-		cls->symbols.add(new Symbol(getName(), this, 0));
+	if (!qualifier->isStatic())
+		cls->addFunctionStruct(getMangleName(), new Symbol(getName(), getLLVMType(context), 0, 0));
+	else
+		cls->addFunctionStruct(getMangleName(), new Symbol(getName(), this));
 }

@@ -2,6 +2,8 @@
 #include <cerrno>
 #include <cstdio>
 #include <iostream>
+#include <unistd.h>
+
 #include "Context.h"
 #include "exception.h"
 #include "cmdline.h"
@@ -11,6 +13,7 @@
 #include "compile.h"
 #include "CompileFile.h"
 #include "Token.h"
+#include "JsymFile.h"
 
 // global
 std::string html_filename;
@@ -35,6 +38,7 @@ extern std::list<std::string> usings;
 #define OPT_AS_ONLY 262
 #define OPT_LLVM_ONLY 263
 #define OPT_JSYM 264
+#define OPT_NOBUILTIN 265
 
 // for store lex txt
 static std::string lex;
@@ -66,11 +70,12 @@ int main(int argc, char * const argv[]) {
 	cmdline.registerOpt(OPT_AS_ONLY, "-c", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_LLVM_ONLY, "--llvm", CmdLine::NO_ARG);
 	cmdline.registerOpt(OPT_JSYM, "--jsym", CmdLine::NO_ARG);
+	cmdline.registerOpt(OPT_NOBUILTIN, "-fno-builtin", CmdLine::NO_ARG);
 
 	bool opt_lex_only = false, opt_parse_only = false,
 				opt_dump_html = false,
 				opt_as_only = false, opt_compile_only = false, opt_llvm_only = false,
-				opt_jsym = false;
+				opt_jsym = false, opt_no_lib = false;
 	std::string ast_filename, output_filename;
 	std::list<std::string> input_files;
 	for (CmdLine::Option opt; cmdline.next(opt) != -2;) {
@@ -110,6 +115,9 @@ int main(int argc, char * const argv[]) {
 			}
 			opt_dump_html = true;
 			html_filename = opt.arg;
+			break;
+		case OPT_NOBUILTIN:
+			opt_no_lib = true;
 			break;
 		default:
 			fprintf(stderr, "Unknown option %s\n", opt.opt.c_str());
@@ -162,6 +170,21 @@ int main(int argc, char * const argv[]) {
 				Context context(true);
 				if (context.isDebug)
 					context.initDWARF(*it);
+				if (!opt_no_lib) {
+					// import system lib
+					JsymFile *jsym;
+					
+					jsym = new JsymFile("lib/io.jsym", true);
+					*jsym >> context;
+					delete jsym;
+
+					jsym = new JsymFile("lib/string.jsym", true);
+					*jsym >> context;
+					delete jsym;
+
+					context.addAlias("string", "System::string");
+				}
+
 				compile(root, context);
 				if (opt_jsym) {
 					std::ofstream ofs(replaceExt(output_filename, "jsym"), std::ofstream::app | std::ofstream::binary);
@@ -190,6 +213,10 @@ int main(int argc, char * const argv[]) {
 		std::ofstream ofs(html_filename);
 		outputHtml(lex, ast, ofs);
 		ofs.close();
+	}
+	if (!success) {
+		if (opt_jsym)
+			unlink(replaceExt(output_filename, "jsym").c_str());
 	}
 	return success ? 0 : -1;
 }

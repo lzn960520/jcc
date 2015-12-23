@@ -2,6 +2,7 @@
 #include "Module.h"
 #include "util.h"
 #include "JsymFile.h"
+#include "Context.h"
 
 Json::Value CompileFile::json() {
 	Json::Value root;
@@ -23,9 +24,15 @@ void CompileFile::gen(Context &context) {
 }
 
 void CompileFile::genStruct(Context &context) {
-	for (std::list<std::string>::iterator it = usings.begin(); it != usings.end(); it++) {
+	for (std::list<std::string>::iterator it = libs.begin(); it != libs.end(); it++) {
 		JsymFile jsym(resolveRelativePath(path, *it), true);
 		jsym >> context;
+	}
+	for (std::list<std::string>::iterator it = usings.begin(); it != usings.end(); it++) {
+		std::string &str = *it;
+		if (str.rfind("::") == std::string::npos)
+			continue;
+		context.addAlias(str.substr(str.rfind("::") + 2), str);
 	}
 	for (std::list<Module*>::iterator it = modules.begin(); it != modules.end(); it++)
 		(*it)->genStruct(context);
