@@ -171,7 +171,7 @@
 		T_DIV_ASSIGN "/=" T_MOD_ASSIGN "%=" T_PWR_ASSIGN "**=" T_LSH "<<"
 		T_RSH ">>" T_LSH_ASSIGN "<<=" T_RSH_ASSIGN ">>=" T_BIT_OR "|"
 		T_BIT_AND "&" T_BIT_XOR "^" T_BIT_NOT "~" T_BOOL "bool" T_TRUE "true"
-		T_FALSE "false" T_ENTRY "#entry" T_LIB "#lib"
+		T_FALSE "false" T_ENTRY "#entry" T_LIB "#lib" T_NATIVE "native"
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -315,6 +315,10 @@ qualifier:
 		$$ = new Qualifier();
 		$$->setStatic();
 		SAVE_LOC($$, @$); }
+	| T_NATIVE {
+		$$ = new Qualifier();
+		$$->setNative();
+		SAVE_LOC($$, @$); }
 	| qualifier T_PUBLIC {
 		$$ = $1;
 		$$->setPublic();
@@ -334,6 +338,10 @@ qualifier:
 	| qualifier T_STATIC {
 		$$ = $1;
 		$$->setStatic();
+		SAVE_LOC($$, @$); }
+	| qualifier T_NATIVE {
+		$$ = $1;
+		$$->setNative();
 		SAVE_LOC($$, @$); }
 
 inclass_definations:
@@ -709,6 +717,12 @@ function_defination:
 		SAVE_LOC($$, @$); }
 	| qualifier T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_BEGIN statement_list T_END {
 		$$ = new Function($1, NULL, $3, $5, $8);
+		SAVE_LOC($$, @$); }
+	| qualifier T_FUNCTION T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS T_COLON type_name {
+		$$ = new Function($1, $8, $3, $5, NULL);
+		SAVE_LOC($$, @$); }
+	| qualifier T_PROCEDURE T_IDENTIFIER T_LEFT_PARENTHESIS arg_list T_RIGHT_PARENTHESIS {
+		$$ = new Function($1, NULL, $3, $5, NULL);
 		SAVE_LOC($$, @$); }
 
 arg_list:

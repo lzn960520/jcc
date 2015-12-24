@@ -325,7 +325,7 @@ static Function* readFunction(char *&p, char *end) {
 		if (p + 1 >= end || *p != 'E' || *(p + 1) != 'F')
 			throw CompileException("Error reading Jsym file");
 		p += 2;
-		return new Function(qul, return_type, id, arg_list, (llvm::Function*) NULL);
+		return new Function(qul, return_type, id, arg_list, NULL);
 	} catch (...) {
 		delete qul;
 		if (id)

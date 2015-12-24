@@ -40,7 +40,7 @@ private:
 	std::map<std::string, Class*> classes;
 	std::list<Module*> modules;
 	std::map<std::string, std::string> aliases;
-	std::list<std::string> raws;
+	std::map<std::string, llvm::GlobalVariable*> globalStrings;
 
 	llvm::Module *module;
 	llvm::IRBuilder<> *builder;
@@ -84,6 +84,7 @@ public:
 	void addClass(Class *cls);
 	void addModule(Module *module);
 	void addAlias(const std::string &aliasName, const std::string &fullName);
+	llvm::GlobalVariable* getGlobalString(const std::string &text);
 };
 
 std::ostream& operator << (std::ostream &os, const Context::SymbolContext &context);

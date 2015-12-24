@@ -68,7 +68,7 @@ void Class::genStruct(Context &context) {
 		llvm::StructType::element_iterator it = extendsLLVM->element_begin();
 		{
 			// Copy vtable's format
-			llvm::StructType *extendVtableType = (llvm::StructType*) *it++;
+			llvm::StructType *extendVtableType = (llvm::StructType*) (*it++)->getPointerElementType();
 			for (llvm::StructType::element_iterator it = extendVtableType->element_begin(); it != extendVtableType->element_end(); it++) {
 				this->vtableType.push_back(*it);
 			}
@@ -272,4 +272,13 @@ void Class::addFunctionStruct(const std::string &mangleName, Symbol *symbol) {
 
 llvm::Function* Class::getConstructor() {
 	return constructor;
+}
+
+llvm::GlobalVariable* Class::getVtable(Interface *interface) {
+	if (!interface)
+		return vtables[0];
+	for (std::list<std::pair<Interface*, size_t> >::const_iterator it = implementsType.begin(); it != implementsType.end(); it++)
+		if (it->first == interface)
+			return vtables[it->second];
+	return NULL;
 }

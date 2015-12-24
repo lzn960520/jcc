@@ -1,4 +1,5 @@
 #lib "subclass.jsym"
+#entry Main::Main
 
 using test::A;
 

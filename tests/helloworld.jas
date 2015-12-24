@@ -1,3 +1,5 @@
+#entry Test::Main
+
 using System::IO;
 module Test
 begin
@@ -6,6 +8,7 @@ begin
 		public static function main() : int
 		begin
 			System::IO::writeln("Hello world!");
+			return 0;
 		end;
 	end;
 end;

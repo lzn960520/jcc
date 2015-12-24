@@ -57,6 +57,7 @@ public:
 	virtual const std::string getMangleName() const;
 	void writeJsymFile(std::ostream &os) override;
 	llvm::Function *getConstructor();
+	llvm::GlobalVariable *getVtable(Interface *interface);
 	friend std::ostream& operator << (std::ostream &os, const Class &cls);
 };
 

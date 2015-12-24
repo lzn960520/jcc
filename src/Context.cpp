@@ -110,7 +110,7 @@ llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionT
 }
 
 void Context::endFunction() {
-	if (currentFunction) {
+	if (currentFunction && !currentFunction->isNative()) {
 		for (llvm::Function::iterator it = currentFunction->getLLVMFunction(*this)->begin(); it != currentFunction->getLLVMFunction(*this)->end(); it++)
 			if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getLLVMFunction(*this)->getEntryBlock()) && it->getTerminator() == NULL) {
 				if (currentFunction->getLLVMFunction(*this)->getReturnType()->isVoidTy()) {

@@ -2,5 +2,6 @@ module System
 begin
 	class string
 	begin
+		private int _addr;
 	end;
 end;

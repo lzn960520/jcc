@@ -1,3 +1,5 @@
+#entry Main::Main
+
 module Main
 begin
 
@@ -9,10 +11,11 @@ begin
 		a[0, 0] = 0;
 		a[1, 1] = 0;
 	end;
-	public procedure main()
+	static public function main() : int
 	begin
 		var Main test = new Main;
 		test.test();
+		return 0;
 	end;
 end;
 

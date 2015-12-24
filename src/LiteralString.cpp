@@ -2,6 +2,7 @@
 #include "exception.h"
 #include "Context.h"
 #include "Type.h"
+#include "Class.h"
 
 static inline int char2hex(const char a) {
 	switch (a) {
@@ -122,8 +123,21 @@ Json::Value LiteralString::json() {
 LiteralString::~LiteralString() {
 }
 
+llvm::GlobalVariable* Context::getGlobalString(const std::string &text) {
+	if (!globalStrings.count(text)) {
+		llvm::Value *str = getBuilder().CreateGlobalStringPtr(text);
+		Class *strCls = findClass("string");
+		std::vector<llvm::Constant*> tmp;
+		tmp.push_back(strCls->getVtable(NULL));
+		tmp.push_back((llvm::Constant *) getBuilder().CreatePtrToInt(str, getBuilder().getInt32Ty()));
+		llvm::Constant *myStr = llvm::ConstantStruct::get((llvm::StructType *) strCls->getLLVMType(), llvm::ArrayRef<llvm::Constant*>(tmp));
+		globalStrings[text] = new llvm::GlobalVariable(getModule(), strCls->getLLVMType(), false, llvm::GlobalVariable::PrivateLinkage, myStr);
+	}
+	return globalStrings[text];
+}
+
 llvm::Value* LiteralString::load(Context &context) {
-	return context.getBuilder().CreatePointerCast(context.getBuilder().CreateGlobalString(text), llvm::Type::getInt8PtrTy(context.getContext()));
+	return context.getGlobalString(text);
 }
 
 llvm::Instruction* LiteralString::store(Context &context, llvm::Value *value) {

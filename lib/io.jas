@@ -4,12 +4,8 @@ module System
 begin
 	class IO
 	begin
-		static public procedure writeInt(int a)
-		begin
-		end;
-
-		static public procedure writeln(string s)
-		begin
-		end;
+		static native public procedure writeInt(int a);
+		static native public procedure writeln(string s);
+		static native public function readInt() : int;
 	end;
 end;

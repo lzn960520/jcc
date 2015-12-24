@@ -12,15 +12,15 @@ class Type;
 class Identifier;
 class ArgumentList;
 class Class;
-struct Function : public MemberNode {
+class Function : public MemberNode {
 	Qualifier *qualifier;
 	Type *return_type;
 	Identifier *identifier;
 	std::list<std::pair<Type*, Identifier*> > &arg_list;
-	typedef std::list<std::pair<Type*, Identifier*> >::iterator arg_iterator;
 	ASTNode *body;
+public:
+	typedef std::list<std::pair<Type*, Identifier*> >::iterator arg_iterator;
 	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body);
-	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, llvm::Function *llvmFunction);
 	~Function();
 	arg_iterator arg_begin() { return arg_list.begin(); }
 	arg_iterator arg_end() { return arg_list.end(); }
@@ -36,9 +36,10 @@ struct Function : public MemberNode {
 	inline bool isPublic() const { return qualifier->isPublic(); }
 	inline bool isPrivate() const { return qualifier->isPrivate(); }
 	inline bool isProtected() const { return qualifier->isProtected(); }
+	inline bool isNative() const { return qualifier->isNative(); }
 	void genStruct(Context &context) override;
 	void writeJsymFile(std::ostream &os) override;
-	bool isDeclaration() { return body == NULL; }
+	bool isDeclaration() { return body == NULL && !isNative(); }
 };
 
 #endif

@@ -75,7 +75,7 @@ DISubprogram* getDIFunction(Context &context, Function *function, Location &loc)
 			loc.begin.line,
 			getDIType(context, function),
 			false,
-			function->body != NULL,
+			!function->isDeclaration(),
 			loc.begin.line,
 			0,
 			false,

@@ -1,3 +1,5 @@
+#entry test::Main
+
 module test
 begin
 	class A
@@ -16,6 +18,10 @@ begin
 		end;
 		public int a;
 		public static int sa;
+		public function testVir() : int
+		begin
+			return 1;
+		end;
 	end;
 
 	class B extends A
@@ -31,13 +37,18 @@ begin
 		public int b;
 		static int sb;
 		public static A sa_in_b;
+		public function testVir() : int
+		begin
+			return 2;
+		end;
 	end;
 
 	class Main
 	begin
 		static public function main() : int
 		begin
-			var B b = new B;
+			var A b = new B;
+			System::IO::writeInt(b.testVir());
 			return 0;
 		end;
 	end;

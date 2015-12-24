@@ -102,20 +102,13 @@ flex: src/lex.yy.cc
 clean:
 	@echo "CLEAN"
 	@$(RM) -rf src/jascal.tab.cc include/jascal.tab.hpp src/lex.yy.cc \
-		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o $(JASCAL_LIB_OBJ) $(JASCAL_LIB)
+		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o tests/*.html tests/*.jsym $(JASCAL_LIB_OBJ) $(JASCAL_LIB) $(TESTS_OUT)
 
-test:
-	@for test in `echo $(TESTS_OUT)`; do \
-		make $$test; \
-	done
+test: $(TESTS_OUT)
 
-tests/%.ll: tests/%.jas $(PROG) $(JASCAL_LIB)
-	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
-	@./$(PROG) --dump-html tests/$*.html $(TEST_LEVEL) -o $@ $< || rm -f tests/$*.json tests/$*.txt $@; exit "255"
-
-tests/%: tests/%.ll
-	@echo "[LINK] $< -> $@"
-	@$(CLANG) $(JASCAL_LIB_IMPL) $< -o $@
+tests/%: tests/%.jas $(PROG) $(JASCAL_LIB) $(JASCAL_LIB_IMPL)
+	@echo "[JCC ] $< -> $@"
+	@(./$(PROG) --dump-html tests/$*.html --llvm -o tests/$*.ll $< && $(CLANG) -m32 $(JASCAL_LIB_IMPL) tests/$*.ll -o $@) || rm -f tests/$*.html
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"

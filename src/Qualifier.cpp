@@ -10,13 +10,13 @@ Qualifier::~Qualifier() {
 
 void Qualifier::setConst() {
 	if (_isConst)
-		throw CompileException("Two \"const\"");
+		throw CompileException("Two 'const' specified");
 	_isConst = true;
 }
 
 void Qualifier::setStatic() {
 	if (_isStatic)
-		throw CompileException("Two \"static\"");
+		throw CompileException("Two 'static' specified");
 	_isStatic = true;
 }
 
@@ -36,6 +36,12 @@ void Qualifier::setProtected() {
 	if (_isPublic || _isPrivate || _isProtected)
 		throw CompileException("Two visibility specified");
 	_isProtected = true;
+}
+
+void Qualifier::setNative() {
+	if (_isNative)
+		throw CompileException("Two 'native' specified");
+	_isNative = true;
 }
 
 Json::Value Qualifier::json() {

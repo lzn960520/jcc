@@ -1,7 +1,7 @@
 ; ModuleID = 'top'
 
 %CN6SystemC6stringV = type { void (%CN6SystemC6string)* }
-%CN6SystemC6string = type { %CN6SystemC6stringV* }
+%CN6SystemC6string = type { %CN6SystemC6stringV*, i32 }
 
 @_VCN6SystemC6string = global %CN6SystemC6stringV zeroinitializer
 
@@ -10,6 +10,8 @@ declare i8* @malloc(i64)
 define void @_CCN6SystemC6string(%CN6SystemC6string*) {
   %2 = getelementptr inbounds %CN6SystemC6string, %CN6SystemC6string* %0, i32 0, i32 0
   store %CN6SystemC6stringV* @_VCN6SystemC6string, %CN6SystemC6stringV** %2
+  %3 = getelementptr inbounds %CN6SystemC6string, %CN6SystemC6string* %0, i32 0, i32 1
+  store i32 0, i32* %3
   ret void
 }
 

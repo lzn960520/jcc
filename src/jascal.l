@@ -109,6 +109,8 @@
 	return T_FUNCTION; }
 "procedure" {
 	return T_PROCEDURE; }
+"native" {
+	return T_NATIVE; }
 "[" {
 	return T_LEFT_SQUARE; }
 "]" {

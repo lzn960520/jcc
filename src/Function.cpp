@@ -9,13 +9,10 @@
 #include "DebugInfo.h"
 #include "Qualifier.h"
 #include "util.h"
+#include "exception.h"
 
 Function::Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body) :
-	qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(body), llvmFunction(NULL) {
-}
-
-Function::Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, llvm::Function *function) :
-	qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(NULL), llvmFunction(function) {
+		qualifier(qualifier), return_type(return_type), identifier(identifier), arg_list(*arg_list), body(body), llvmFunction(NULL) {
 }
 
 Function::~Function() {
@@ -51,6 +48,8 @@ Json::Value Function::json() {
 }
 
 void Function::gen(Context &context) {
+	if (body == NULL && !isNative())
+		throw CompileException("empty non-static function defination");
 	std::vector<llvm::Type*> arg_type;
 	if (!isStatic())
 		arg_type.push_back(context.getBuilder().getInt8PtrTy(0));
@@ -82,7 +81,8 @@ void Function::gen(Context &context) {
 		context.addSymbol(new Symbol(it->second->getName(), Symbol::ARGUMENT, it->first, &(*it2)));
 		it2->setName(it->second->getName());
 	}
-	body->gen(context);
+	if (!isNative())
+		body->gen(context);
 	context.popDIScope();
 	context.popContext();
 	*const_cast<llvm::DISubprogram**>(&context.DIfunction) = NULL;
@@ -90,7 +90,7 @@ void Function::gen(Context &context) {
 }
 
 llvm::Function* Function::getLLVMFunction(Context &context) {
-	if (!llvmFunction && !body) {
+	if (!llvmFunction && !body && !isNative()) {
 		std::vector<llvm::Type*> arg_type;
 		if (!isStatic())
 			arg_type.push_back(context.getBuilder().getInt8PtrTy(0));
