@@ -40,14 +40,14 @@ void Interface::genStruct(Context &context) {
 		func->genStruct(context);
 	}
 
-	vtableType->setBody(ownVtableContent);
+	vtableType->setBody(this->vtableType);
 }
 
 const std::string Interface::getMangleName() const {
 	if (module)
-		return "I" + module->getMangleName() + "I" + itos(getName().length()) + getName();
+		return "J" + module->getMangleName() + "J" + itos(getName().length()) + getName();
 	else
-		return "I" + itos(getName().length()) + getName();
+		return "J" + itos(getName().length()) + getName();
 }
 
 void Interface::addFunction(const std::string &mangleName, llvm::Function *function) {
@@ -57,10 +57,7 @@ void Interface::addFunction(const std::string &mangleName, llvm::Function *funct
 void Interface::addFunctionStruct(const std::string &mangleName, Symbol *symbol) {
 	switch (symbol->type) {
 	case Symbol::FUNCTION:
-		ownVtableContent.push_back(llvm::PointerType::get(symbol->data.function.funcProto, 0));
-		symbol->data.function.vtableOffset = 0;
-		symbol->data.function.funcPtrOffset = ownVtableContent.size() - 1;
-		symbols.add(symbol);
+		Class::addFunctionStruct(mangleName, symbol);
 		break;
 	default:
 		throw CompileException("Try to add strange things to interface");

@@ -40,7 +40,7 @@ llvm::Value* MemberAccess::load(Context &context) {
 		Class *cls = targetClass->getClass(context);
 		if (!cls)
 			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
-		if (cls->getMangleName()[0] == 'I')
+		if (cls->getMangleName()[0] == 'J')
 			throw InvalidType("'" + cls->getFullName() + "' is an interface");
 		Symbol *symbol = cls->findSymbol(identifier->getName());
 		if (!symbol)
@@ -80,7 +80,7 @@ Type* MemberAccess::getType(Context &context) {
 		Class *cls = targetClass->getClass(context);
 		if (!cls)
 			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
-		if (cls->getMangleName()[0] == 'I')
+		if (cls->getMangleName()[0] == 'J')
 			throw InvalidType("'" + cls->getFullName() + "' is an interface");
 		Symbol *symbol = cls->findSymbol(identifier->getName());
 		if (!symbol)
@@ -102,7 +102,7 @@ llvm::Instruction* MemberAccess::store(Context &context, llvm::Value *value) {
 		Class *cls = targetClass->getClass(context);
 		if (!cls)
 			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
-		if (cls->getMangleName()[0] == 'I')
+		if (cls->getMangleName()[0] == 'J')
 			throw InvalidType("'" + cls->getFullName() + "' is an interface");
 		Symbol *symbol = cls->findSymbol(identifier->getName());
 		if (!symbol)

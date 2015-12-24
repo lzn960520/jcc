@@ -31,9 +31,7 @@ class Class : public StructNode {
 	VtableEntryLookup vtableEntryLookup;
 	std::map<size_t, std::vector<llvm::Function*> > vtableEntry;
 	std::map<size_t, llvm::GlobalVariable*> vtables;
-	virtual void addFunction(const std::string &mangleName, llvm::Function *function);
-	virtual void addFunctionStruct(const std::string &mangleName, Symbol *symbol);
-	size_t ownVtableOffset;
+	llvm::Function *constructor;
 	friend class Function;
 	friend class MemberVariableDefination;
 	friend class Type;
@@ -41,7 +39,9 @@ protected:
 	Context::SymbolContext symbols;
 	std::list<MemberNode*> &list;
 	llvm::Type *llvmType;
-	std::vector<llvm::Type*> ownVtableContent;
+	std::vector<llvm::Type*> vtableType;
+	virtual void addFunction(const std::string &mangleName, llvm::Function *function);
+	virtual void addFunctionStruct(const std::string &mangleName, Symbol *symbol);
 public:
 	Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
 	Class(Identifier *identifier, Identifier *extends, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
@@ -56,6 +56,7 @@ public:
 	const std::string getFullName() const;
 	virtual const std::string getMangleName() const;
 	void writeJsymFile(std::ostream &os) override;
+	llvm::Function *getConstructor();
 	friend std::ostream& operator << (std::ostream &os, const Class &cls);
 };
 

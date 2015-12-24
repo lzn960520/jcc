@@ -230,8 +230,8 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 			Class *dcls = dtype->getClass();
 			if (ocls == dcls)
 				return val;
-			if (dcls->getMangleName()[0] == 'I') {
-				if (ocls->getMangleName()[0] == 'I')
+			if (dcls->getMangleName()[0] == 'J') {
+				if (ocls->getMangleName()[0] == 'J')
 					break;
 				for (std::list<std::pair<Interface*, size_t> >::iterator it = ocls->implementsType.begin(); it != ocls->implementsType.end(); it++)
 					if (it->first == (Interface *) dcls) {

@@ -63,7 +63,7 @@ llvm::Value* FunctionCall::load(Context &context) {
 		if (!target)
 			delete tmpTarget;
 
-		if (targetClass->getMangleName()[0] == 'I') {
+		if (targetClass->getMangleName()[0] == 'J') {
 			function = addDebugLoc(
 					context,
 					context.getBuilder().CreateLoad(

@@ -5,6 +5,7 @@
 #include "Context.h"
 #include "exception.h"
 #include "DebugInfo.h"
+#include "Class.h"
 
 New::New(Type *type) : type(type) {
 }
@@ -22,7 +23,7 @@ Json::Value New::json() {
 
 llvm::Value *New::load(Context &context) {
 	llvm::Value *arg[] = { context.getBuilder().getInt64(type->getSize(context)) };
-	return addDebugLoc(
+	llvm::Value *newObj = addDebugLoc(
 			context,
 			context.getBuilder().CreateBitCast(
 					addDebugLoc(
@@ -36,6 +37,17 @@ llvm::Value *New::load(Context &context) {
 							loc),
 					type->getType(context)),
 			loc);
+	if (type->isObject()) {
+		Class *cls = type->getClass();
+		std::vector<llvm::Value*> arg;
+		arg.push_back(newObj);
+		addDebugLoc(
+				context,
+				context.getBuilder().CreateCall(cls->getConstructor(), llvm::ArrayRef<llvm::Value*>(arg)),
+				loc
+		);
+	}
+	return newObj;
 }
 
 llvm::Instruction* New::store(Context &context, llvm::Value *value) {

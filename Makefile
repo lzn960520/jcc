@@ -1,5 +1,6 @@
 .PHONY: all clean test vars deps flex bison update-html archive lib
 
+CLANG := clang
 CXX := clang++
 CC := clang
 LEX := flex
@@ -38,7 +39,6 @@ CPPFLAGS += `pcre++-config --cflags`
 
 CPPFLAGS += -fno-rtti -fexceptions -std=c++11
 
-TEST_LEVEL ?= --llvm --jsym
 # jascal
 SOURCES := $(patsubst src/%,%,$(wildcard src/*.cpp))
 SOURCES += jascal.tab.cc lex.yy.cc
@@ -49,10 +49,11 @@ DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 DEPS := $(patsubst %.cc,deps/%.d,$(DEPS))
 PROG := jcc
 TESTS := $(wildcard tests/*.jas)
-TESTS_OUT := $(patsubst %.jas,%.ll,$(TESTS))
+TESTS_OUT := $(patsubst %.jas,%,$(TESTS))
 JASCAL_LIB_SRC := $(wildcard lib/*.jas)
 JASCAL_LIB := $(patsubst %.jas,%.jsym,$(JASCAL_LIB_SRC))
 JASCAL_LIB_OBJ := $(patsubst %.jas,%.ll,$(JASCAL_LIB_SRC))
+JASCAL_LIB_IMPL := $(patsubst %.jas,%.impl.ll,$(JASCAL_LIB_SRC))
 
 all: $(PROG)
 
@@ -103,11 +104,18 @@ clean:
 	@$(RM) -rf src/jascal.tab.cc include/jascal.tab.hpp src/lex.yy.cc \
 		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o $(JASCAL_LIB_OBJ) $(JASCAL_LIB)
 
-test: $(TESTS_OUT)
+test:
+	@for test in `echo $(TESTS_OUT)`; do \
+		make $$test; \
+	done
 
 tests/%.ll: tests/%.jas $(PROG) $(JASCAL_LIB)
 	@echo "[JCC ] tests/$*.jas -> tests/$*.ll"
-	@./$(PROG) --dump-html tests/$*.html $(TEST_LEVEL) -o $@ $< || rm -f tests/$*.json tests/$*.txt $@
+	@./$(PROG) --dump-html tests/$*.html $(TEST_LEVEL) -o $@ $< || rm -f tests/$*.json tests/$*.txt $@; exit "255"
+
+tests/%: tests/%.ll
+	@echo "[LINK] $< -> $@"
+	@$(CLANG) $(JASCAL_LIB_IMPL) $< -o $@
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"

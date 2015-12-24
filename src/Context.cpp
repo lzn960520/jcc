@@ -98,7 +98,7 @@ void Context::initDWARF(const std::string &filename) {
 }
 
 llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionType *funcType, Function *function) {
-	if (function->isDeclaration()) {
+	if (function && function->isDeclaration()) {
 		return llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
 	} else {
 		llvm::Function *llvmFunction = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
@@ -110,15 +110,17 @@ llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionT
 }
 
 void Context::endFunction() {
-	for (llvm::Function::iterator it = currentFunction->getLLVMFunction(*this)->begin(); it != currentFunction->getLLVMFunction(*this)->end(); it++)
-		if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getLLVMFunction(*this)->getEntryBlock()) && it->getTerminator() == NULL) {
-			if (currentFunction->getLLVMFunction(*this)->getReturnType()->isVoidTy()) {
-				builder->SetInsertPoint(&(*it));
-				builder->CreateRetVoid();
-			} else
-				throw NoReturn(currentFunction->getName().c_str());
-		}
-	currentFunction = NULL;
+	if (currentFunction) {
+		for (llvm::Function::iterator it = currentFunction->getLLVMFunction(*this)->begin(); it != currentFunction->getLLVMFunction(*this)->end(); it++)
+			if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getLLVMFunction(*this)->getEntryBlock()) && it->getTerminator() == NULL) {
+				if (currentFunction->getLLVMFunction(*this)->getReturnType()->isVoidTy()) {
+					builder->SetInsertPoint(&(*it));
+					builder->CreateRetVoid();
+				} else
+					throw NoReturn(currentFunction->getName().c_str());
+			}
+		currentFunction = NULL;
+	}
 	builder->ClearInsertionPoint();
 }
 
@@ -178,7 +180,10 @@ std::string Context::getFunctionName() {
 }
 
 void Context::setBlock(llvm::BasicBlock *targetBlock) {
-	builder->SetInsertPoint(targetBlock);
+	if (targetBlock)
+		builder->SetInsertPoint(targetBlock);
+	else
+		builder->ClearInsertionPoint();
 }
 
 llvm::BasicBlock* Context::currentBlock() {
@@ -207,7 +212,7 @@ void Context::addClass(Class *cls) {
 }
 
 Class* Context::findClass(const std::string &name) {
-	if (classes.count(currentModule->getFullName() + "::" + name))
+	if (currentModule && classes.count(currentModule->getFullName() + "::" + name))
 		return classes[currentModule->getFullName() + "::" + name];
 	else if (aliases.count(name))
 		return findClass(aliases[name]);

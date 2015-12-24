@@ -27,9 +27,19 @@ class:
 interface:
 	N1::Interface # JN2N2J9Interface
 
+vtable_type:
+	N1::N2::Class # CN2N1N2N2C5ClassV
+
+vtable_data:
+	N1::N2::Class # _VCN2N1N2N2C5Class
+	N1::IA in N1::N2::Class # _VCN2N1N2N2C5Class_JN2N1J2IA
+
 procedure:
-	N1::Class1::func() # _FN2N1C6Class1F4func0
-	N1::Class1::func(int) # _FN2N1C6Class1F4func1i
+	N1::Class1::func() # _FCN2N1C6Class1F4func0
+	N1::Class1::func(int) # _FCN2N1C6Class1F4func1i
 
 function:
-	N1::Class1::func(N2::Class2) : int # _FN2N1C6Class1F4func1CN2N2C6Class2
+	N1::Class1::func(N2::Class2) : int # _FCN2N1C6Class1F4func1CN2N2C6Class2
+
+constructor:
+	N1::Class1::Class1() # _CCN2N1C6Class10

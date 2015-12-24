@@ -63,6 +63,8 @@ void Function::gen(Context &context) {
 					llvm::ArrayRef<llvm::Type*>(arg_type),
 					false),
 			this);
+	if (!isStatic())
+		cls->addFunction(getMangleName(), llvmFunction);
 	*const_cast<llvm::DISubprogram**>(&context.DIfunction) = getDIFunction(context, this, loc);
 	context.pushContext();
 	context.pushDIScope(context.DIfunction);
