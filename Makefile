@@ -6,11 +6,6 @@ CC := clang
 LEX := flex
 LLVM_COMPONENTS := all
 
-CPPFLAGS ?=
-CPPFLAGS += -Iinclude -g -DDEBUG
-ifeq ($(DEBUG), 1)
-CPPFLAGS += -g -DDEBUG
-endif
 OS_NAME = $(shell uname -o | tr '[A-Z]' '[a-z]')
 
 # libjsoncpp
@@ -48,6 +43,11 @@ JASCAL_LIB_SRC := $(wildcard lib/*.jas)
 JASCAL_LIB := $(patsubst %.jas,%.jsym,$(JASCAL_LIB_SRC))
 JASCAL_LIB_OBJ := $(patsubst %.jas,%.ll,$(JASCAL_LIB_SRC))
 JASCAL_LIB_IMPL := $(patsubst %.jas,%.impl.ll,$(JASCAL_LIB_SRC))
+CPPFLAGS ?=
+CPPFLAGS += -Iinclude -g -DDEBUG -fexceptions
+ifeq ($(DEBUG), 1)
+CPPFLAGS += -g -DDEBUG
+endif
 
 all: $(PROG)
 

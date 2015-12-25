@@ -10,6 +10,7 @@ class MemberAccess : public Expression {
 	Identifier *identifier;
 	bool isStatic;
 	Type *targetClass;
+	llvm::Value *getPointer(Context &context);
 public:
 	MemberAccess(Expression *target, Identifier *identifier);
 	MemberAccess(Type *type, Identifier *identifier);

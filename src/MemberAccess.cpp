@@ -35,43 +35,49 @@ Json::Value MemberAccess::json() {
 	return ans;
 }
 
-llvm::Value* MemberAccess::load(Context &context) {
+llvm::Value* MemberAccess::getPointer(Context &context) {
 	if (isStatic) {
+		// find class
 		Class *cls = targetClass->getClass(context);
 		if (!cls)
 			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
 		if (cls->getMangleName()[0] == 'J')
 			throw InvalidType("'" + cls->getFullName() + "' is an interface");
+		// find symbol
 		Symbol *symbol = cls->findSymbol(identifier->getName());
 		if (!symbol)
 			throw SymbolNotFound("No such static member '" + identifier->getName() + "' in class '" + cls->getFullName() + "'");
-		return addDebugLoc(
-				context,
-				context.getBuilder().CreateLoad(
-						symbol->data.identifier.value
-				),
-				loc);
+		if (symbol->type != Symbol::STATIC_MEMBER_VAR)
+			throw InvalidType("'" + identifier->getName() + "' in '" + targetClass->getName() + "' is not a static member variable");
+		// check permission
+		if (symbol->data.identifier.isPrivate && cls != context.currentClass)
+			throw CompileException("'" + identifier->getName() + "' is private");
+		if (symbol->data.identifier.isProtected && !Class::isA(context.currentClass, cls))
+			throw CompileException("'" + identifier->getName() + "' is protected");
+		return symbol->data.identifier.value;
 	} else {
+		// find class
 		if (!target->getType(context)->isObject())
 			throw InvalidType(std::string("Access member of a ") + target->getType(context)->getName());
 		Class *cls = target->getType(context)->getClass();
+		// find symbol
 		Symbol *symbol = cls->findSymbol(identifier->getName());
 		if (!symbol)
 			throw SymbolNotFound(std::string("No such member variable in class ") + cls->getName());
-		llvm::Value *tmp = addDebugLoc(
+		if (symbol->type != Symbol::MEMBER_VAR)
+			throw InvalidType("'" + identifier->getName() + "' in '" + targetClass->getName() + "' is not a member variable");
+		// check permission
+		if (symbol->data.identifier.isPrivate && cls != context.currentClass)
+			throw CompileException("'" + identifier->getName() + "' is private");
+		if (symbol->data.identifier.isProtected && !Class::isA(context.currentClass, cls))
+			throw CompileException("'" + identifier->getName() + "' is protected");
+		return addDebugLoc(
 				context,
 				context.getBuilder().CreateStructGEP(
 						nullptr,
 						target->load(context),
 						symbol->data.member.index),
 				loc);
-		if (tmp->getType()->getPointerElementType()->isArrayTy())
-			return tmp;
-		else
-			return addDebugLoc(
-					context,
-					context.getBuilder().CreateLoad(tmp),
-					loc);
 	}
 }
 
@@ -97,42 +103,27 @@ Type* MemberAccess::getType(Context &context) {
 	}
 }
 
+llvm::Value* MemberAccess::load(Context &context) {
+	llvm::Value *ptr = getPointer(context);
+	if (ptr->getType()->getPointerElementType()->isArrayTy())
+		return ptr;
+	else
+		return addDebugLoc(
+				context,
+				context.getBuilder().CreateLoad(ptr),
+				loc
+		);
+}
+
 llvm::Instruction* MemberAccess::store(Context &context, llvm::Value *value) {
-	if (isStatic) {
-		Class *cls = targetClass->getClass(context);
-		if (!cls)
-			throw SymbolNotFound("No such class '" + targetClass->getName() + "'");
-		if (cls->getMangleName()[0] == 'J')
-			throw InvalidType("'" + cls->getFullName() + "' is an interface");
-		Symbol *symbol = cls->findSymbol(identifier->getName());
-		if (!symbol)
-			throw SymbolNotFound("No such static member '" + identifier->getName() + "' in class '" + cls->getFullName() + "'");
+	llvm::Value *ptr = getPointer(context);
+	if (ptr->getType()->isArrayTy())
+		throw NotAssignable("member array");
+	else
 		return context.getBuilder().CreateStore(
 				value,
-				symbol->data.identifier.value
+				ptr
 		);
-	} else {
-		if (!target->getType(context)->isObject())
-			throw InvalidType(std::string("Access member of a ") + target->getType(context)->getName());
-		Class *cls = target->getType(context)->getClass();
-		Symbol *symbol = cls->findSymbol(identifier->getName());
-		if (!symbol)
-			throw SymbolNotFound(std::string("No such member variable in class ") + cls->getName());
-		llvm::Value *tmp = addDebugLoc(
-				context,
-				context.getBuilder().CreateStructGEP(
-						nullptr,
-						target->load(context),
-						symbol->data.member.index),
-				loc);
-		if (tmp->getType()->isArrayTy())
-			throw NotAssignable("member array");
-		else
-			return addDebugLoc(
-					context,
-					context.getBuilder().CreateStore(value, tmp),
-					loc);
-	}
 }
 
 Expression::Constant MemberAccess::loadConstant() {
