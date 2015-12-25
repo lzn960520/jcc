@@ -143,6 +143,9 @@ var AST;
 		default:
 			this.name = data.base_type;
 			break;
+		case "object":
+			this.name = data.class;
+			break;
 		}
 		this.getChildren = function() {
 			return children;
@@ -162,7 +165,8 @@ var AST;
 				"type": data.arg_list[i].type,
 				"identifier": data.arg_list[i].identifier
 			}, this));
-		children.push(AST(data.body, this));
+		if (data.body)
+			children.push(AST(data.body, this));
 		this.getChildren = function() {
 			return children;
 		}

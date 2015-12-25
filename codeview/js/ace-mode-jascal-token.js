@@ -61,7 +61,7 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
                     next : "expect_out_token"
                 }, {
                     token : "keyword",
-                    regex : /[a-z_]*/,
+                    regex : /[#a-z_]*/,
                     next : "expect_out_token"
                 }
             ],
