@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sstream>
+#include <cmath>
 
 static inline std::string itos(int i) {
 	std::ostringstream os;

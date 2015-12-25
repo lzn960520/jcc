@@ -293,3 +293,23 @@ llvm::GlobalVariable* Class::getVtable(Interface *interface) {
 			return vtables[it->second];
 	return NULL;
 }
+
+bool Class::isA(Class *a, Class *b) {
+	if (a == b)
+		return true;
+	if (b->getMangleName()[0] == 'J') {
+		// Is a implements b?
+		for (std::list<std::pair<Interface*, size_t> >::const_iterator it = a->implementsType.begin(); it != a->implementsType.end(); it++)
+			if (it->first == b)
+				return true;
+		return false;
+	} else if (a->getMangleName()[0] == 'J')
+		// An interface can't be a class
+		return false;
+	else {
+		// Is a extends from b?
+		while (a && a != b)
+			a = a->extendsClass;
+		return a != NULL;
+	}
+}

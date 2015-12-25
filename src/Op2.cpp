@@ -67,25 +67,171 @@ Op2::~Op2() {
 
 llvm::Value* Op2::load(Context &context) {
 	if (op == ASSIGN) {
-		llvm::Value *tmp = right->load(context);
+		llvm::Value *tmp = Type::cast(context, right->getType(context), right->load(context), left->getType(context));
 		addDebugLoc(
 				context,
-				left->store(context, Type::cast(context, right->getType(context), tmp, left->getType(context))),
+				left->store(context, tmp),
 				loc);
 		return tmp;
 	}
 	Type *ansType = Type::higherType(left->getType(context), right->getType(context));
 	llvm::Value *lhs = Type::cast(context, left->getType(context), left->load(context), ansType);
 	llvm::Value *rhs = Type::cast(context, right->getType(context), right->load(context), ansType);
+
+	// pre type check
 	switch (op) {
 	case ADD:
-		return addDebugLoc(context, context.getBuilder().CreateAdd(lhs, rhs), loc);
+	case ADD_ASSIGN:
 	case SUB:
-		return addDebugLoc(context, context.getBuilder().CreateSub(lhs, rhs), loc);
+	case SUB_ASSIGN:
 	case MUL:
-		return addDebugLoc(context, context.getBuilder().CreateMul(lhs, rhs), loc);
+	case MUL_ASSIGN:
 	case DIV:
-		return addDebugLoc(context, context.getBuilder().CreateSDiv(lhs, rhs), loc);
+	case DIV_ASSIGN:
+	case PWR:
+	case PWR_ASSIGN:
+	case MOD:
+	case MOD_ASSIGN:
+	case LT:
+	case GT:
+	case LEQ:
+	case GEQ:
+	case EQ:
+	case NEQ:
+		if (!ansType->isNumber() && !ansType->isString())
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + left->getType(context)->getName() + " and " + right->getType(context)->getName());
+		break;
+	case LSH:
+	case LSH_ASSIGN:
+	case RSH:
+	case RSH_ASSIGN:
+	case BIT_OR:
+	case BIT_OR_ASSIGN:
+	case BIT_AND:
+	case BIT_AND_ASSIGN:
+	case BIT_XOR:
+	case BIT_XOR_ASSIGN:
+		if (!ansType->isInt())
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + left->getType(context)->getName() + " and " + right->getType(context)->getName());
+		break;
+	case LOG_OR:
+	case LOG_OR_ASSIGN:
+	case LOG_AND:
+	case LOG_AND_ASSIGN:
+	case LOG_XOR:
+	case LOG_XOR_ASSIGN:
+		if (!ansType->isBool())
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + left->getType(context)->getName() + " and " + right->getType(context)->getName());
+		break;
+	case ASSIGN:
+		// this has been handled before
+		break;
+	}
+
+	switch (op) {
+	case ADD_ASSIGN:
+	case ADD: {
+		llvm::Value *tmp;
+		if (ansType->isFloat())
+			tmp = addDebugLoc(context, context.getBuilder().CreateFAdd(lhs, rhs), loc);
+		else
+			tmp = addDebugLoc(context, context.getBuilder().CreateAdd(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case SUB_ASSIGN:
+	case SUB: {
+		llvm::Value *tmp;
+		if (ansType->isFloat())
+			tmp = addDebugLoc(context, context.getBuilder().CreateFSub(lhs, rhs), loc);
+		else
+			tmp = addDebugLoc(context, context.getBuilder().CreateSub(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case MUL_ASSIGN:
+	case MUL: {
+		llvm::Value *tmp;
+		if (ansType->isFloat())
+			tmp = addDebugLoc(context, context.getBuilder().CreateFMul(lhs, rhs), loc);
+		else
+			tmp = addDebugLoc(context, context.getBuilder().CreateMul(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case DIV_ASSIGN:
+	case DIV: {
+		llvm::Value *tmp;
+		if (ansType->isFloat())
+			tmp = addDebugLoc(context, context.getBuilder().CreateFDiv(lhs, rhs), loc);
+		else if (ansType->isUnsigned)
+			tmp = addDebugLoc(context, context.getBuilder().CreateUDiv(lhs, rhs), loc);
+		else
+			tmp = addDebugLoc(context, context.getBuilder().CreateSDiv(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case MOD_ASSIGN:
+	case MOD: {
+		llvm::Value *tmp;
+		if (ansType->isUnsigned)
+			tmp = addDebugLoc(context, context.getBuilder().CreateURem(lhs, rhs), loc);
+		else
+			tmp = addDebugLoc(context, context.getBuilder().CreateSRem(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case LSH_ASSIGN:
+	case LSH: {
+		llvm::Value *tmp = addDebugLoc(context, context.getBuilder().CreateShl(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case RSH_ASSIGN:
+	case RSH: {
+		llvm::Value *tmp;
+		if (ansType->isUnsigned)
+			tmp = addDebugLoc(context, context.getBuilder().CreateLShr(lhs, rhs), loc);
+		else
+			tmp = addDebugLoc(context, context.getBuilder().CreateAShr(lhs, rhs), loc);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
 	case LT:
 		if (ansType->isFloat())
 			return addDebugLoc(context, context.getBuilder().CreateFCmpOLT(lhs, rhs), loc);
@@ -131,6 +277,7 @@ llvm::Value* Op2::load(Context &context) {
 			throw NotImplemented("comparison of string");
 		break;
 	case ASSIGN:
+		// this has been handled before
 		break;
 	case EQ:
 		if (ansType->isFloat())
@@ -148,22 +295,49 @@ llvm::Value* Op2::load(Context &context) {
 		else if (ansType->isString())
 			throw NotImplemented("comparison of string");
 		break;
+	case LOG_AND_ASSIGN:
+	case BIT_AND_ASSIGN:
 	case LOG_AND:
-		if (!left->getType(context)->isBool() || !right->getType(context)->isBool())
-			throw InvalidType("Logical and only allowed to bool");
-		return context.getBuilder().CreateAnd(lhs, rhs);
+	case BIT_AND: {
+		llvm::Value *tmp = context.getBuilder().CreateAnd(lhs, rhs);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case LOG_OR_ASSIGN:
+	case BIT_OR_ASSIGN:
 	case LOG_OR:
-		if (!left->getType(context)->isBool() || !right->getType(context)->isBool())
-			throw InvalidType("Logical or only allowed to bool");
-		return context.getBuilder().CreateOr(lhs, rhs);
+	case BIT_OR: {
+		llvm::Value *tmp = context.getBuilder().CreateOr(lhs, rhs);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case LOG_XOR_ASSIGN:
+	case BIT_XOR_ASSIGN:
 	case LOG_XOR:
-		if (!left->getType(context)->isBool() || !right->getType(context)->isBool())
-			throw InvalidType("Logical xor only allowed to bool");
-		return context.getBuilder().CreateXor(lhs, rhs);
-	default:
-		throw NotImplemented(std::string("operator ") + OpNames[op] + " not implemented");
+	case BIT_XOR: {
+		llvm::Value *tmp = context.getBuilder().CreateXor(lhs, rhs);
+		if (hasAssign(op)) {
+			tmp = Type::cast(context, ansType, tmp, left->getType(context));
+			addDebugLoc(
+					context,
+					left->store(context, tmp),
+					loc);
+		}
+		return tmp; }
+	case PWR:
+	case PWR_ASSIGN:
+		break;
 	}
-	throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + left->getType(context)->getName() + " and " + right->getType(context)->getName());
 }
 
 llvm::Instruction* Op2::store(Context &context, llvm::Value *value) {
@@ -176,7 +350,30 @@ Type* Op2::getType(Context &context) {
 	case SUB:
 	case MUL:
 	case DIV:
+	case MOD:
+	case PWR:
+	case LSH:
+	case RSH:
+	case BIT_AND:
+	case BIT_OR:
+	case BIT_XOR:
 		return Type::higherType(left->getType(context), right->getType(context));
+	case ADD_ASSIGN:
+	case SUB_ASSIGN:
+	case MUL_ASSIGN:
+	case DIV_ASSIGN:
+	case MOD_ASSIGN:
+	case PWR_ASSIGN:
+	case BIT_OR_ASSIGN:
+	case BIT_AND_ASSIGN:
+	case BIT_XOR_ASSIGN:
+	case LOG_OR_ASSIGN:
+	case LOG_AND_ASSIGN:
+	case LOG_XOR_ASSIGN:
+	case LSH_ASSIGN:
+	case RSH_ASSIGN:
+	case ASSIGN:
+		return left->getType(context);
 	case LT:
 	case GT:
 	case LEQ:
@@ -187,8 +384,6 @@ Type* Op2::getType(Context &context) {
 	case LOG_OR:
 	case LOG_XOR:
 		return &Type::Bool;
-	default:
-		throw NotImplemented(std::string("operator ") + OpNames[op] + " not implemented");
 	}
 }
 
@@ -199,6 +394,25 @@ bool Op2::isConstant() {
 Expression::Constant Op2::loadConstant() {
 	Type* higherType = Type::higherType(left->getTypeConstant(), right->getTypeConstant());
 	Expression::Constant ans;
+	switch (op) {
+	case ADD_ASSIGN:
+	case SUB_ASSIGN:
+	case MUL_ASSIGN:
+	case DIV_ASSIGN:
+	case MOD_ASSIGN:
+	case PWR_ASSIGN:
+	case BIT_OR_ASSIGN:
+	case BIT_AND_ASSIGN:
+	case BIT_XOR_ASSIGN:
+	case LOG_OR_ASSIGN:
+	case LOG_AND_ASSIGN:
+	case LOG_XOR_ASSIGN:
+	case LSH_ASSIGN:
+	case RSH_ASSIGN:
+		throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to constant");
+	default:
+		break;
+	}
 	if (higherType->isInt())
 		if (higherType->isUnsigned)
 			switch (op) {
@@ -241,6 +455,26 @@ Expression::Constant Op2::loadConstant() {
 					ans._uint64 /= right->loadConstant()._uint64;
 				else
 					ans._uint64 /= right->loadConstant()._int64;
+				return ans;
+			case MOD:
+				if (left->getTypeConstant()->isUnsigned)
+					ans._uint64 = left->loadConstant()._uint64;
+				else
+					ans._uint64 = left->loadConstant()._int64;
+				if (right->getTypeConstant()->isUnsigned)
+					ans._uint64 %= right->loadConstant()._uint64;
+				else
+					ans._uint64 %= right->loadConstant()._int64;
+				return ans;
+			case PWR:
+				if (left->getTypeConstant()->isUnsigned)
+					ans._uint64 = left->loadConstant()._uint64;
+				else
+					ans._uint64 = left->loadConstant()._int64;
+				if (right->getTypeConstant()->isUnsigned)
+					ans._uint64 = pow(ans._uint64, right->loadConstant()._uint64);
+				else
+					ans._uint64 = pow(ans._uint64, right->loadConstant()._int64);
 				return ans;
 			case LT:
 				if (left->getTypeConstant()->isUnsigned)
@@ -326,6 +560,26 @@ Expression::Constant Op2::loadConstant() {
 					ans._int64 /= right->loadConstant()._uint64;
 				else
 					ans._int64 /= right->loadConstant()._int64;
+				return ans;
+			case MOD:
+				if (left->getTypeConstant()->isUnsigned)
+					ans._int64 = left->loadConstant()._uint64;
+				else
+					ans._int64 = left->loadConstant()._int64;
+				if (right->getTypeConstant()->isUnsigned)
+					ans._int64 %= right->loadConstant()._uint64;
+				else
+					ans._int64 %= right->loadConstant()._int64;
+				return ans;
+			case PWR:
+				if (left->getTypeConstant()->isUnsigned)
+					ans._int64 = left->loadConstant()._uint64;
+				else
+					ans._int64 = left->loadConstant()._int64;
+				if (right->getTypeConstant()->isUnsigned)
+					ans._int64 = pow(ans._int64, right->loadConstant()._uint64);
+				else
+					ans._int64 = pow(ans._int64, right->loadConstant()._int64);
 				return ans;
 			case LT:
 				if (left->getTypeConstant()->isUnsigned)
@@ -436,6 +690,10 @@ Expression::Constant Op2::loadConstant() {
 			else
 				ans._double /= right->loadConstant()._double;
 			return ans;
+		case LSH:
+		case RSH:
+		case MOD:
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + left->getTypeConstant()->getName() + " and " + right->getTypeConstant()->getName());
 		case LT:
 			if (left->getTypeConstant()->isInt())
 				if (left->getTypeConstant()->isUnsigned)
@@ -504,8 +762,8 @@ Expression::Constant Op2::loadConstant() {
 			throw NotImplemented(std::string("operator ") + OpNames[op] + " not implemented");
 		}
 	else if (higherType->isString())
-		throw NotImplemented("const string calculate");
-	throw NotImplemented(std::string("Const caculation ") + left->getTypeConstant()->getName() +
+		throw NotImplemented("constant string calculate");
+	throw NotImplemented(std::string("constant caculation ") + left->getTypeConstant()->getName() +
 			OpNames[op] + right->getTypeConstant()->getName());
 }
 
@@ -527,6 +785,49 @@ Type* Op2::getTypeConstant() {
 	case LOG_XOR:
 		return &Type::Bool;
 	default:
-		throw NotImplemented(std::string("operator ") + OpNames[op] + " not implemented");
+		throw NotImplemented(std::string("constant caculation ") + left->getTypeConstant()->getName() +
+			OpNames[op] + right->getTypeConstant()->getName());
+	}
+}
+
+bool Op2::hasAssign(OpType op) {
+	switch (op) {
+	case ADD:
+	case SUB:
+	case MUL:
+	case DIV:
+	case MOD:
+	case PWR:
+	case LT:
+	case GT:
+	case LEQ:
+	case GEQ:
+	case NEQ:
+	case EQ:
+	case LOG_AND:
+	case LOG_OR:
+	case LOG_XOR:
+	case BIT_OR:
+	case BIT_AND:
+	case BIT_XOR:
+	case LSH:
+	case RSH:
+		return false;
+	case ADD_ASSIGN:
+	case SUB_ASSIGN:
+	case MUL_ASSIGN:
+	case DIV_ASSIGN:
+	case MOD_ASSIGN:
+	case PWR_ASSIGN:
+	case LOG_AND_ASSIGN:
+	case LOG_OR_ASSIGN:
+	case LOG_XOR_ASSIGN:
+	case BIT_OR_ASSIGN:
+	case BIT_AND_ASSIGN:
+	case BIT_XOR_ASSIGN:
+	case ASSIGN:
+	case LSH_ASSIGN:
+	case RSH_ASSIGN:
+		return true;
 	}
 }

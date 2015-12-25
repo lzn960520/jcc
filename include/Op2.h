@@ -52,6 +52,7 @@ struct Op2 : public Expression {
 	bool isConstant() override;
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
+	static bool hasAssign(OpType op);
 };
 
 #endif

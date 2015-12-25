@@ -38,9 +38,9 @@ void MemberVariableDefination::genStruct(Context &context) {
 	if (!qualifier->isStatic())
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
 			cls->members.push_back(vars->type->getType(context));
-			cls->symbols.add(new Symbol(it->first->getName(), vars->type, cls->members.size() - 1));
+			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->type, cls->members.size() - 1));
 		}
 	else
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
-			cls->symbols.add(new Symbol(it->first->getName(), Symbol::STATIC_MEMBER_VAR, vars->type, new llvm::GlobalVariable(context.getModule(), vars->type->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, NULL, cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
+			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->type, new llvm::GlobalVariable(context.getModule(), vars->type->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, NULL, cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
 }

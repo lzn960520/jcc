@@ -33,10 +33,27 @@ Op1::~Op1() {
 
 llvm::Value* Op1::load(Context &context) {
 	llvm::Value *ohs = operand->load(context);
+
+	// pre type check
 	switch (op) {
 	case SELF_INC:
+	case SELF_DEC:
+	case BIT_NOT:
 		if (!operand->getType(context)->isInt())
-			throw InvalidType("Self increment only allowed to integer");
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + operand->getType(context)->getName());
+		break;
+	case LOG_NOT:
+		if (!operand->getType(context)->isBool())
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + operand->getType(context)->getName());
+		break;
+	case NEG:
+		if (!operand->getType(context)->isNumber())
+			throw InvalidType(std::string("can't apply operator ") + OpNames[op] + " to " + operand->getType(context)->getName());
+		break;
+	}
+
+	switch (op) {
+	case SELF_INC:
 		addDebugLoc(
 				context,
 				operand->store(context,
@@ -49,8 +66,6 @@ llvm::Value* Op1::load(Context &context) {
 				loc);
 		return ohs;
 	case SELF_DEC:
-		if (!operand->getType(context)->isInt())
-			throw InvalidType("Self decrement only allowed to integer");
 		addDebugLoc(
 				context,
 				operand->store(context,
@@ -63,13 +78,14 @@ llvm::Value* Op1::load(Context &context) {
 				loc);
 		return ohs;
 	case LOG_NOT:
-		if (!operand->getType(context)->isBool())
-			throw InvalidType("Logical-not only allowed to bool");
 		return addDebugLoc(context, context.getBuilder().CreateNot(ohs), loc);
 	case BIT_NOT:
-		if (!operand->getType(context)->isInt())
-			throw InvalidType("Bit-not only allowed to integer");
 		return addDebugLoc(context, context.getBuilder().CreateNot(ohs), loc);
+	case NEG:
+		if (operand->getType(context)->isFloat())
+			return addDebugLoc(context, context.getBuilder().CreateFNeg(ohs), loc);
+		else
+			return addDebugLoc(context, context.getBuilder().CreateNeg(ohs), loc);
 	}
 }
 
@@ -78,14 +94,7 @@ llvm::Instruction* Op1::store(Context &context, llvm::Value *value) {
 }
 
 Type* Op1::getType(Context &context) {
-	switch (op) {
-	case SELF_INC:
-	case SELF_DEC:
-	case LOG_NOT:
-		return &Type::Bool;
-	case BIT_NOT:
-		return operand->getType(context);
-	}
+	return operand->getType(context);
 }
 
 bool Op1::isConstant() {
@@ -108,16 +117,19 @@ Expression::Constant Op1::loadConstant() {
 			throw InvalidType("Bit not is only allowed to integer");
 		ans._uint64 = ~operand->loadConstant()._uint64;
 		return ans;
+	case NEG:
+		if (!operand->getTypeConstant()->isNumber())
+			throw InvalidType("Negative is only allowed to number");
+		if (operand->getTypeConstant()->isFloat())
+			ans._double = -operand->loadConstant()._double;
+		else if (operand->getTypeConstant()->isUnsigned)
+			ans._uint64 = -operand->loadConstant()._uint64;
+		else
+			ans._int64 = -operand->loadConstant()._int64;
+		return ans;
 	}
 }
 
 Type* Op1::getTypeConstant() {
-	switch (op) {
-	case SELF_INC:
-	case SELF_DEC:
-	case LOG_NOT:
-		return &Type::Bool;
-	case BIT_NOT:
-		return operand->getTypeConstant();
-	}
+	return operand->getTypeConstant();
 }

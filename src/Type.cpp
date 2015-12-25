@@ -113,12 +113,18 @@ Json::Value Type::json() {
 
 llvm::Type* Type::getType(Context &context) {
 	switch (baseType) {
+	case BOOL:
+		return context.getBuilder().getInt1Ty();
 	case BYTE:
 		return context.getBuilder().getInt8Ty();
 	case SHORT:
 		return context.getBuilder().getInt16Ty();
 	case INT:
 		return context.getBuilder().getInt32Ty();
+	case FLOAT:
+		return context.getBuilder().getFloatTy();
+	case DOUBLE:
+		return context.getBuilder().getDoubleTy();
 	case ARRAY:
 		{
 			size_t totalSize = 1;
@@ -148,12 +154,11 @@ llvm::Type* Type::getType(Context &context) {
 
 size_t Type::getSize(Context &context) {
 	switch (baseType) {
+	case BOOL:
 	case BYTE:
-		return 1;
 	case SHORT:
-		return 2;
 	case INT:
-		return 4;
+		return context.DL->getTypeAllocSize(getType(context));
 	case OBJECT: {
 		return context.DL->getTypeAllocSize(getType(context)->getPointerElementType()); }
 	case STRING:
@@ -223,14 +228,31 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		if (otype->isInt())
 			if (otype->getSize(context) == dtype->getSize(context))
 				return val;
+			else {
+				if (otype->getSize(context) > dtype->getSize(context))
+					return val ? context.getBuilder().CreateTrunc(val, dtype->getType(context)) : NULL;
+				else {
+					if (otype->isUnsigned)
+						return val ? context.getBuilder().CreateBitCast(val, dtype->getType(context)) : NULL;
+					else
+						return val ? context.getBuilder().CreateSExt(val, dtype->getType(context)) : NULL;
+				}
+			}
+		else if (otype->isFloat()) {
+			if (dtype->isUnsigned)
+				return val ? context.getBuilder().CreateFPToUI(val, dtype->getType(context)) : NULL;
 			else
-				return val ? context.getBuilder().CreateTruncOrBitCast(val, dtype->getType(context)) : NULL;
-		else if (otype->isFloat())
-			return val ? context.getBuilder().CreateFPCast(val, dtype->getType(context)) : NULL;
+				return val ? context.getBuilder().CreateFPToSI(val, dtype->getType(context)) : NULL;
+		}
 		break;
 	case FLOAT:
 	case DOUBLE:
-		if (otype->isNumber())
+		if (otype->isInt()) {
+			if (otype->isUnsigned)
+				return val ? context.getBuilder().CreateUIToFP(val, dtype->getType(context)) : NULL;
+			else
+				return val ? context.getBuilder().CreateSIToFP(val, dtype->getType(context)) : NULL;
+		} else if (otype->isFloat())
 			return val ? context.getBuilder().CreateFPCast(val, dtype->getType(context)) : NULL;
 		break;
 	case OBJECT:

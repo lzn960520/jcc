@@ -141,7 +141,7 @@ llvm::FunctionType* Function::getLLVMType(Context &context) {
 
 void Function::genStruct(Context &context) {
 	if (!qualifier->isStatic())
-		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), getLLVMType(context), 0, 0));
+		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), qualifier, this, getLLVMType(context), 0, 0));
 	else
-		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), this));
+		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), qualifier, this));
 }

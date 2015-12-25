@@ -59,6 +59,7 @@ public:
 	void writeJsymFile(std::ostream &os) override;
 	llvm::Function *getConstructor();
 	llvm::GlobalVariable *getVtable(Interface *interface);
+	static bool isA(Class *a, Class *b);
 	friend std::ostream& operator << (std::ostream &os, const Class &cls);
 };
 

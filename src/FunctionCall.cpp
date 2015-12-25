@@ -34,22 +34,59 @@ Json::Value FunctionCall::json() {
 }
 
 llvm::Value* FunctionCall::load(Context &context) {
+	Symbol *symbol = NULL;
 	Class *targetClass = NULL;
-	std::string funcName = identifier->getName();
 	if (target == NULL) {
+		// static call or self call
 		if (identifier->getName().rfind("::") != std::string::npos) {
+			// static call
+
+			// find class
 			targetClass = context.findClass(identifier->getName().substr(0, identifier->getName().rfind("::")));
-			funcName = identifier->getName().substr(identifier->getName().rfind("::") + 2);
 			if (!targetClass)
-				throw SymbolNotFound(identifier->getName().substr(0, identifier->getName().rfind("::")));
-		} else
-			targetClass = context.currentFunction->getClass();
-	} else
+				throw SymbolNotFound("Class '" + identifier->getName().substr(0, identifier->getName().rfind("::")) + "'");
+
+			// find function
+			symbol = targetClass->findSymbol(identifier->getName().substr(identifier->getName().rfind("::") + 2));
+			if (!symbol)
+				throw SymbolNotFound("Function '" + identifier->getName() + "'");
+
+			// check symbol is static function
+			if (symbol->type != Symbol::STATIC_FUNCTION)
+				throw InvalidType("function '" + identifier->getName() + "' is not a static function");
+
+			// check symbol's permission
+			if (symbol->data.static_function.isPrivate && targetClass != context.currentClass)
+				throw CompileException("function '" + identifier->getName() + "' is private");
+			if (symbol->data.static_function.isProtected && !Class::isA(context.currentClass, targetClass))
+				throw CompileException("function '" + identifier->getName() + "' is protected");
+		} else {
+			// self call
+			targetClass = context.currentClass;
+
+			// find function
+			symbol = targetClass->findSymbol(identifier->getName());
+			if (!symbol)
+				throw SymbolNotFound("Function '" + identifier->getName() + "'");
+		}
+	} else {
+		// member function call
 		targetClass = target->getType(context)->getClass();
-	Symbol *symbol = targetClass->findSymbol(funcName);
-	if (!symbol) {
-		std::cout << *targetClass;
-		throw FunctionNotFound(identifier->getName());
+		
+		// find function
+		symbol = targetClass->findSymbol(identifier->getName());
+		if (!symbol)
+			throw SymbolNotFound("Function '" + identifier->getName() + "'");
+
+		// check symbol is normal function
+		if (symbol->type != Symbol::FUNCTION)
+			throw InvalidType("function '" + identifier->getName() + "' is not a member function");
+
+		// check symbol's permission
+		if (symbol->data.static_function.isPrivate && targetClass != context.currentClass)
+			throw CompileException("function '" + identifier->getName() + "' is private");
+		if (symbol->data.static_function.isProtected && !Class::isA(context.currentClass, targetClass))
+			throw CompileException("function '" + identifier->getName() + "' is protected");
 	}
 
 	llvm::Value *function;
@@ -64,6 +101,7 @@ llvm::Value* FunctionCall::load(Context &context) {
 			delete tmpTarget;
 
 		if (targetClass->getMangleName()[0] == 'J') {
+			// locate vtable
 			function = addDebugLoc(
 					context,
 					context.getBuilder().CreateLoad(
@@ -72,6 +110,7 @@ llvm::Value* FunctionCall::load(Context &context) {
 					loc
 			);
 			// for interface call, we have to recalculate the object base address
+			// load offset from vtable
 			llvm::Value *baseOffset = addDebugLoc(
 					context,
 					context.getBuilder().CreateLoad(
@@ -87,6 +126,7 @@ llvm::Value* FunctionCall::load(Context &context) {
 					),
 					loc
 			);
+			// calculate the base address
 			thisval = addDebugLoc(
 					context,
 					context.getBuilder().CreateIntToPtr(
@@ -110,6 +150,7 @@ llvm::Value* FunctionCall::load(Context &context) {
 					loc
 			);
 		} else {
+			// locate vtable
 			function = addDebugLoc(
 					context,
 					context.getBuilder().CreateLoad(
@@ -125,12 +166,16 @@ llvm::Value* FunctionCall::load(Context &context) {
 					),
 					loc
 			);
+
+			// for object call, we only need type cast
 			thisval = context.getBuilder().CreatePointerCast(
 					thisval,
 					context.getBuilder().getInt8PtrTy(0)
 			);
 		}
+		// add thisval as the first argument
 		arg_code.push_back(thisval);
+		// load function pointer from vtable
 		function = addDebugLoc(
 				context,
 				context.getBuilder().CreateLoad(
@@ -155,12 +200,12 @@ llvm::Value* FunctionCall::load(Context &context) {
 	default:
 		throw InvalidType("calling a symbol which is not a function");
 	}
-	if (symbol->type == Symbol::STATIC_FUNCTION) {
-		// Calling a static function
-	} else {
-	}
+
+	// load remaining arguments
 	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_code.push_back((*it)->load(context));
+
+	// do the call
 	llvm::Value *ans = addDebugLoc(
 			context,
 			context.getBuilder().CreateCall(function, llvm::ArrayRef<llvm::Value*>(arg_code)),
@@ -189,6 +234,7 @@ Type* FunctionCall::getType(Context &context) {
 	case Symbol::STATIC_FUNCTION:
 		return symbol->data.static_function.function->getReturnType();
 	case Symbol::FUNCTION:
+		return symbol->data.function.function->getReturnType();
 	default:
 		throw InvalidType("calling a symbol which is not a function");
 	}
