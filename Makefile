@@ -33,12 +33,6 @@ LIBS += `llvm-config --libs $(LLVM_COMPONENTS)`
 LIBS += `llvm-config --system-libs $(LLVM_COMPONENTS)`
 endif
 
-# pcre
-LIBS += `pcre++-config --libs`
-CPPFLAGS += `pcre++-config --cflags`
-
-CPPFLAGS += -fno-rtti -fexceptions -std=c++11
-
 # jascal
 SOURCES := $(patsubst src/%,%,$(wildcard src/*.cpp))
 SOURCES += jascal.tab.cc lex.yy.cc
