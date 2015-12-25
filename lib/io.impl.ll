@@ -71,6 +71,17 @@ define void @CN6SystemC2IOF7writeln1a(%CN6SystemC6string* %s) {
   ret void
 }
 
+declare i32 @scanf(i8*, ...)
+@readIntFmt = private constant [3 x i8] c"%d\00"
+
+define i32 @CN6SystemC2IOF7readInt0() {
+  %1 = getelementptr [3 x i8], [3 x i8]* @readIntFmt, i32 0, i32 0
+  %2 = alloca i32
+  call i32 (i8*, ...) @scanf(i8* %1, i32* %2)
+  %4 = load i32, i32* %2
+  ret i32 %4
+}
+
 attributes #0 = { nounwind readnone }
 
 !llvm.module.flags = !{!0, !1}
