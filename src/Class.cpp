@@ -55,8 +55,8 @@ void Class::genStruct(Context &context) {
 	llvmType = llvm::StructType::create(context.getContext(), getMangleName());
 	context.addClass(this);
 
-	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
-	members.push_back(llvm::PointerType::get(vtableType, 0));
+	vtableLLVMType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
+	members.push_back(llvm::PointerType::get(vtableLLVMType, 0));
 
 	if (extends) {
 		extendsClass = context.findClass(extends->getName());
@@ -69,9 +69,8 @@ void Class::genStruct(Context &context) {
 		{
 			// Copy vtable's format
 			llvm::StructType *extendVtableType = (llvm::StructType*) (*it++)->getPointerElementType();
-			for (llvm::StructType::element_iterator it = extendVtableType->element_begin(); it != extendVtableType->element_end(); it++) {
-				this->vtableType.push_back(*it);
-			}
+			for (llvm::StructType::element_iterator it = extendVtableType->element_begin(); it != extendVtableType->element_end(); it++)
+				vtableType.push_back(*it);
 		}
 
 		{
@@ -90,9 +89,8 @@ void Class::genStruct(Context &context) {
 	} else if (getMangleName()[0] == 'C') {
 		llvm::SmallVector<llvm::Type*, 16> destructor_arg;
 		destructor_arg.push_back(llvmType);
-		this->vtableType.push_back(llvm::PointerType::get(llvm::FunctionType::get(context.getBuilder().getVoidTy(), destructor_arg, false), 0));
+		vtableType.push_back(llvm::PointerType::get(llvm::FunctionType::get(context.getBuilder().getVoidTy(), destructor_arg, false), 0));
 	}
-
 	
 	for (std::list<Identifier*>::iterator it = implements.begin(); it != implements.end(); it++) {
 		// Process interface
@@ -113,7 +111,7 @@ void Class::genStruct(Context &context) {
 		(*it)->genStruct(context);
 	}
 
-	vtableType->setBody(this->vtableType);
+	vtableLLVMType->setBody(this->vtableType);
 	((llvm::StructType *) llvmType)->setBody(members);
 
 	{
@@ -132,9 +130,9 @@ void Class::genStruct(Context &context) {
 
 	if (getMangleName()[0] == 'C') {
 		// Create vtable data declaration
-		vtables[0] = new llvm::GlobalVariable(context.getModule(), vtableType, false, llvm::GlobalVariable::ExternalLinkage, nullptr, "_V" + getMangleName());
+		vtables[0] = new llvm::GlobalVariable(context.getModule(), vtableLLVMType, false, llvm::GlobalVariable::ExternalLinkage, nullptr, "_V" + getMangleName());
 		for (std::list<std::pair<Interface*, size_t> >::const_iterator it = implementsType.begin(); it != implementsType.end(); it++)
-			vtables[it->second] = new llvm::GlobalVariable(context.getModule(), this->vtableType[0], false, llvm::GlobalVariable::ExternalLinkage, nullptr, "_V" + getMangleName() + "_" + it->first->getMangleName());
+			vtables[it->second] = new llvm::GlobalVariable(context.getModule(), it->first->vtableLLVMType, false, llvm::GlobalVariable::ExternalLinkage, nullptr, "_V" + getMangleName() + "_" + it->first->getMangleName());
 	}
 }
 
@@ -160,7 +158,9 @@ void Class::gen(Context &context) {
 			std::vector<llvm::Function*> &entrys = vtableEntry[it->second];
 			if (entrys.size() != it->first->vtableType.size())
 				throw CompileException("Class '" + getFullName() + "' doesn't fully implement '" + it->first->getFullName() + "'");
-			for (std::vector<llvm::Function*>::const_iterator it2 = entrys.begin(); it2 != entrys.end(); it2++)
+			std::vector<llvm::Function*>::const_iterator it2 = entrys.begin();
+			it2++;
+			for (; it2 != entrys.end(); it2++)
 				if (!*it2)
 					throw CompileException("Class '" + getFullName() + "' doesn't fully implement '" + it->first->getFullName() + "'");
 		}
@@ -169,13 +169,24 @@ void Class::gen(Context &context) {
 		for (std::map<size_t, llvm::GlobalVariable*>::const_iterator it = vtables.begin(); it != vtables.end(); it++) {
 			if (vtableEntry.count(it->first)) {
 				std::vector<llvm::Function*> &entries = vtableEntry[it->first];
+				llvm::StructType *vtableType = (llvm::StructType*) vtables[it->first]->getType()->getPointerElementType();
 				std::vector<llvm::Constant*> tmp;
 				size_t i = 0;
-				for (std::vector<llvm::Function*>::const_iterator it2 = entries.begin(); it2 != entries.end(); it2++, i++)
+				for (std::vector<llvm::Function*>::const_iterator it2 = entries.begin(); it2 != entries.end(); it2++, i++) {
+					if (it->first != 0 && i == 0) {
+						tmp.push_back(context.getBuilder().getInt32(
+								context.DL->getStructLayout(
+										(llvm::StructType *) getLLVMType()
+								)->getElementOffset(it->first)));
+						continue;
+					}
 					if (*it2)
 						tmp.push_back(*it2);
 					else
-						tmp.push_back(llvm::ConstantPointerNull::get((llvm::PointerType *) ((llvm::StructType *) vtables[it->first]->getType()->getPointerElementType())->getElementType(i)));
+						tmp.push_back(llvm::ConstantPointerNull::get((llvm::PointerType *) vtableType->getElementType(i)));
+				}
+				for (; i < vtableType->getNumElements(); i++)
+					tmp.push_back(llvm::ConstantPointerNull::get((llvm::PointerType *) vtableType->getElementType(i)));
 				vtables[it->first]->setInitializer(llvm::ConstantStruct::get((llvm::StructType *) vtables[it->first]->getType()->getPointerElementType(), llvm::ArrayRef<llvm::Constant*>(tmp)));
 			} else {
 				llvm::StructType *vtableType = (llvm::StructType *) it->second->getType()->getElementType();
@@ -241,9 +252,9 @@ const std::string Class::getMangleName() const {
 		return "C" + itos(getName().length()) + getName();
 }
 
-void Class::addFunction(const std::string &mangleName, llvm::Function *function) {
-	assert(vtableEntryLookup.count(mangleName) != 0);
-	VtableEntryList &velist = vtableEntryLookup[mangleName];
+void Class::addFunction(const std::string &signature, llvm::Function *function) {
+	assert(vtableEntryLookup.count(signature) != 0);
+	VtableEntryList &velist = vtableEntryLookup[signature];
 	for (VtableEntryList::iterator it = velist.begin(); it != velist.end(); it++) {
 		if (vtableEntry[it->first].size() <= it->second)
 			vtableEntry[it->first].resize(it->second + 1);
@@ -251,13 +262,13 @@ void Class::addFunction(const std::string &mangleName, llvm::Function *function)
 	}
 }
 
-void Class::addFunctionStruct(const std::string &mangleName, Symbol *symbol) {
-	if (vtableEntryLookup.count(mangleName) == 0) {
+void Class::addFunctionStruct(const std::string &signature, Symbol *symbol) {
+	if (vtableEntryLookup.count(signature) == 0) {
 		symbols.add(symbol);
 		switch (symbol->type) {
 		case Symbol::FUNCTION:
 			vtableType.push_back(llvm::PointerType::get(symbol->data.function.funcProto, 0));
-			vtableEntryLookup[mangleName].push_back(VtableEntryPointer(0, vtableType.size() - 1));
+			vtableEntryLookup[signature].push_back(VtableEntryPointer(0, vtableType.size() - 1));
 			symbol->data.function.vtableOffset = 0;
 			symbol->data.function.funcPtrOffset = vtableType.size() - 1;
 			break;

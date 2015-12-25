@@ -45,8 +45,10 @@ std::ostream& operator << (std::ostream &os, const Context::SymbolContext &conte
 Context::Context(bool debug) : mallocFunc(NULL), DL(NULL), DI(NULL), isDebug(debug) {
 	llvmContext = &llvm::getGlobalContext();
 	module = new llvm::Module("top", getContext());
+	module->setTargetTriple("i386-unknown-linux-gnu");
 	builder = new llvm::IRBuilder<>(getContext());
 	*const_cast<llvm::DataLayout**>(&DL) = new llvm::DataLayout(module);
+	DL->reset("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:32-f80:128:128-S128-n8:16:32");
 
 	currentFunction = NULL;
 

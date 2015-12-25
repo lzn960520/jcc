@@ -155,7 +155,7 @@ size_t Type::getSize(Context &context) {
 	case INT:
 		return 4;
 	case OBJECT: {
-		return context.DL->getTypeAllocSize(getType(context)); }
+		return context.DL->getTypeAllocSize(getType(context)->getPointerElementType()); }
 	case STRING:
 		return String.getSize(context);
 	default:
@@ -205,6 +205,15 @@ Type* Type::higherType(Type *a, Type *b) {
 	throw IncompatibleType(BaseTypeNames[a->baseType], BaseTypeNames[b->baseType]);
 }
 
+bool Type::isA(Type *a, Type *b) {
+	try {
+		cast(*(Context *) NULL, a, NULL, b);
+		return true;
+	} catch (...) {
+		return false;
+	}
+}
+
 llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *dtype) {
 	switch (dtype->baseType) {
 	case INT:
@@ -215,14 +224,14 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 			if (otype->getSize(context) == dtype->getSize(context))
 				return val;
 			else
-				return context.getBuilder().CreateTruncOrBitCast(val, dtype->getType(context));
+				return val ? context.getBuilder().CreateTruncOrBitCast(val, dtype->getType(context)) : NULL;
 		else if (otype->isFloat())
-			return context.getBuilder().CreateFPCast(val, dtype->getType(context));
+			return val ? context.getBuilder().CreateFPCast(val, dtype->getType(context)) : NULL;
 		break;
 	case FLOAT:
 	case DOUBLE:
 		if (otype->isNumber())
-			return context.getBuilder().CreateFPCast(val, dtype->getType(context));
+			return val ? context.getBuilder().CreateFPCast(val, dtype->getType(context)) : NULL;
 		break;
 	case OBJECT:
 		if (otype->isObject()) {
@@ -237,21 +246,27 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 					if (it->first == (Interface *) dcls) {
 						llvm::SmallVector<llvm::Value*, 1> tmp;
 						tmp.push_back(context.getBuilder().getInt32(it->second));
-						return context.getBuilder().CreatePointerCast(
-								context.getBuilder().CreateSub(
+						return val ? context.getBuilder().CreateIntToPtr(
+								context.getBuilder().CreateAdd(
 										context.getBuilder().CreatePtrToInt(
 												val,
 												context.getBuilder().getInt32Ty()
 										),
-										context.getBuilder().getInt32(context.DL->getIndexedOffset(
-												ocls->getLLVMType(),
-												tmp
-										))
+										context.getBuilder().getInt32(context.DL->getStructLayout((llvm::StructType *) ocls->getLLVMType())->getElementOffset(it->second)
+										)
 								),
-								dcls->getLLVMType()
-						);
+								llvm::PointerType::get(dcls->getLLVMType(), 0)
+						) : NULL;
 					}
 			} else {
+				while (ocls && ocls != dcls)
+					ocls = ocls->extendsClass;
+				if (ocls)
+					return val ? context.getBuilder().CreatePointerCast(
+						val,
+						dcls->getType()->getType(context)
+					) : NULL;
+				break;
 			}
 		}
 		break;
@@ -260,6 +275,51 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		break;
 	}
 	throw IncompatibleType(std::string("can't cast ") + otype->getName() + " to " + dtype->getName());
+}
+
+const std::string Type::getMangleName(Context &context) {
+	switch (baseType) {
+	case INT:
+		if (isUnsigned)
+			return "I";
+		else
+			return "i";
+	case SHORT:
+		if (isUnsigned)
+			return "S";
+		else
+			return "s";
+	case BYTE:
+		if (isUnsigned)
+			return "B";
+		else
+			return "b";
+	case CHAR:
+		return "c";
+	case FLOAT:
+		return "f";
+	case DOUBLE:
+		return "d";
+	case STRING:
+		return "a";
+	case BOOL:
+		return "t";
+	case ARRAY: {
+		std::string tmp = "A";
+		tmp += itos(arrayDim.size());
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
+			if (!it->first->isConstant() || !it->second || !it->second->isConstant())
+				tmp += "D";
+			else
+				tmp += "S" + itos(it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1);
+		tmp += internal->getMangleName(context);
+		return tmp;
+	}
+	case OBJECT:
+		if (getClass(context) == NULL)
+			throw SymbolNotFound("Class '" + identifier->getName() + "'");
+		return getClass()->getMangleName();
+	}
 }
 
 const std::string Type::getMangleName() {

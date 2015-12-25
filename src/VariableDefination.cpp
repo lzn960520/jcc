@@ -64,7 +64,7 @@ void VariableDefination::gen(Context &context) {
 			llvm::AllocaInst *tmp = addDebugLoc(context, context.getBuilder().CreateAlloca(type, NULL, it->first->getName()), it->first->loc);
 			insertDeclareDebugInfo(context, this->type, it->first->getName(), tmp, it->first->loc, false);
 			if (it->second)
-				addDebugLoc(context, context.getBuilder().CreateStore(it->second->load(context), tmp, false), it->first->loc);
+				addDebugLoc(context, context.getBuilder().CreateStore(Type::cast(context, it->second->getType(context), it->second->load(context), this->type), tmp, false), it->first->loc);
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, this->type, tmp));
 		}
 	} else {

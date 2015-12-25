@@ -28,10 +28,11 @@ void Interface::gen(Context &context) {
 }
 
 void Interface::genStruct(Context &context) {
-	llvm::StructType *vtableType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
-	llvmType = llvm::PointerType::get(vtableType, 0);
+	vtableLLVMType = llvm::StructType::create(context.getContext(), getMangleName() + "V");
+	llvmType = llvm::PointerType::get(vtableLLVMType, 0);
 	context.addClass(this);
 
+	vtableType.push_back(context.getBuilder().getInt32Ty());
 	for (std::list<MemberNode*>::iterator it = list.begin(); it != list.end(); it++) {
 		Function *func = (Function *) *it;
 		if (func->isStatic() || !func->isPublic() || func->isPrivate() || !func->isDeclaration() || func->isProtected())
@@ -40,7 +41,7 @@ void Interface::genStruct(Context &context) {
 		func->genStruct(context);
 	}
 
-	vtableType->setBody(this->vtableType);
+	vtableLLVMType->setBody(vtableType);
 }
 
 const std::string Interface::getMangleName() const {

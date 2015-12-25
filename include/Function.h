@@ -31,7 +31,7 @@ public:
 	const std::string& getName();
 	Type *getReturnType() { return return_type; }
 	llvm::FunctionType* getLLVMType(Context &context);
-	const std::string getMangleName();
+	const std::string getMangleName(Context &context);
 	inline bool isStatic() const { return qualifier->isStatic(); }
 	inline bool isPublic() const { return qualifier->isPublic(); }
 	inline bool isPrivate() const { return qualifier->isPrivate(); }
@@ -40,6 +40,7 @@ public:
 	void genStruct(Context &context) override;
 	void writeJsymFile(std::ostream &os) override;
 	bool isDeclaration() { return body == NULL && !isNative(); }
+	const std::string getSignature(Context &context);
 };
 
 #endif

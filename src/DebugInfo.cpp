@@ -70,7 +70,7 @@ DISubprogram* getDIFunction(Context &context, Function *function, Location &loc)
 	return context.DI->createFunction(
 			getDIFile(context, loc),
 			function->getName(),
-			function->getMangleName(),
+			function->getMangleName(context),
 			getDIFile(context, loc),
 			loc.begin.line,
 			getDIType(context, function),

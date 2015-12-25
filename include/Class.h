@@ -40,8 +40,9 @@ protected:
 	std::list<MemberNode*> &list;
 	llvm::Type *llvmType;
 	std::vector<llvm::Type*> vtableType;
-	virtual void addFunction(const std::string &mangleName, llvm::Function *function);
-	virtual void addFunctionStruct(const std::string &mangleName, Symbol *symbol);
+	llvm::StructType *vtableLLVMType;
+	virtual void addFunction(const std::string &signature, llvm::Function *function);
+	virtual void addFunctionStruct(const std::string &signature, Symbol *symbol);
 public:
 	Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
 	Class(Identifier *identifier, Identifier *extends, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);

@@ -56,14 +56,14 @@ void Function::gen(Context &context) {
 	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg_type.push_back(it->first->getType(context));
 	llvmFunction = context.createFunction(
-			getMangleName(),
+			getMangleName(context),
 			llvm::FunctionType::get(
 					return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
 					llvm::ArrayRef<llvm::Type*>(arg_type),
 					false),
 			this);
 	if (!isStatic())
-		cls->addFunction(getMangleName(), llvmFunction);
+		cls->addFunction(getSignature(context), llvmFunction);
 	*const_cast<llvm::DISubprogram**>(&context.DIfunction) = getDIFunction(context, this, loc);
 	context.pushContext();
 	context.pushDIScope(context.DIfunction);
@@ -97,7 +97,7 @@ llvm::Function* Function::getLLVMFunction(Context &context) {
 		for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 			arg_type.push_back(it->first->getType(context));
 		llvmFunction = context.createFunction(
-				getMangleName(),
+				getMangleName(context),
 				llvm::FunctionType::get(
 						return_type ? return_type->getType(context) : context.getBuilder().getVoidTy(),
 						llvm::ArrayRef<llvm::Type*>(arg_type),
@@ -113,10 +113,17 @@ const std::string& Function::getName() {
 	return identifier->getName();
 }
 
-const std::string Function::getMangleName() {
+const std::string Function::getMangleName(Context &context) {
 	std::string tmp = cls->getMangleName() + "F" + itos(identifier->getName().length()) + identifier->getName() + itos(arg_list.size());
 	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
-		tmp += it->first->getMangleName();
+		tmp += it->first->getMangleName(context);
+	return tmp;
+}
+
+const std::string Function::getSignature(Context &context) {
+	std::string tmp = "F" + itos(identifier->getName().length()) + identifier->getName() + itos(arg_list.size());
+	for (arg_iterator it = arg_list.begin(); it != arg_list.end(); it++)
+		tmp += it->first->getMangleName(context);
 	return tmp;
 }
 
@@ -134,7 +141,7 @@ llvm::FunctionType* Function::getLLVMType(Context &context) {
 
 void Function::genStruct(Context &context) {
 	if (!qualifier->isStatic())
-		cls->addFunctionStruct(getMangleName(), new Symbol(getName(), getLLVMType(context), 0, 0));
+		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), getLLVMType(context), 0, 0));
 	else
-		cls->addFunctionStruct(getMangleName(), new Symbol(getName(), this));
+		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), this));
 }

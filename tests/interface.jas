@@ -11,16 +11,31 @@ begin
 	begin
 		public function a() : int
 		begin
-			return 0;
+			return 3;
+		end;
+	end;
+
+	class B implements IA
+	begin
+		public function a() : int
+		begin
+			return 4;
 		end;
 	end;
 
 	class Main
 	begin
+		private static procedure print(IA a)
+		begin
+			System::IO::writeInt(a.a());
+		end;
+
 		public static function main() : int
 		begin
 			var IA a = new A;
-			a.a();
+			print(a);
+			a = new B;
+			print(a);
 			return 0;
 		end;
 	end;

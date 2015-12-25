@@ -62,10 +62,12 @@ public:
 	const std::string getName();
 	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
 	void writeJsymFile(std::ostream &os) override;
+	const std::string getMangleName(Context &context);
 	const std::string getMangleName();
 	void gen(Context &context) override {};
 	void genStruct(Context &context) override {};
 	llvm::Constant* getDefault(Context &context);
+	static bool isA(Type *a, Type *b);
 };
 
 #endif
