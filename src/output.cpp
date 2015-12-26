@@ -7,6 +7,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/Analysis/Passes.h>
+#include <llvm/LinkAllPasses.h>
 
 #include "output.h"
 #include "exception.h"
@@ -35,15 +36,15 @@ public:
 };
 
 static void addOptPasses(PassManager &pm) {
-	/*passManager.add(llvm::createConstantMergePass());
-	passManager.add(llvm::createConstantPropagationPass());
-	passManager.add(llvm::createLoopSimplifyPass());
-	passManager.add(llvm::createCFGSimplificationPass());
-	passManager.add(llvm::createInstructionSimplifierPass());
-	passManager.add(llvm::createDeadInstEliminationPass());
-	passManager.add(llvm::createDeadCodeEliminationPass());
-	passManager.add(llvm::createUnreachableBlockEliminationPass());
-	passManager.add(llvm::createGlobalDCEPass());*/
+	pm.add(llvm::createConstantMergePass());
+	pm.add(llvm::createConstantPropagationPass());
+	pm.add(llvm::createLoopSimplifyPass());
+	pm.add(llvm::createCFGSimplificationPass());
+	pm.add(llvm::createInstructionSimplifierPass());
+	pm.add(llvm::createDeadInstEliminationPass());
+	pm.add(llvm::createDeadCodeEliminationPass());
+	pm.add(llvm::createUnreachableBlockEliminationPass());
+	pm.add(llvm::createGlobalDCEPass());
 }
 
 void outputLLVM(Module &module, ostream &os) {

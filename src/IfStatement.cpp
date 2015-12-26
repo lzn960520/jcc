@@ -37,24 +37,20 @@ void IfStatement::gen(Context &context) {
 	if (!test->getType(context)->isBool())
 		throw InvalidType("test expression of if must be bool");
 	llvm::BasicBlock *ori_block = context.currentBlock(), *true_b, *false_b;
-	if (then_st) {
-		true_b = context.newBlock("if_" + itos(then_st->loc.begin.line) + "@true");
-		then_st->gen(context);
-	}
-	if (else_st) {
-		false_b = context.newBlock("if_" + itos(else_st->loc.begin.line) + "@false");
-		else_st->gen(context);
-	}
 	llvm::BasicBlock *after = context.newBlock("if_" + itos(then_st->loc.begin.line) + "@after");
 	Location tmploc;
 	tmploc.begin = loc.end;
 	if (then_st) {
-		context.setBlock(true_b);
-		addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);
+		true_b = context.newBlock("if_" + itos(then_st->loc.begin.line) + "@true");
+		then_st->gen(context);
+		if (context.currentBlock()->getTerminator() == NULL)
+			addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);
 	}
 	if (else_st) {
-		context.setBlock(false_b);
-		addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);
+		false_b = context.newBlock("if_" + itos(else_st->loc.begin.line) + "@false");
+		else_st->gen(context);
+		if (context.currentBlock()->getTerminator() == NULL)
+			addDebugLoc(context, context.getBuilder().CreateBr(after), tmploc);
 	}
 	if (!else_st)
 		false_b = after;

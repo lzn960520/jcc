@@ -33,6 +33,8 @@
 	yylloc.end.line += strcnt(yytext, '\n');
 	yylloc.end.column -= (strrchr(yytext, '\n') - yytext);
 	return T_COMMENT; }
+"for" {
+	return T_FOR; }
 "+"	{
 	return T_ADD; }
 "-"	{

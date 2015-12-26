@@ -38,7 +38,7 @@ void VariableDefination::gen(Context &context) {
 	if (this->type->isArray()) {
 		// check before
 		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = type->arrayDim.begin(); it != type->arrayDim.end(); it++)
-			if (!it->first->getTypeConstant()->isInt() || (it->second && !it->second->getTypeConstant()->isInt()))
+			if (!it->first->getTypeConstant()->isInt() || (it->second && !it->second->getType(context)->isInt()))
 				throw InvalidType("dim expression must be integer");
 		// determine whether it is an array pointer
 		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = type->arrayDim.begin(); it != type->arrayDim.end(); it++)
@@ -53,7 +53,7 @@ void VariableDefination::gen(Context &context) {
 									it->first->getName()),
 							loc);
 					insertDeclareDebugInfo(context, type, it->first->getName(), alloca, loc, false);
-					Op2 *assign = new Op2(it->first->clone(), Op2::ASSIGN, it->second);
+					Op2 *assign = new Op2(it->first->clone(), Op2::ASSIGN, it->second->clone());
 					try {
 						assign->load(context);
 					} catch (...) {
@@ -67,10 +67,10 @@ void VariableDefination::gen(Context &context) {
 		// generate template New
 		New *_template = NULL;
 		{
-			ArrayAccessor *accessor = new ArrayAccessor(new Op2(type->arrayDim[0].second, Op2::SUB, type->arrayDim[0].first));
+			ArrayAccessor *accessor = new ArrayAccessor(new Op2(type->arrayDim[0].second->clone(), Op2::SUB, type->arrayDim[0].first->clone()));
 			for (size_t i = 1, len = type->arrayDim.size(); i != len; i++)
-				accessor->push_back(new Op2(type->arrayDim[i].second, Op2::SUB, type->arrayDim[i].first));
-			_template = new New(type->internal, accessor);
+				accessor->push_back(new Op2(type->arrayDim[i].second->clone(), Op2::SUB, type->arrayDim[i].first->clone()));
+			_template = new New(type->internal->clone(), accessor);
 		}
 		// generate alloca and assign
 		{
@@ -108,6 +108,16 @@ void VariableDefination::gen(Context &context) {
 					loc);
 			insertDeclareDebugInfo(context, type, it->first->getName(), alloca, loc, false);
 			context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, type, alloca));
+			if (it->second) {
+				Op2 *assign = new Op2(it->first->clone(), Op2::ASSIGN, it->second->clone());
+				try {
+					assign->load(context);
+				} catch (...) {
+					delete assign;
+					throw;
+				}
+				delete assign;
+			}
 		}
 	}
 }

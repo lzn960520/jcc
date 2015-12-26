@@ -8,6 +8,7 @@ begin
 		static native public procedure writeFloat(float a);
 		static native public procedure writeBool(bool a);
 		static native public procedure writeln(string s);
+		static native public procedure write(string s);
 		static native public function readInt() : int;
 	end;
 end;

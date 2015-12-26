@@ -1,0 +1,49 @@
+#entry leetcode::P2
+
+using System::IO;
+
+module leetcode
+begin
+	class P2
+	begin
+		private static function max(int a, int b) : int
+		begin
+			if (a > b) then
+				return a
+			else
+				return b;
+		end;
+
+		public static function main() : int
+		begin
+			var int L1 = IO::readInt(), L2 = IO::readInt();
+			var int [0..(L1 - 1)] num1;
+			var int[0..(L2 - 1)] num2;
+			var int[0..max(L1, L2)] ans;
+			var int ansLen = 0;
+			for (var int i = 0; i < L1; i++) do
+				num1[i] = IO::readInt();
+			for (var int i = 0; i < L2; i++) do
+				num2[i] = IO::readInt();
+			for (var int i = 0, len = max(L1, L2); i <= len; i++) do
+				ans[i] = 0;
+			for (var int i = 0, len = max(L1, L2); i < len; i++) do
+			begin
+				if (i < L1) then
+					ans[i] += num1[i];
+				if (i < L2) then
+					ans[i] += num2[i];
+				ans[i + 1] += ans[i] / 10;
+				ans[i] %= 10;
+				if (ans[i + 1] != 0) then
+					ansLen = i + 1
+				else if (ans[i] != 0) then
+					ansLen = i;
+			end;
+			for (var int i = 0; i <= ansLen; i++) do
+				IO::writeInt(ans[i]);
+			IO::writeln("");
+			return 0;
+		end;
+	end;
+end;

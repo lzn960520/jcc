@@ -521,5 +521,10 @@ Type* Type::clone() const {
 		for (size_t i = 1, len = arrayDim.size(); i < len; i++)
 			definator->push_back(arrayDim[i].first->clone(), arrayDim[i].second->clone());
 		return new Type(internal->clone(), definator); }
+	case OBJECT:
+		if (cls)
+			return new Type(cls);
+		else
+			return new Type(identifier->clone());
 	}
 }

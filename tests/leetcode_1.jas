@@ -1,0 +1,29 @@
+#entry leetcode::P1
+
+using System::IO;
+
+module leetcode
+begin
+	class P1
+	begin
+		static public function main() : int
+		begin
+			var int N = IO::readInt();
+			var int[1..N] arr;
+			for (var int i = 1; i <= N; i++) do
+				arr[i] = IO::readInt();
+			var int target = IO::readInt();
+			for (var int i = 1; i <= N; i++) do
+				for (var int j = i + 1; j <= N; j++) do
+					if (arr[i] + arr[j] == target) then
+					begin
+						IO::writeInt(i);
+						IO::writeInt(j);
+						IO::writeln("");
+						return 0;
+					end;
+			IO::writeln("Not found");
+			return 0;
+		end;
+	end;
+end;

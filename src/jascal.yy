@@ -66,6 +66,7 @@
 	#include "CompileFile.h"
 	#include "LiteralInt.h"
 	#include "LiteralBool.h"
+	#include "ForStatement.h"
 }
 
 %union {
@@ -121,12 +122,12 @@
 %type <arr_acc> array_accessor
 %type <arr_acc> array_accessor_list
 %type <var_entry_list> variable_defination_list
-%type <var_def> variable_defination
+%type <var_def> variable_defination opt_variable_defination
 %type <function> function_defination
 %type <function> function_declaration
-%type <ast> while_statement if_statement repeat_statement statement
+%type <ast> while_statement if_statement repeat_statement statement for_statement
 %type <statements> statement_list_head statement_list
-%type <expression> expression literal function_call
+%type <expression> expression opt_expression literal function_call
 %type <type> type_name base_type
 %type <call_arg_list> call_arg_list
 %type <arg_list> arg_list
@@ -172,6 +173,7 @@
 		T_RSH ">>" T_LSH_ASSIGN "<<=" T_RSH_ASSIGN ">>=" T_BIT_OR "|"
 		T_BIT_AND "&" T_BIT_XOR "^" T_BIT_NOT "~" T_BOOL "bool" T_TRUE "true"
 		T_FALSE "false" T_ENTRY "#entry" T_LIB "#lib" T_NATIVE "native"
+		T_FOR "for"
 
 %right T_ASSIGN
 %left T_LOG_OR
@@ -181,13 +183,13 @@
 %right T_LOG_AND_ASSIGN
 %right T_LOG_XOR_ASSIGN
 %precedence T_LOG_NOT
+%right T_ADD_ASSIGN T_SUB_ASSIGN
+%right T_MUL_ASSIGN T_DIV_ASSIGN T_MOD_ASSIGN
+%right T_PWR_ASSIGN
 %left T_LT T_GT T_LEQ T_GEQ T_EQ T_NEQ T_LTGT
 %left T_ADD T_SUB
 %left T_MUL T_DIV T_MOD
 %left T_PWR
-%right T_ADD_ASSIGN T_SUB_ASSIGN
-%right T_MUL_ASSIGN T_DIV_ASSIGN T_MOD_ASSIGN
-%right T_PWR_ASSIGN
 %left T_LSH T_RSH
 %right T_LSH_ASSIGN T_RSH_ASSIGN
 %left T_BIT_OR
@@ -603,7 +605,9 @@ literal:
 		SAVE_LOC($$, @$); }
 
 statement:
-	expression {
+	{
+		$$ = NULL; }
+	| expression {
 		$$ = $1; }
 	| while_statement
 	| T_VAR variable_defination {
@@ -619,6 +623,7 @@ statement:
 	| T_BEGIN statement_list T_END {
 		$$ = new Block($2);
 		SAVE_LOC($$, @$); }
+	| for_statement
 
 statement_list_head:
 	{
@@ -630,8 +635,7 @@ statement_list_head:
 		SAVE_LOC($$, @$); }
 
 statement_list:
-	statement_list_head
-	| statement_list_head statement {
+	statement_list_head statement {
 		$1->push_back($2);
 		$$ = $1;
 		SAVE_LOC($$, @$); }
@@ -647,6 +651,22 @@ if_statement:
 while_statement:
 	T_WHILE expression T_DO statement {
 		$$ = new WhileStatement($2, $4);
+		SAVE_LOC($$, @$); }
+
+opt_variable_defination:
+	{
+		$$ = NULL; }
+	| T_VAR variable_defination {
+		$$ = $2; }
+
+opt_expression:
+	{
+		$$ = NULL; }
+	| expression
+
+for_statement:
+	T_FOR T_LEFT_PARENTHESIS opt_variable_defination T_SEMICOLON opt_expression T_SEMICOLON statement_list T_RIGHT_PARENTHESIS T_DO statement {
+		$$ = new ForStatement($3, $5, $7, $10);
 		SAVE_LOC($$, @$); }
 
 repeat_statement:

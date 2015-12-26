@@ -47,6 +47,8 @@ DIType* getDIType(Context &context, Type *type) {
 		return context.DI->createBasicType("string", context.DL->getPointerSizeInBits(0), context.DL->getPointerSizeInBits(0), DW_ATE_float);
 	case Type::OBJECT:
 		return context.DI->createPointerType(getDIType(context, (Type *) NULL), context.DL->getPointerSizeInBits(0), context.DL->getPointerSizeInBits(0));
+	case Type::ARRAY:
+		return context.DI->createPointerType(getDIType(context, type->internal), context.DL->getPointerSizeInBits(0), context.DL->getPointerSizeInBits(0));
 	}
 }
 

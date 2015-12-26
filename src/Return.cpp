@@ -29,5 +29,4 @@ void Return::gen(Context &context) {
 		addDebugLoc(context, context.getBuilder().CreateRet(expression->load(context)), loc);
 	else
 		addDebugLoc(context, context.getBuilder().CreateRetVoid(), loc);
-	context.newBlock();
 }

@@ -1,0 +1,17 @@
+#entry Test::Main
+
+using System::IO;
+
+module Test
+begin
+	class Main
+	begin
+		public static function main() : int
+		begin
+			for (var int i = 0; i < 10; i++) do
+				IO::writeInt(i);
+			IO::writeln("");
+			return 0;
+		end;
+	end;
+end;

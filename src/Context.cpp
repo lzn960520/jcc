@@ -11,6 +11,7 @@
 #include "JsymFile.h"
 #include "Module.h"
 #include "util.h"
+#include "Return.h"
 
 void Context::SymbolContext::add(Symbol *symbol) {
 	map[symbol->name] = symbol;
@@ -112,14 +113,21 @@ llvm::Function* Context::createFunction(const std::string &name, llvm::FunctionT
 }
 
 void Context::endFunction() {
-	if (currentFunction && !currentFunction->isNative()) {
+	if (currentFunction) {
 		for (llvm::Function::iterator it = currentFunction->getLLVMFunction(*this)->begin(); it != currentFunction->getLLVMFunction(*this)->end(); it++)
 			if ((it->hasNUsesOrMore(1) || &(*it) == &currentFunction->getLLVMFunction(*this)->getEntryBlock()) && it->getTerminator() == NULL) {
 				if (currentFunction->getLLVMFunction(*this)->getReturnType()->isVoidTy()) {
 					builder->SetInsertPoint(&(*it));
 					builder->CreateRetVoid();
-				} else
+					builder->ClearInsertionPoint();
+				} else if (currentFunction->isNative()) {
+					builder->SetInsertPoint(&(*it));
+					builder->CreateRet(currentFunction->getReturnType()->getDefault(*this));
+					builder->ClearInsertionPoint();
+				} else {
+					(*it).dump();
 					throw NoReturn(currentFunction->getName().c_str());
+				}
 			}
 		currentFunction = NULL;
 	}

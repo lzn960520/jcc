@@ -34,8 +34,6 @@ Json::Value LiteralInt::json() {
 }
 
 LiteralInt::~LiteralInt() {
-	if (type)
-		delete type;
 }
 
 llvm::Value* LiteralInt::load(Context &context) {

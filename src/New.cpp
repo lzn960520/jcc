@@ -167,5 +167,5 @@ New* New::clone() const {
 	if (dim)
 		return new New(type->clone(), dim->clone());
 	else
-		return new New(type->clone(), NULL);
+		return new New(type->clone());
 }

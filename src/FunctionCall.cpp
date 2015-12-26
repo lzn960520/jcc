@@ -17,7 +17,10 @@ Expression* FunctionCall::clone() const {
 	std::list<Expression*> *arg = new std::list<Expression*>();
 	for (std::list<Expression*>::const_iterator it = arg_list.begin(); it != arg_list.end(); it++)
 		arg->push_back((*it)->clone());
-	return new FunctionCall(target->clone(), identifier->clone(), arg);
+	if (target)
+		return new FunctionCall(target->clone(), identifier->clone(), arg);
+	else
+		return new FunctionCall(NULL, identifier->clone(), arg);
 }
 
 FunctionCall::~FunctionCall() {

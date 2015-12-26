@@ -20,10 +20,11 @@ define void @_CCN6SystemC2IO(%CN6SystemC2IO*) {
 }
 
 declare i32 @printf(i8*, ...)
-@writeIntFmt = private constant [4 x i8] c"%d\0A\00"
-@writeFloatFmt = private constant [4 x i8] c"%f\0A\00"
-@writeTrueFmt = private constant [6 x i8] c"true\0A\00"
-@writeFalseFmt = private constant [7 x i8] c"false\0A\00"
+@writeIntFmt = private constant [4 x i8] c"%d \00"
+@writeFloatFmt = private constant [4 x i8] c"%f \00"
+@writeTrueFmt = private constant [6 x i8] c"true \00"
+@writeFalseFmt = private constant [7 x i8] c"false \00"
+@writeFmt = private constant [3 x i8] c"%s\00"
 @writelnFmt = private constant [4 x i8] c"%s\0A\00"
 
 define void @CN6SystemC2IOF8writeInt1i(i32 %a) {
@@ -64,6 +65,17 @@ define void @CN6SystemC2IOF7writeln1a(%CN6SystemC6string* %s) {
 "CN6SystemC2IOF7writeln1a@entry":
   call void @llvm.dbg.declare(metadata %CN6SystemC6string* %s, metadata !18, metadata !16), !dbg !19
   %0 = getelementptr [4 x i8], [4 x i8]* @writelnFmt, i32 0, i32 0
+  %1 = getelementptr %CN6SystemC6string, %CN6SystemC6string* %s, i32 0, i32 1
+  %2 = load i32, i32* %1
+  %3 = inttoptr i32 %2 to i8*
+  call i32 (i8*, ...) @printf(i8* %0, i8* %3)
+  ret void
+}
+
+define void @CN6SystemC2IOF5write1a(%CN6SystemC6string* %s) {
+"CN6SystemC2IOF5write1a@entry":
+  call void @llvm.dbg.declare(metadata %CN6SystemC6string* %s, metadata !18, metadata !16), !dbg !19
+  %0 = getelementptr [3 x i8], [3 x i8]* @writeFmt, i32 0, i32 0
   %1 = getelementptr %CN6SystemC6string, %CN6SystemC6string* %s, i32 0, i32 1
   %2 = load i32, i32* %1
   %3 = inttoptr i32 %2 to i8*
