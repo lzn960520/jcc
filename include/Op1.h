@@ -3,15 +3,19 @@
 
 #include "Expression.h"
 
-struct Op1 : public Expression {
+class Op1 : public Expression {
 	Expression *operand;
+public:
 	enum OpType {
 		SELF_INC,
 		SELF_DEC,
 		BIT_NOT,
 		LOG_NOT,
 		NEG
-	} op;
+	};
+private:
+	OpType op;
+public:
 	Op1(Expression *operand, OpType op);
 	static const char *OpNames[];
 	~Op1();
@@ -22,6 +26,7 @@ struct Op1 : public Expression {
 	bool isConstant() override;
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
+	Op1* clone() const override;
 };
 
 #endif

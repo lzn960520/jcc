@@ -15,6 +15,13 @@ LiteralInt::LiteralInt(int val, bool isUnsigned) {
 	}
 }
 
+LiteralInt* LiteralInt::clone() const {
+	if (type->isUnsigned)
+		return new LiteralInt(this->val._uint32, true);
+	else
+		return new LiteralInt(this->val._int32, false);
+}
+
 Json::Value LiteralInt::json() {
 	Json::Value root;
 	root["name"] = "literal_int";

@@ -33,19 +33,33 @@ Type Type::UInt32(Type::INT, true);
 
 Type::Type(BaseType baseType, bool isUnsigned) :
 			baseType(baseType), isUnsigned(isUnsigned), internal(NULL), cls(NULL), identifier(NULL) {
-	assert(baseType != ARRAY);
-	if ((baseType == CHAR || baseType == FLOAT || baseType == DOUBLE) && isUnsigned)
-		throw InvalidType("Can't set char, float or double to unsigned");
+	switch (baseType) {
+	case CHAR:
+	case FLOAT:
+	case DOUBLE:
+	case BOOL:
+	case STRING:
+		if (isUnsigned)
+			throw InvalidType("Can't set char, float or double to unsigned");
+		break;
+	case INT:
+	case SHORT:
+	case BYTE:
+		break;
+	case ARRAY:
+	case OBJECT:
+		assert(false);
+	}
 }
 
-Type::Type(Type *baseType, ArrayDefinator *definator) :
-			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL), arrayDim(definator->list) {
+Type::Type(Type *internal, ArrayDefinator *definator) :
+			baseType(ARRAY), isUnsigned(false), internal(internal), cls(NULL), identifier(NULL), arrayDim(definator->list) {
 	definator->list.clear();
 	delete definator;
 }
 
-Type::Type(Type *baseType, const std::vector<std::pair<int, int> > &dims) :
-			baseType(ARRAY), isUnsigned(false), internal(baseType), cls(NULL), identifier(NULL) {
+Type::Type(Type *internal, const std::vector<std::pair<int, int> > &dims) :
+			baseType(ARRAY), isUnsigned(false), internal(internal), cls(NULL), identifier(NULL) {
 	for (std::vector<std::pair<int, int> >::const_iterator it = dims.begin(); it != dims.end(); it++)
 		const_cast<std::vector<std::pair<Expression*, Expression*> >*>(&arrayDim)->push_back(std::pair<Expression*, Expression*>(new LiteralInt(it->first, true), new LiteralInt(it->second, true)));
 }
@@ -129,12 +143,14 @@ llvm::Type* Type::getType(Context &context) {
 		{
 			size_t totalSize = 1;
 			for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
-				if (!it->second)
-					throw NotImplemented("dynamic array");
-				if (!it->first->isConstant() || !it->second->isConstant())
-					throw NotImplemented("dynamic dim expression");
-				if (!it->first->getTypeConstant()->isInt() || !it->second->getTypeConstant()->isInt())
+				if (!it->first->getType(context)->isInt())
 					throw InvalidType("dim expression must be integer");
+				if (!it->second)
+					return llvm::PointerType::get(internal->getType(context), 0);
+				if (!it->second->getType(context)->isInt())
+					throw InvalidType("dim expression must be integer");
+				if (!it->first->isConstant() || !it->second->isConstant())
+					return llvm::PointerType::get(internal->getType(context), 0);
 				totalSize *= it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1;
 			}
 			return llvm::ArrayType::get(internal->getType(context), totalSize);
@@ -293,13 +309,26 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		}
 		break;
 	case ARRAY:
-		throw NotImplemented("type cast about array");
+		if (!otype->isArray())
+			break;
+		if (otype->arrayDim.size() != dtype->arrayDim.size())
+			break;
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = otype->arrayDim.begin(), it2 = dtype->arrayDim.begin(); it != otype->arrayDim.end(); it++, it2++) {
+			if ((!it->second || !it->second->isConstant()) && it2->second && it2->second->isConstant())
+				break;
+			if (it->second && it2->second && it->second->isConstant() && it2->second->isConstant())
+				if (it->second->loadConstant()._int64 - it->first->loadConstant()._int64 != it2->second->loadConstant()._int64 - it2->first->loadConstant()._int64)
+					break;
+		}
+		if (!otype->internal->equals(*dtype->internal, context))
+			break;
+		return val;
 		break;
 	}
 	throw IncompatibleType(std::string("can't cast ") + otype->getName() + " to " + dtype->getName());
 }
 
-const std::string Type::getMangleName(Context &context) {
+const std::string Type::getMangleName(Context &context) const {
 	switch (baseType) {
 	case INT:
 		if (isUnsigned)
@@ -330,7 +359,7 @@ const std::string Type::getMangleName(Context &context) {
 		std::string tmp = "A";
 		tmp += itos(arrayDim.size());
 		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++)
-			if (!it->first->isConstant() || !it->second || !it->second->isConstant())
+			if (!it->second || !it->second->isConstant())
 				tmp += "D";
 			else
 				tmp += "S" + itos(it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1);
@@ -338,13 +367,13 @@ const std::string Type::getMangleName(Context &context) {
 		return tmp;
 	}
 	case OBJECT:
-		if (getClass(context) == NULL)
+		if (const_cast<Type*>(this)->getClass(context) == NULL)
 			throw SymbolNotFound("Class '" + identifier->getName() + "'");
 		return getClass()->getMangleName();
 	}
 }
 
-const std::string Type::getMangleName() {
+const std::string Type::getMangleName() const {
 	switch (baseType) {
 	case INT:
 		if (isUnsigned)
@@ -401,11 +430,9 @@ llvm::Constant* Type::getDefault(Context &context) {
 		{
 			size_t totalSize = 1;
 			for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
-				if (!it->second)
-					throw NotImplemented("dynamic array");
-				if (!it->first->isConstant() || !it->second->isConstant())
-					throw NotImplemented("dynamic dim expression");
-				if (!it->first->getTypeConstant()->isInt() || !it->second->getTypeConstant()->isInt())
+				if (!it->second || !it->second->isConstant())
+					return llvm::ConstantPointerNull::get(llvm::PointerType::get(internal->getType(context), 0));
+				if (!it->first->getType(context)->isInt() || !it->second->getType(context)->isInt())
 					throw InvalidType("dim expression must be integer");
 				totalSize *= it->second->loadConstant()._int64 - it->first->loadConstant()._int64 + 1;
 			}
@@ -431,8 +458,17 @@ Class* Type::getClass(Context &context) {
 
 const std::string Type::getName() {
 	switch (baseType) {
-	case ARRAY:
-		return internal->getName() + "[]";
+	case ARRAY: {
+		std::string tmp = internal->getName() + "[";
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = arrayDim.begin(); it != arrayDim.end(); it++) {
+			tmp += itos(it->first->loadConstant()._int64) + "..";
+			if (it->second && it->second->isConstant())
+				tmp += itos(it->second->loadConstant()._int64) + ",";
+			else
+				tmp += ",";
+		}
+		tmp = tmp.substr(0, tmp.size() - 1) + "]";
+		return tmp; }
 	case OBJECT:
 		if (cls)
 			return cls->getFullName();
@@ -440,5 +476,50 @@ const std::string Type::getName() {
 			return identifier->getName();
 	default:
 		return BaseTypeNames[baseType];
+	}
+}
+
+bool Type::equals(const Type &other, Context &context) const {
+	if (this->baseType != other.baseType)
+		return false;
+	switch (this->baseType) {
+	case INT:
+	case BYTE:
+	case SHORT:
+		return this->isUnsigned == other.isUnsigned;
+	case FLOAT:
+	case DOUBLE:
+	case BOOL:
+	case CHAR:
+	case STRING:
+		return true;
+	case ARRAY:
+		if (this->arrayDim.size() != other.arrayDim.size())
+			return false;
+		for (std::vector<std::pair<Expression*, Expression*> >::const_iterator it = this->arrayDim.begin(), it2 = other.arrayDim.begin(); it != this->arrayDim.end(); it++, it2++)
+			if (it->second->isConstant() != it2->second->isConstant())
+				return false;
+		return this->internal->equals(*other.internal, context);
+	case OBJECT:
+		return this->getMangleName(context) == other.getMangleName(context);
+	}
+}
+
+Type* Type::clone() const {
+	switch (baseType) {
+	case CHAR:
+	case FLOAT:
+	case DOUBLE:
+	case BOOL:
+	case INT:
+	case SHORT:
+	case BYTE:
+	case STRING:
+		return new Type(baseType, isUnsigned);
+	case ARRAY: {
+		ArrayDefinator *definator = new ArrayDefinator(arrayDim[0].first->clone(), arrayDim[1].second->clone());
+		for (size_t i = 1, len = arrayDim.size(); i < len; i++)
+			definator->push_back(arrayDim[i].first->clone(), arrayDim[i].second->clone());
+		return new Type(internal->clone(), definator); }
 	}
 }

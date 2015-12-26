@@ -5,9 +5,14 @@
 #include "Type.h"
 #include "DebugInfo.h"
 #include "Function.h"
+#include "MemberAccess.h"
 
 Identifier::Identifier(const char *name) :
 	text(name) {
+}
+
+Identifier* Identifier::clone() const {
+	return new Identifier(text.c_str());
 }
 
 Json::Value Identifier::json() {
@@ -30,7 +35,6 @@ llvm::Value* Identifier::load(Context &context) {
 		throw SymbolNotFound(text, loc);
 	switch (ans->type) {
 	case Symbol::ARGUMENT:
-	case Symbol::STATIC_MEMBER_VAR:
 		return ans->data.identifier.value;
 	case Symbol::LOCAL_VAR: {
 		return addDebugLoc(
@@ -38,25 +42,19 @@ llvm::Value* Identifier::load(Context &context) {
 				context.getBuilder().CreateLoad(ans->data.identifier.value),
 				loc);
 	}
+	case Symbol::STATIC_MEMBER_VAR: {
+		MemberAccess *access = new MemberAccess(new Type(context.currentClass), clone());
+		llvm::Value *ans = access->load(context);
+		delete access;
+		return ans; }
 	case Symbol::MEMBER_VAR: {
-		if (context.currentFunction->isStatic())
-			throw CompileException("Access non-static member variable in static function");
-		llvm::Value *tmp = addDebugLoc(
-				context,
-				context.getBuilder().CreateStructGEP(
-						nullptr,
-						context.findSymbol("this")->data.identifier.value,
-						ans->data.member.index),
-				loc);
-		if (tmp->getType()->getPointerElementType()->isArrayTy())
-			return tmp;
-		else {
-			return addDebugLoc(
-					context,
-					context.getBuilder().CreateLoad(tmp),
-					loc);
-		}
-	}
+		MemberAccess *access = new MemberAccess(new Identifier("this"), clone());
+		llvm::Value *ans = access->load(context);
+		delete access;
+		return ans; }
+	case Symbol::FUNCTION:
+	case Symbol::STATIC_FUNCTION:
+		throw NotImplemented("function pointer");
 	}
 }
 
@@ -66,26 +64,22 @@ llvm::Instruction* Identifier::store(Context &context, llvm::Value *value) {
 		throw SymbolNotFound(text, loc);
 	switch (ans->type) {
 	case Symbol::ARGUMENT:
-	case Symbol::STATIC_MEMBER_VAR:
 		return context.getBuilder().CreateStore(value, ans->data.identifier.value);
-		break;
 	case Symbol::LOCAL_VAR:
 		return context.getBuilder().CreateStore(value, ans->data.identifier.value);
-		break;
+	case Symbol::STATIC_MEMBER_VAR: {
+		MemberAccess *access = new MemberAccess(new Type(context.currentClass), clone());
+		llvm::Instruction *store = access->store(context, value);
+		delete access;
+		return store; }
 	case Symbol::MEMBER_VAR: {
-		return context.getBuilder().CreateStore(
-				value,
-				addDebugLoc(
-						context,
-						context.getBuilder().CreateStructGEP(
-								nullptr,
-								context.findSymbol("this")->data.identifier.value,
-								ans->data.member.index),
-						loc));
-		break;
-	}
+		MemberAccess *access = new MemberAccess(new Identifier("this"), clone());
+		llvm::Instruction *store = access->store(context, value);
+		delete access;
+		return store; }
+	case Symbol::STATIC_FUNCTION:
 	case Symbol::FUNCTION:
-		throw NotImplemented("function pointer");
+		throw NotAssignable("function pointer");
 	}
 }
 
@@ -101,6 +95,7 @@ Type* Identifier::getType(Context &context) {
 	case Symbol::MEMBER_VAR:
 		return ans->data.member.type;
 	case Symbol::FUNCTION:
+	case Symbol::STATIC_FUNCTION:
 		throw NotImplemented("function pointer");
 	}
 }

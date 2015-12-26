@@ -49,6 +49,10 @@ Op2::Op2(Expression *left, OpType op, Expression *right) :
 	left(left), right(right), op(op) {
 }
 
+Op2* Op2::clone() const {
+	return new Op2(left->clone(), op, right->clone());
+}
+
 Json::Value Op2::json() {
 	Json::Value root;
 	root["name"] = "op2";
@@ -67,7 +71,8 @@ Op2::~Op2() {
 
 llvm::Value* Op2::load(Context &context) {
 	if (op == ASSIGN) {
-		llvm::Value *tmp = Type::cast(context, right->getType(context), right->load(context), left->getType(context));
+		llvm::Value *tmp = right->load(context);
+		tmp = Type::cast(context, right->getType(context), tmp, left->getType(context));
 		addDebugLoc(
 				context,
 				left->store(context, tmp),
@@ -336,8 +341,9 @@ llvm::Value* Op2::load(Context &context) {
 		return tmp; }
 	case PWR:
 	case PWR_ASSIGN:
-		break;
+		throw NotImplemented(std::string("operator '") + OpNames[op] + "'");
 	}
+	throw CompileException("Shouldn't reach here");
 }
 
 llvm::Instruction* Op2::store(Context &context, llvm::Value *value) {

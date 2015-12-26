@@ -5,6 +5,13 @@ ArrayAccessor::ArrayAccessor(Expression *expression) {
 	push_back(expression);
 }
 
+ArrayAccessor* ArrayAccessor::clone() const {
+	ArrayAccessor *ans = new ArrayAccessor(list[0]->clone());
+	for (size_t i = 1, len = list.size(); i != len; i++)
+		ans->push_back(list[i]->clone());
+	return ans;
+}
+
 void ArrayAccessor::push_back(Expression *expression) {
 	list.push_back(expression);
 }

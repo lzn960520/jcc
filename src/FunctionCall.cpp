@@ -13,6 +13,13 @@ FunctionCall::FunctionCall(Expression *target, Identifier *identifier, std::list
 	target(target), identifier(identifier), arg_list(*arg_list) {
 }
 
+Expression* FunctionCall::clone() const {
+	std::list<Expression*> *arg = new std::list<Expression*>();
+	for (std::list<Expression*>::const_iterator it = arg_list.begin(); it != arg_list.end(); it++)
+		arg->push_back((*it)->clone());
+	return new FunctionCall(target->clone(), identifier->clone(), arg);
+}
+
 FunctionCall::~FunctionCall() {
 	if (target)
 		delete target;

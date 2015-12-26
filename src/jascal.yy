@@ -215,7 +215,7 @@ _compile_unit:
 
 compile_unit_entry:
 	T_LIB T_LITERAL_STRING {
-		root->addLib($2->text);
+		root->addLib($2->getText());
 		delete $2; }
 	| T_ENTRY ns_identifier {
 		root->setEntry($2->getFullName()); }
@@ -544,6 +544,9 @@ tuple_list:
 object_create:
 	T_NEW type_name {
 		$$ = new New($2);
+		SAVE_LOC($$, @$); }
+	| T_NEW type_name array_accessor {
+		$$ = new New($2, $3);
 		SAVE_LOC($$, @$); }
 
 array_accessor:

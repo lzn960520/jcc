@@ -4,10 +4,13 @@
 #include "Expression.h"
 
 class Type;
+class ArrayAccessor;
 class New : public Expression {
 	Type *type;
+	ArrayAccessor *dim;
 public:
 	New(Type *type);
+	New(Type *type, ArrayAccessor *dim);
 	~New();
 	Json::Value json() override;
 	llvm::Value *load(Context &context) override;
@@ -16,6 +19,7 @@ public:
 	bool isConstant() override { return false; }
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
+	New* clone() const override;
 };
 
 #endif

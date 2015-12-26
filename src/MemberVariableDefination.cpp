@@ -26,7 +26,7 @@ void MemberVariableDefination::gen(Context &context) {
 	if (qualifier->isStatic())
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
 			llvm::Value *old = cls->symbols.find(it->first->getName())->data.identifier.value;
-			llvm::Value *_new = new llvm::GlobalVariable(context.getModule(), vars->type->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, vars->type->getDefault(context));
+			llvm::Value *_new = new llvm::GlobalVariable(context.getModule(), vars->getType()->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, vars->getType()->getDefault(context));
 			old->replaceAllUsesWith(_new);
 			((llvm::GlobalVariable *) old)->eraseFromParent();
 			cls->symbols.find(it->first->getName())->data.identifier.value = _new;
@@ -37,10 +37,10 @@ void MemberVariableDefination::gen(Context &context) {
 void MemberVariableDefination::genStruct(Context &context) {
 	if (!qualifier->isStatic())
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
-			cls->members.push_back(vars->type->getType(context));
-			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->type, cls->members.size() - 1));
+			cls->members.push_back(vars->getType()->getType(context));
+			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->getType(), cls->members.size() - 1));
 		}
 	else
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
-			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->type, new llvm::GlobalVariable(context.getModule(), vars->type->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, NULL, cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
+			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->getType(), new llvm::GlobalVariable(context.getModule(), vars->getType()->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, NULL, cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
 }

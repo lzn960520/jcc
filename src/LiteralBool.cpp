@@ -8,6 +8,10 @@
 LiteralBool::LiteralBool(bool val) : val(val) {
 }
 
+LiteralBool* LiteralBool::clone() const {
+	return new LiteralBool(val);
+}
+
 LiteralBool::~LiteralBool() {
 }
 

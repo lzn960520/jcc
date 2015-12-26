@@ -5,9 +5,10 @@
 
 #include "Expression.h"
 
-struct LiteralString : public Expression {
+class LiteralString : public Expression {
 	std::string text;
 	std::string ori_text;
+public:
 	LiteralString(const char *text);
 	~LiteralString();
 	Json::Value json() override;
@@ -21,6 +22,8 @@ struct LiteralString : public Expression {
 		return ans;
 	}
 	Type* getTypeConstant() override;
+	LiteralString* clone() const override;
+	const std::string& getText() const { return text; }
 };
 
 #endif

@@ -22,6 +22,7 @@ public:
 	Type* getTypeConstant() override;
 	bool isConstant() override { return false; }
 	Constant loadConstant() override;
+	MemberAccess* clone() const override;
 };
 
 #endif

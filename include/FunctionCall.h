@@ -20,6 +20,7 @@ struct FunctionCall : public Expression {
 	bool isConstant() override { return false; }
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
+	Expression* clone() const override;
 };
 
 #endif

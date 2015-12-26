@@ -3,9 +3,10 @@
 
 #include "Expression.h"
 
-struct LiteralBool : public Expression {
+class LiteralBool : public Expression {
 	Type *type;
 	bool val;
+public:
 	LiteralBool(bool val);
 	~LiteralBool();
 	Json::Value json() override;
@@ -15,6 +16,7 @@ struct LiteralBool : public Expression {
 	bool isConstant() override { return true; }
 	Constant loadConstant() override;
 	Type* getTypeConstant() override { return type; }
+	LiteralBool* clone() const override;
 };
 
 #endif

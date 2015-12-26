@@ -17,6 +17,7 @@ struct Identifier : public Expression {
 	bool isConstant() override { return false; }
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
+	Identifier* clone() const override;
 };
 
 #endif

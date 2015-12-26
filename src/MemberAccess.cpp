@@ -15,6 +15,13 @@ MemberAccess::MemberAccess(Type *cls, Identifier *identifier) :
 		target(NULL), targetClass(cls), identifier(identifier), isStatic(true) {
 }
 
+MemberAccess* MemberAccess::clone() const {
+	if (isStatic)
+		return new MemberAccess(targetClass->clone(), identifier->clone());
+	else
+		return new MemberAccess(target->clone(), identifier->clone());
+}
+
 MemberAccess::~MemberAccess() {
 	if (target)
 		delete target;
@@ -105,9 +112,15 @@ Type* MemberAccess::getType(Context &context) {
 
 llvm::Value* MemberAccess::load(Context &context) {
 	llvm::Value *ptr = getPointer(context);
-	if (ptr->getType()->getPointerElementType()->isArrayTy())
-		return ptr;
-	else
+	if (ptr->getType()->getPointerElementType()->isArrayTy()) {
+		return addDebugLoc(
+				context,
+				context.getBuilder().CreatePointerCast(
+						ptr,
+						llvm::PointerType::get(ptr->getType()->getPointerElementType()->getArrayElementType(), 0)
+				),
+				loc);
+	} else
 		return addDebugLoc(
 				context,
 				context.getBuilder().CreateLoad(ptr),

@@ -12,6 +12,7 @@ struct ArrayAccessor : public ASTNode {
 	void push_back(Expression *expression);
 	~ArrayAccessor();
 	Json::Value json() override;
+	ArrayAccessor* clone() const;
 };
 
 #endif

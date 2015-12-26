@@ -75,10 +75,10 @@ void Interface::writeJsymFile(std::ostream &os) {
 void MemberVariableDefination::writeJsymFile(std::ostream &os) {
 	os.write("V", 1);
 	qualifier->writeJsymFile(os);
-	vars->type->writeJsymFile(os);
-	size_t len = vars->list.size();
+	vars->getType()->writeJsymFile(os);
+	size_t len = vars->getSize();
 	os.write((char *) &len, 4);
-	for (std::list<std::pair<Identifier*, Expression*> >::iterator it = vars->list.begin(); it != vars->list.end(); it++) {
+	for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
 		size_t len = it->first->getName().size();
 		os.write((char *) &len, 4);
 		os.write(it->first->getName().c_str(), len);

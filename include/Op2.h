@@ -3,8 +3,9 @@
 
 #include "Expression.h"
 
-struct Op2 : public Expression {
+class Op2 : public Expression {
 	Expression *left, *right;
+public:
 	enum OpType {
 		ADD,
 		SUB,
@@ -41,7 +42,10 @@ struct Op2 : public Expression {
 		BIT_OR,
 		BIT_AND,
 		BIT_XOR
-	} op;
+	};
+private:
+	OpType op;
+public:
 	Op2(Expression *left, OpType op, Expression *right);
 	static const char *OpNames[];
 	~Op2();
@@ -53,6 +57,7 @@ struct Op2 : public Expression {
 	Constant loadConstant() override;
 	Type* getTypeConstant() override;
 	static bool hasAssign(OpType op);
+	Op2* clone() const override;
 };
 
 #endif

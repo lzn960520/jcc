@@ -16,6 +16,8 @@ llvm::DISubroutineType* getDIType(Context &context, Function *function);
 llvm::DISubprogram* getDIFunction(Context &context, Function *function, Location &loc);
 template<typename T>
 T* addDebugLoc(Context &context, T *instruction, Location &loc) {
+	if (llvm::isa<llvm::Constant>(instruction))
+		return instruction;
 	((llvm::Instruction *) instruction)->setMetadata("dbg", llvm::DILocation::get(context.getContext(), loc.begin.line, loc.begin.column, context.DIfunction));
 	return instruction;
 }

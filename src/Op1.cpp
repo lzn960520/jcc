@@ -18,6 +18,10 @@ Op1::Op1(Expression *operand, OpType op) :
 	operand(operand), op(op) {
 }
 
+Op1* Op1::clone() const {
+	return new Op1(operand->clone(), op);
+}
+
 Json::Value Op1::json() {
 	Json::Value root;
 	root["name"] = "op1";

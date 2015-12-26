@@ -22,6 +22,7 @@ public:
 	virtual bool isConstant() = 0;
 	virtual Constant loadConstant() = 0;
 	virtual Type* getTypeConstant() = 0;
+	virtual Expression* clone() const = 0;
 };
 
 #endif

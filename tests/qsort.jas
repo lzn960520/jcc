@@ -8,7 +8,7 @@ module sort begin
  */
 class Main
 begin
-	private int[0..10] a; // the array
+	private int[0..] a; // the array
 
 	private procedure sort(int l, int r)
 	begin
@@ -36,6 +36,7 @@ begin
 	static public function main() : int
 	begin
 		var Main that = new Main;
+		that.a = new int[5];
 		that.a[0] = IO::readInt();
 		that.a[1] = IO::readInt();
 		that.a[2] = IO::readInt();

@@ -113,6 +113,10 @@ LiteralString::LiteralString(const char *ori_text) :
 	text = text.substr(0, p - text.data());
 }
 
+LiteralString* LiteralString::clone() const {
+	return new LiteralString(ori_text.c_str());
+}
+
 Json::Value LiteralString::json() {
 	Json::Value root;
 	root["name"] = "literal_string";

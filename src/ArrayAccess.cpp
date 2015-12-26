@@ -12,6 +12,10 @@ ArrayAccess::ArrayAccess(Expression *array, ArrayAccessor *accessor) :
 	array(array), accessor(accessor) {
 }
 
+ArrayAccess* ArrayAccess::clone() const {
+	return new ArrayAccess(array->clone(), accessor->clone());
+}
+
 Json::Value ArrayAccess::json() {
 	Json::Value root;
 	root["name"] = "array_access";
@@ -31,28 +35,41 @@ llvm::Value* ArrayAccess::getPointer(Context &context) {
 	const std::vector<std::pair<Expression*, Expression*> > &dim = array->getType(context)->arrayDim;
 	llvm::Value *offset = NULL;
 	for (size_t i = 0; i < dim.size(); i++) {
-		if (!dim[i].second) {
-			// TODO: Dynamic array
-			throw NotImplemented("Dynamic array");
-		} else if (!dim[i].first->isConstant() || !dim[i].second->isConstant()) {
-			throw NotImplemented("dynamic dim expression");
-		} else if (!dim[i].first->getTypeConstant()->isInt() || !dim[i].first->getTypeConstant()->isInt()) {
+		if (!dim[i].first->getTypeConstant()->isInt() || (dim[i].second && !dim[i].second->getType(context)->isInt()))
 			throw InvalidType("dim expression must be integer");
-		} else {
+		else {
 			if (offset == NULL)
 				offset = addDebugLoc(
 						context,
-						llvm::BinaryOperator::CreateSub(
+						context.getBuilder().CreateSub(
 								accessor->list[i]->load(context),
-								context.getBuilder().getInt32(dim[i].first->loadConstant()._int64), "", context.currentBlock()),
+								context.getBuilder().getInt32(dim[i].first->loadConstant()._int64)
+						),
 						loc);
 			else {
-				offset = addDebugLoc(
-						context,
-						context.getBuilder().CreateMul(
-								offset,
-								llvm::ConstantInt::get(context.getBuilder().getInt32Ty(), dim[i].second->loadConstant()._int64 - dim[i].first->loadConstant()._int64 + 1, false)),
-						loc);
+				if (!dim[i - 1].second || !dim[i - 1].second->isConstant())
+					offset = addDebugLoc(
+							context,
+							context.getBuilder().CreateMul(
+									offset,
+									context.getBuilder().CreateLoad(
+											context.getBuilder().CreateConstGEP1_32(
+													context.getBuilder().CreatePointerCast(
+															offset,
+															llvm::PointerType::get(context.getBuilder().getInt32Ty(), 0)
+													),
+													-(i + 1)
+											)
+									)
+							),
+							loc);
+				else
+					offset = addDebugLoc(
+							context,
+							context.getBuilder().CreateMul(
+									offset,
+									context.getBuilder().getInt32(dim[i].second->loadConstant()._int64 - dim[i].first->loadConstant()._int64 + 1)),
+							loc);
 				offset = addDebugLoc(
 						context,
 						context.getBuilder().CreateAdd(
@@ -69,18 +86,15 @@ llvm::Value* ArrayAccess::getPointer(Context &context) {
 			}
 		}
 	}
-	llvm::Value *index[2];
-	index[0] = context.getBuilder().getInt32(0);
-	index[1] = offset;
+	llvm::Value *index[1];
+	index[0] = offset;
 	llvm::Value *array_ptr = array->load(context);
 	return addDebugLoc(
 			context,
-			llvm::GetElementPtrInst::Create(
-					nullptr,
+			context.getBuilder().CreateInBoundsGEP(
 					array_ptr,
-					llvm::ArrayRef<llvm::Value*>(index, 2),
-					"",
-					context.currentBlock()),
+					llvm::ArrayRef<llvm::Value*>(index, 1)
+			),
 			loc);
 }
 

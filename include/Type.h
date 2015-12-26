@@ -56,18 +56,20 @@ public:
 	bool isArray() { return baseType == ARRAY; }
 	bool isString() { return baseType == STRING; }
 	bool isObject() { return baseType == OBJECT; }
-	Class* getClass() { return cls; }
+	Class* getClass() const { return cls; }
 	Class* getClass(Context &context);
 	static Type* higherType(Type *a, Type *b);
 	const std::string getName();
 	static llvm::Value* cast(Context &context, Type *otype, llvm::Value *val, Type *dtype);
 	void writeJsymFile(std::ostream &os) override;
-	const std::string getMangleName(Context &context);
-	const std::string getMangleName();
+	const std::string getMangleName(Context &context) const;
+	const std::string getMangleName() const;
 	void gen(Context &context) override {};
 	void genStruct(Context &context) override {};
 	llvm::Constant* getDefault(Context &context);
 	static bool isA(Type *a, Type *b);
+	bool equals (const Type &type, Context &context) const;
+	Type* clone() const;
 };
 
 #endif

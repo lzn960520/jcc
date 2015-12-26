@@ -1,0 +1,14 @@
+#entry Test::Main
+
+module Test
+begin
+	class Main
+	begin
+		static private int[] a;
+		public static function main() : int
+		begin
+			a = new int[3];
+			return 0;
+		end;
+	end;
+end;
