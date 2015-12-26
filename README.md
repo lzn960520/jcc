@@ -35,13 +35,15 @@
     * `--parse`<br>
         Do the parse(syntax analysis) stage only
     * `--llvm`<br>
-        Do the compile stage only. (Get the llvm assembly file)
+        Do the compile stage only. (Generate the llvm assembly file)
     * `-S`<br>
-        Do the compile stage only. (Get the target assembly file)
+        Do the compile stage only. (Generate the target assembly file)
     * `-c`<br>
-        Do the assemble stage only. (Get the object file)
+        Do the assemble stage only. (Generate the object file)
     * `-o <output_filename>`<br>
         Specifiy the output filename
-* Build-in tests<br>
-    You can just run `make test`, it will compile the test cases in `tests` directory using option `jcc --dump-html tests/xxx.html --llvm -o tests/xxx.ll tests/xxx.jas`<br>
-    For eash test case, it will generate an `xxx.ll` file which contains the llvm assembly of the source file, and an `xxx.html` file which could be opened in browser to see the token stream and the AST of the source file
+	* `-fno-builtin`<br>
+		Don't include the standard library automatically. Mainly used to compile standard library itself.
+* Built-in tests<br>
+    You can just run `make test`, it will compile the test cases in `tests` directory using option `jcc --dump-html tests/xxx.html --llvm -o tests/xxx.ll tests/xxx.jas` and then run `clang` to compile and link the `.ll` file against jascal libs' implementations (such as `lib/io.impl.ll`)<br>
+    For eash test case, it will generate an `xxx` file which is the executable binary file of the source file, and an `xxx.html` file which could be opened in browser to see the token stream and the AST of the source file
