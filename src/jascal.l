@@ -6,7 +6,6 @@
 	#include "jascal.tab.hpp"
 	#include "Identifier.h"
 	#include "LiteralString.h"
-	#include "LiteralInt.h"
 	#include "Tokenizer.h"
 
 	#define YY_USER_ACTION { \
@@ -228,12 +227,30 @@
 		return T_NEWLINE;
 	else
 		return yylex(); }
-[0-9]+	{
+0[xX][0-9a-fA-F]+ {
+	str = yytext;
+	sscanf(yytext + 2, "%x", &v);
+	b = false;
+	return T_LITERAL_INT; }
+0[xX][0-9a-fA-F]+[uU] {
+	str = yytext;
+	sscanf(yytext + 2, "%x", &v);
+	b = true;
+	return T_LITERAL_INT; }
+(\.[0-9]+|[1-9][0-9]*\.[0-9]+|0\.[0-9]+) {
+	str = yytext;
+	sscanf(yytext, "%lf", &vd);
+	return T_LITERAL_DOUBLE; }
+(\.[0-9]+f|[1-9][0-9]*\.[0-9]*f|0\.[0-9]*f) {
+	str = yytext;
+	sscanf(yytext, "%f", &vf);
+	return T_LITERAL_FLOAT; }
+([1-9][0-9]*|0)	{
 	str = yytext;
 	v = atoi(yytext);
 	b = false;
 	return T_LITERAL_INT; }
-[0-9]+(u|U) {
+([1-9][0-9]*|0)[uU] {
 	str = yytext;
 	v = atoi(yytext);
 	b = true;

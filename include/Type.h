@@ -31,6 +31,8 @@ public:
 	static Type String;
 	static Type Int32;
 	static Type UInt32;
+	static Type Double;
+	static Type Float;
 private:
 	Type(Identifier *identifier, int);
 	Class * const cls;

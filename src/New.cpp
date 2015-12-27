@@ -165,7 +165,7 @@ Type* New::getTypeConstant() {
 
 New* New::clone() const {
 	if (dim)
-		return new New(type->clone(), dim->clone());
+		return new New(type->internal->clone(), dim->clone());
 	else
 		return new New(type->clone());
 }

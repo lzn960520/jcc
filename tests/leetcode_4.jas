@@ -1,0 +1,39 @@
+#entry leetcode::P4
+
+using System::IO;
+
+module leetcode
+begin
+	class P4
+	begin
+		public static function main() : int
+		begin
+			var int L1 = IO::readInt(), L2 = IO::readInt();
+			var int[0..] nums1 = new int[L1], nums2 = new int[L2];
+			for (var int i = 0; i < L1; i++) do
+				nums1[i] = IO::readInt();
+			for (var int i = 0; i < L2; i++) do
+				nums2[i] = IO::readInt();
+			var int now = 0, pre = 0, n = (L1 + L2) / 2 + 1, i = 0, j = 0, k = 0;
+			while k < n do
+			begin
+				pre = now;
+				if i == L1 then
+					now = nums2[j++]
+				else if j == L2 then
+					now = nums1[i++]
+				else if nums1[i] < nums2[j] then
+					now = nums1[i++]
+				else
+					now = nums2[j++];
+				k++;
+			end;
+			if (L1 + L2) % 2 == 1 then
+				IO::writeInt(now)
+			else
+				IO::writeFloat((pre + now) / 2.0f);
+			IO::writeln("");
+			return 0;
+		end;
+	end;
+end;

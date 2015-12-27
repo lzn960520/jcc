@@ -13,6 +13,10 @@ lex.yy.cc
 !test.jas
 /tests/*
 !/tests/*.jas
+!/tests/test.sh
+!/tests/grade-functions.sh
+!/tests/*-test*.in
+!/tests/*-test*.out
 /.ycm*
 /tools/bincc/bincc
 /.exvim

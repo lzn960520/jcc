@@ -64,4 +64,5 @@ void ForStatement::gen(Context &context) {
 	addDebugLoc(context, context.getBuilder().CreateBr(loopBlock), tmploc);
 
 	context.setBlock(afterBlock);
+	context.popContext();
 }

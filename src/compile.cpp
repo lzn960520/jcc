@@ -21,6 +21,12 @@ std::list<Token*> tokenize(std::istream &is, const std::string &path) {
 		case T_LITERAL_INT:
 			ans.push_back(new Token(T_LITERAL_INT, tokenizer.yylloc, tokenizer.str, tokenizer.v, tokenizer.b));
 			break;
+		case T_LITERAL_FLOAT:
+			ans.push_back(new Token(T_LITERAL_FLOAT, tokenizer.yylloc, tokenizer.str, tokenizer.vf));
+			break;
+		case T_LITERAL_DOUBLE:
+			ans.push_back(new Token(T_LITERAL_DOUBLE, tokenizer.yylloc, tokenizer.str, tokenizer.vd));
+			break;
 		default:
 			ans.push_back(new Token(type, tokenizer.yylloc));
 			break;

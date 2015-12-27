@@ -12,7 +12,9 @@ Identifier::Identifier(const char *name) :
 }
 
 Identifier* Identifier::clone() const {
-	return new Identifier(text.c_str());
+	Identifier *clone = new Identifier(text.c_str());
+	clone->loc = loc;
+	return clone;
 }
 
 Json::Value Identifier::json() {

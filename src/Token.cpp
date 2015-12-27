@@ -4,7 +4,8 @@
 #include "Identifier.h"
 #include "LiteralString.h"
 #include "LiteralInt.h"
-#include <iostream>
+#include "LiteralFloat.h"
+#include "LiteralDouble.h"
 
 int Parser::yylex(YYSTYPE *yylval, YYLTYPE *yylloc) {
 	if (it == list.end())
@@ -21,6 +22,14 @@ int Parser::yylex(YYSTYPE *yylval, YYLTYPE *yylloc) {
 		break;
 	case T_LITERAL_INT:
 		yylval->expression = new LiteralInt((*it)->v, (*it)->isUnsigned);
+		yylval->expression->loc = (*it)->yylloc;
+		break;
+	case T_LITERAL_FLOAT:
+		yylval->expression = new LiteralFloat((*it)->vf);
+		yylval->expression->loc = (*it)->yylloc;
+		break;
+	case T_LITERAL_DOUBLE:
+		yylval->expression = new LiteralDouble((*it)->vd);
 		yylval->expression->loc = (*it)->yylloc;
 		break;
 	case T_NEWLINE:
@@ -45,6 +54,12 @@ std::ostream& operator<< (std::ostream &os, const Token &token) {
 		break;
 	case T_LITERAL_INT:
 		os << "<literal_int " << token.str << ">";
+		break;
+	case T_LITERAL_FLOAT:
+		os << "<literal_float " << token.str << ">";
+		break;
+	case T_LITERAL_DOUBLE:
+		os << "<literal_double " << token.str << ">";
 		break;
 	case T_LITERAL_STRING:
 		os << "<literal_string " << token.str << ">";

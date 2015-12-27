@@ -30,6 +30,8 @@ Type Type::Bool(Type::BOOL);
 Type Type::String(new Identifier("string"), 0);
 Type Type::Int32(Type::INT);
 Type Type::UInt32(Type::INT, true);
+Type Type::Float(Type::FLOAT);
+Type Type::Double(Type::DOUBLE);
 
 Type::Type(BaseType baseType, bool isUnsigned) :
 			baseType(baseType), isUnsigned(isUnsigned), internal(NULL), cls(NULL), identifier(NULL) {
@@ -179,6 +181,8 @@ size_t Type::getSize(Context &context) {
 		return context.DL->getTypeAllocSize(getType(context)->getPointerElementType()); }
 	case STRING:
 		return String.getSize(context);
+	case ARRAY:
+		return context.DL->getPointerSize(0);
 	default:
 		throw NotImplemented("type '" + getName() + "'");
 	}
@@ -517,9 +521,9 @@ Type* Type::clone() const {
 	case STRING:
 		return new Type(baseType, isUnsigned);
 	case ARRAY: {
-		ArrayDefinator *definator = new ArrayDefinator(arrayDim[0].first->clone(), arrayDim[1].second->clone());
+		ArrayDefinator *definator = new ArrayDefinator(arrayDim[0].first->clone(), arrayDim[0].second ? arrayDim[0].second->clone() : NULL);
 		for (size_t i = 1, len = arrayDim.size(); i < len; i++)
-			definator->push_back(arrayDim[i].first->clone(), arrayDim[i].second->clone());
+			definator->push_back(arrayDim[i].first->clone(), arrayDim[i].second ? arrayDim[i].second->clone() : NULL);
 		return new Type(internal->clone(), definator); }
 	case OBJECT:
 		if (cls)

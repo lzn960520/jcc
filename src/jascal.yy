@@ -146,6 +146,8 @@
 %type <implement_list> class_implements implement_list
 
 %token <expression> T_LITERAL_INT "literal_int"
+%token <expression> T_LITERAL_FLOAT "literal_float"
+%token <expression> T_LITERAL_DOUBLE "literal_double"
 %token <literal_string> T_LITERAL_STRING "literal_string"
 %token <identifier> T_IDENTIFIER "identifier"
 %token T_MODULE "module" T_BEGIN "begin" T_END "end" T_LEFT_CURLY "{"
@@ -595,6 +597,8 @@ array_definator_list:
 
 literal:
 	T_LITERAL_INT
+	| T_LITERAL_FLOAT
+	| T_LITERAL_DOUBLE
 	| T_LITERAL_STRING {
 		$$ = $1; }
 	| T_TRUE {

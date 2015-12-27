@@ -1,4 +1,5 @@
 .PHONY: all clean test vars deps flex bison update-html archive lib
+.PRECIOUS: tests/%
 
 CLANG := clang
 CXX := clang++
@@ -38,7 +39,7 @@ DEPS := $(patsubst %.cpp,deps/%.d,$(SOURCES))
 DEPS := $(patsubst %.cc,deps/%.d,$(DEPS))
 PROG := jcc
 TESTS := $(wildcard tests/*.jas)
-TESTS_OUT := $(patsubst %.jas,%,$(TESTS))
+TESTS_TARGET := $(patsubst tests/%.jas,test-%,$(TESTS))
 JASCAL_LIB_SRC := $(wildcard lib/*.jas)
 JASCAL_LIB := $(patsubst %.jas,%.jsym,$(JASCAL_LIB_SRC))
 JASCAL_LIB_OBJ := $(patsubst %.jas,%.ll,$(JASCAL_LIB_SRC))
@@ -98,11 +99,14 @@ clean:
 	@$(RM) -rf src/jascal.tab.cc include/jascal.tab.hpp src/lex.yy.cc \
 		 $(PROG) $(OBJS) $(DEPS) bison-report.txt tests/*.txt tests/*.ll tests/*.json tests/*.o tests/*.html tests/*.jsym $(JASCAL_LIB_OBJ) $(JASCAL_LIB) $(TESTS_OUT)
 
-test: $(TESTS_OUT)
+test: $(TESTS_TARGET)
+
+test-%: tests/%
+	@(cd tests; ./test.sh $*)
 
 tests/%: tests/%.jas $(PROG) $(JASCAL_LIB) $(JASCAL_LIB_IMPL)
 	@echo "[JCC ] $< -> $@"
-	@(./$(PROG) --dump-html tests/$*.html --llvm -o tests/$*.ll $< && $(CLANG) -m32 $(JASCAL_LIB_IMPL) tests/$*.ll -o $@) || rm -f tests/$*.html
+	@(./$(PROG) --dump-html tests/$*.html --llvm -o tests/$*.ll $< && $(CLANG) -m32 $(JASCAL_LIB_IMPL) tests/$*.ll -o $@)
 
 objs/index-comb.html: codeview/index.html tools/HtmlCombiner/combiner.py
 	@echo "[GEN ] $< -> $@"

@@ -13,6 +13,8 @@ class Tokenizer : public yyFlexLexer {
 	Location yylloc;
 	std::string str;
 	int v;
+	float vf;
+	double vd;
 	bool b;
 	friend std::list<Token*> tokenize(std::istream &is, const std::string &path);
 public:

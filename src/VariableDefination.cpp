@@ -53,6 +53,7 @@ void VariableDefination::gen(Context &context) {
 									it->first->getName()),
 							loc);
 					insertDeclareDebugInfo(context, type, it->first->getName(), alloca, loc, false);
+					context.addSymbol(new Symbol(it->first->getName(), Symbol::LOCAL_VAR, type, alloca));
 					Op2 *assign = new Op2(it->first->clone(), Op2::ASSIGN, it->second->clone());
 					try {
 						assign->load(context);
