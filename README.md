@@ -47,3 +47,4 @@
 * Built-in tests<br>
     You can just run `make test`, it will compile the test cases in `tests` directory using option `jcc --dump-html tests/xxx.html --llvm -o tests/xxx.ll tests/xxx.jas` and then run `clang` to compile and link the `.ll` file against jascal libs' implementations (such as `lib/io.impl.ll`)<br>
     For eash test case, it will generate an `xxx` file which is the executable binary file of the source file, and an `xxx.html` file which could be opened in browser to see the token stream and the AST of the source file
+	Additionally, if there is any test data for a test case (named `tests/xxx-testx.in` and `tests/xxx-testx.out`), the tester will automatically run the executable file and feed the `.in` file to it, then get the output and compare it with `.out` file. There will be a time limit which is set to 2 seconds. The comparison will ignore blank line. A `[TEST] xxx.in -> xxx ...pass` will be printed if the output match the `.out` file.
