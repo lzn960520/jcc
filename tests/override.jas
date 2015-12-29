@@ -1,0 +1,44 @@
+#entry Test::Main
+
+using System::IO;
+
+module Test
+begin
+	class A
+	begin
+	end;
+
+	class B extends A
+	begin
+	end;
+
+	class C extends B
+	begin
+	end;
+
+	class Main
+	begin
+		private static function fun(A a, A b) : int
+		begin
+			return 1;
+		end;
+
+		private static function fun(B a, A b) : int
+		begin
+			return 2;
+		end;
+
+		public static function main() : int
+		begin
+			var A a;
+			var B b;
+			var C c;
+			IO::writeInt(fun(a, a));
+			IO::writeInt(fun(a, c));
+			IO::writeInt(fun(b, a));
+			IO::writeInt(fun(b, b));
+			IO::writeln("");
+			return 0;
+		end;
+	end;
+end;

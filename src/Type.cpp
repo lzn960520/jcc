@@ -14,20 +14,21 @@
 #include "LiteralInt.h"
 
 const char *Type::BaseTypeNames[] = {
+	"bool",
 	"byte",
 	"short",
 	"int",
-	"char",
 	"float",
 	"double",
+	"char",
 	"array",
-	"bool",
 	"string",
 	"object"
 };
 
 Type Type::Bool(Type::BOOL);
-Type Type::String(new Identifier("string"), 0);
+Type Type::_String(new Identifier("string"), 0);
+Type Type::String(new Identifier("string"));
 Type Type::Int32(Type::INT);
 Type Type::UInt32(Type::INT, true);
 Type Type::Float(Type::FLOAT);
@@ -165,7 +166,7 @@ llvm::Type* Type::getType(Context &context) {
 			throw SymbolNotFound("No such class '" + context.currentModule->getFullName() + "::" + identifier->getName() + "'");
 		return llvm::PointerType::get(cls->getLLVMType(), 0);
 	case STRING:
-		return String.getType(context);
+		return _String.getType(context);
 	}
 	throw NotImplemented(std::string("type '") + getName() + "'");
 }
@@ -180,7 +181,7 @@ size_t Type::getSize(Context &context) {
 	case OBJECT: {
 		return context.DL->getTypeAllocSize(getType(context)->getPointerElementType()); }
 	case STRING:
-		return String.getSize(context);
+		return _String.getSize(context);
 	case ARRAY:
 		return context.DL->getPointerSize(0);
 	default:
@@ -327,6 +328,10 @@ llvm::Value* Type::cast(Context &context, Type *otype, llvm::Value *val, Type *d
 		if (!otype->internal->equals(*dtype->internal, context))
 			break;
 		return val;
+		break;
+	case STRING:
+		if (dtype->baseType == STRING)
+			return val;
 		break;
 	}
 	throw IncompatibleType(std::string("can't cast ") + otype->getName() + " to " + dtype->getName());
@@ -530,5 +535,42 @@ Type* Type::clone() const {
 			return new Type(cls);
 		else
 			return new Type(identifier->clone());
+	}
+}
+
+int Type::distance(Type *from, Type *to, Context &context) {
+	switch (from->baseType) {
+	case BOOL:
+	case BYTE:
+	case SHORT:
+	case INT:
+	case FLOAT:
+	case DOUBLE:
+		switch (to->baseType) {
+		case BOOL:
+		case BYTE:
+		case SHORT:
+		case INT:
+		case FLOAT:
+		case DOUBLE:
+			return to->baseType - from->baseType;
+		default:
+			return -1;
+		}
+		break;
+	case CHAR:
+		switch (to->baseType) {
+		case SHORT:
+		case INT:
+			return to->baseType - SHORT;
+		default:
+			return -1;
+		}
+	case ARRAY:
+		return from->equals(to->baseType, context) ? 0 : -1;
+	case STRING:
+		return to->baseType == STRING ? 0 : -1;
+	case OBJECT:
+		return to->baseType == OBJECT ? Class::distance(from->getClass(context), to->getClass(context)) : -1;
 	}
 }

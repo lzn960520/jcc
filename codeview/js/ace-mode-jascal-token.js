@@ -45,7 +45,7 @@ define("ace/mode/jascal_token_highlight_rules",["require","exports","module","ac
                     next : "expect_out_token"
                 }, {
                     token : "constant.numeric",
-                    regex : /literal_int [^>]*/,
+                    regex : /literal_int [^>]*|literal_float [^>]*|literal_double [^>]*/,
                     next : "expect_out_token"
                 }, {
                     token : "string",

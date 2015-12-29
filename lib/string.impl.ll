@@ -1,5 +1,5 @@
 ; ModuleID = 'top'
-target triple = "i386-unknown-linux-gnu"
+target triple = "i386-pc-linux-gnu"
 
 %CN6SystemC6stringV = type { void (%CN6SystemC6string)* }
 %CN6SystemC6string = type { %CN6SystemC6stringV*, i32 }

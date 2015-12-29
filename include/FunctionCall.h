@@ -2,15 +2,20 @@
 #define _FUNCTION_CALL_H_
 
 #include <list>
+#include <vector>
 
 #include "Expression.h"
 
 class Identifier;
 class Expression;
-struct FunctionCall : public Expression {
+class Symbol;
+class Type;
+class FunctionCall : public Expression {
 	Identifier *identifier;
 	std::list<Expression*> &arg_list;
 	Expression *target;
+	static Symbol* bestMatch(Symbol *symbol, const std::vector<Type*> &actual_type, Context &context);
+public:
 	FunctionCall(Expression *target, Identifier *identifier, std::list<Expression*> *arg_list);
 	~FunctionCall();
 	Json::Value json() override;

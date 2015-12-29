@@ -1,5 +1,7 @@
 #entry test::Main
 
+using System::IO;
+
 module test
 begin
 	class A
@@ -49,6 +51,7 @@ begin
 		begin
 			var A b = new B;
 			System::IO::writeInt(b.testVir());
+			IO::writeln("");
 			return 0;
 		end;
 	end;

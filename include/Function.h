@@ -2,6 +2,7 @@
 #define _FUNCTION_H_
 
 #include <list>
+#include <vector>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 
@@ -19,7 +20,7 @@ class Function : public MemberNode {
 	std::list<std::pair<Type*, Identifier*> > &arg_list;
 	ASTNode *body;
 public:
-	typedef std::list<std::pair<Type*, Identifier*> >::iterator arg_iterator;
+	typedef std::list<std::pair<Type*, Identifier*> >::const_iterator arg_iterator;
 	Function(Qualifier *qualifier, Type *return_type, Identifier *identifier, std::list<std::pair<Type*, Identifier*> > *arg_list, ASTNode *body);
 	~Function();
 	arg_iterator arg_begin() { return arg_list.begin(); }
@@ -41,6 +42,7 @@ public:
 	void writeJsymFile(std::ostream &os) override;
 	bool isDeclaration() { return body == NULL && !isNative(); }
 	const std::string getSignature(Context &context);
+	static const std::string genName(const std::string &name, const std::vector<Type*> &arg_type);
 };
 
 #endif

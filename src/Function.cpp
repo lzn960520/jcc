@@ -145,3 +145,12 @@ void Function::genStruct(Context &context) {
 	else
 		cls->addFunctionStruct(getSignature(context), new Symbol(getName(), qualifier, this));
 }
+
+const std::string Function::genName(const std::string &name, const std::vector<Type*> &arg_type) {
+	if (arg_type.size() == 0)
+		return name + "()";
+	std::string ans = name + "(";
+	for (std::vector<Type*>::const_iterator it = arg_type.begin(); it != arg_type.end(); it++)
+		ans = ans + (*it)->getName() + ", ";
+	return ans.substr(0, ans.size() - 2) + ")";
+}

@@ -264,6 +264,9 @@ void Class::addFunction(const std::string &signature, llvm::Function *function) 
 
 void Class::addFunctionStruct(const std::string &signature, Symbol *symbol) {
 	if (vtableEntryLookup.count(signature) == 0) {
+		Symbol *exist = findSymbol(symbol->name);
+		if (exist && exist->type != Symbol::FUNCTION && exist->type != Symbol::STATIC_FUNCTION)
+			throw Redefination(symbol->name);
 		symbols.add(symbol);
 		switch (symbol->type) {
 		case Symbol::FUNCTION:
@@ -271,8 +274,10 @@ void Class::addFunctionStruct(const std::string &signature, Symbol *symbol) {
 			vtableEntryLookup[signature].push_back(VtableEntryPointer(0, vtableType.size() - 1));
 			symbol->data.function.vtableOffset = 0;
 			symbol->data.function.funcPtrOffset = vtableType.size() - 1;
+			symbol->data.function.next = exist;
 			break;
 		case Symbol::STATIC_FUNCTION:
+			symbol->data.static_function.next = exist;
 			break;
 		default:
 			throw CompileException("Try to add something strange as function");
@@ -312,4 +317,49 @@ bool Class::isA(Class *a, Class *b) {
 			a = a->extendsClass;
 		return a != NULL;
 	}
+}
+
+int Class::distance(Class *from, Class *to) {
+	if (from == to)
+		return 0;
+	if (from->getMangleName()[0] == 'J')
+		return -1;
+	else if (to->getMangleName()[0] == 'J') {
+		int ans = 0;
+		while (from && !from->isImplemented(to)) {
+			ans++;
+			from = from->extendsClass;
+		}
+		return from ? ans : -1;
+	} else {
+		int ans = 0;
+		while (from && from != to) {
+			ans++;
+			from = from->extendsClass;
+		}
+		return from ? ans : -1;
+	}
+}
+
+bool Class::isImplemented(Class *interface) const {
+	for (std::list<std::pair<Interface*, size_t> >::const_iterator it = implementsType.begin(); it != implementsType.end(); it++)
+		if (it->first == interface)
+			return true;
+	return false;
+}
+
+void Class::addMember(llvm::Type *llvmType, Symbol *symbol) {
+	Symbol *exist = findSymbol(symbol->name);
+	if (exist)
+		throw Redefination(symbol->name);
+	members.push_back(llvmType);
+	symbol->data.member.index = members.size() - 1;
+	symbols.add(symbol);
+}
+
+void Class::addStaticMember(Symbol *symbol) {
+	Symbol *exist = findSymbol(symbol->name);
+	if (exist)
+		throw Redefination(symbol->name);
+	symbols.add(symbol);
 }

@@ -36,19 +36,14 @@ begin
 	static public function main() : int
 	begin
 		var Main that = new Main;
-		that.a = new int[5];
-		that.a[0] = IO::readInt();
-		that.a[1] = IO::readInt();
-		that.a[2] = IO::readInt();
-		that.a[3] = IO::readInt();
-		that.a[4] = IO::readInt();
-		that.sort(0, 4);
+		var int N = IO::readInt();
+		that.a = new int[N];
+		for (var int i = 0; i < N; i++) do
+			that.a[i] = IO::readInt();
+		that.sort(0, N - 1);
+		for (var int i = 0; i < N; i++) do
+			IO::writeInt(that.a[i]);
 		IO::writeln("");
-		System::IO::writeInt(that.a[0]);
-		System::IO::writeInt(that.a[1]);
-		System::IO::writeInt(that.a[2]);
-		System::IO::writeInt(that.a[3]);
-		System::IO::writeInt(that.a[4]);
 		return 0;
 	end;
 end;

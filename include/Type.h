@@ -15,19 +15,20 @@ class Expression;
 class Type : public StructNode {
 public:
 	const enum BaseType {
+		BOOL,
 		BYTE,
 		SHORT,
 		INT,
-		CHAR,
 		FLOAT,
 		DOUBLE,
+		CHAR,
 		ARRAY,
-		BOOL,
 		STRING,
 		OBJECT
 	} baseType;
 	static const char *BaseTypeNames[];
 	static Type Bool;
+	static Type _String;
 	static Type String;
 	static Type Int32;
 	static Type UInt32;
@@ -72,6 +73,7 @@ public:
 	static bool isA(Type *a, Type *b);
 	bool equals (const Type &type, Context &context) const;
 	Type* clone() const;
+	static int distance(Type *from, Type *to, Context &context);
 };
 
 #endif

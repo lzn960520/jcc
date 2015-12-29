@@ -44,6 +44,10 @@ Json::Value FunctionCall::json() {
 }
 
 llvm::Value* FunctionCall::load(Context &context) {
+	std::vector<Type*> actual_type;
+	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
+		actual_type.push_back((*it)->getType(context));
+
 	Symbol *symbol = NULL;
 	Class *targetClass = NULL;
 	if (target == NULL) {
@@ -61,15 +65,20 @@ llvm::Value* FunctionCall::load(Context &context) {
 			if (!symbol)
 				throw SymbolNotFound("Function '" + identifier->getName() + "'");
 
+			// match the best override
+			symbol = bestMatch(symbol, actual_type, context);
+			if (!symbol)
+				throw SymbolNotFound("No matching call for '" + Function::genName(identifier->getName(), actual_type) + "'");
+
 			// check symbol is static function
 			if (symbol->type != Symbol::STATIC_FUNCTION)
-				throw InvalidType("function '" + identifier->getName() + "' is not a static function");
+				throw InvalidType("'" + symbol->data.function.function->getName() + "' is not a static function");
 
 			// check symbol's permission
 			if (symbol->data.static_function.isPrivate && targetClass != context.currentClass)
-				throw CompileException("function '" + identifier->getName() + "' is private");
+				throw CompileException("function '" + symbol->data.static_function.function->getName() + "' is private");
 			if (symbol->data.static_function.isProtected && !Class::isA(context.currentClass, targetClass))
-				throw CompileException("function '" + identifier->getName() + "' is protected");
+				throw CompileException("function '" + symbol->data.static_function.function->getName() + "' is protected");
 		} else {
 			// self call
 			targetClass = context.currentClass;
@@ -77,7 +86,11 @@ llvm::Value* FunctionCall::load(Context &context) {
 			// find function
 			symbol = targetClass->findSymbol(identifier->getName());
 			if (!symbol)
-				throw SymbolNotFound("Function '" + identifier->getName() + "'");
+				throw SymbolNotFound("'" + identifier->getName() + "'");
+
+			symbol = bestMatch(symbol, actual_type, context);
+			if (!symbol)
+				throw SymbolNotFound("No matching call for '" + Function::genName(identifier->getName(), actual_type) + "'");
 		}
 	} else {
 		// member function call
@@ -88,15 +101,19 @@ llvm::Value* FunctionCall::load(Context &context) {
 		if (!symbol)
 			throw SymbolNotFound("Function '" + identifier->getName() + "'");
 
+		symbol = bestMatch(symbol, actual_type, context);
+		if (!symbol)
+			throw SymbolNotFound("No matching call for '" + Function::genName(identifier->getName(), actual_type) + "'");
+
 		// check symbol is normal function
 		if (symbol->type != Symbol::FUNCTION)
-			throw InvalidType("function '" + identifier->getName() + "' is not a member function");
+			throw InvalidType("function '" + symbol->data.static_function.function->getName() + "' is not a member function");
 
 		// check symbol's permission
 		if (symbol->data.static_function.isPrivate && targetClass != context.currentClass)
-			throw CompileException("function '" + identifier->getName() + "' is private");
+			throw CompileException("function '" + symbol->data.static_function.function->getName() + "' is private");
 		if (symbol->data.static_function.isProtected && !Class::isA(context.currentClass, targetClass))
-			throw CompileException("function '" + identifier->getName() + "' is protected");
+			throw CompileException("function '" + symbol->data.static_function.function->getName() + "' is protected");
 	}
 
 	llvm::Value *function;
@@ -212,8 +229,12 @@ llvm::Value* FunctionCall::load(Context &context) {
 	}
 
 	// load remaining arguments
-	for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++)
-		arg_code.push_back((*it)->load(context));
+	{
+		Function *func = symbol->type == Symbol::FUNCTION ? symbol->data.function.function : symbol->data.static_function.function;
+		Function::arg_iterator it2 = func->arg_begin();
+		for (std::list<Expression*>::iterator it = arg_list.begin(); it != arg_list.end(); it++, it2++)
+			arg_code.push_back(Type::cast(context, (*it)->getType(context), (*it)->load(context), it2->first));
+	}
 
 	// do the call
 	llvm::Value *ans = addDebugLoc(
@@ -256,4 +277,37 @@ Expression::Constant FunctionCall::loadConstant() {
 
 Type* FunctionCall::getTypeConstant() {
 	throw NotConstant("function call");
+}
+
+Symbol* FunctionCall::bestMatch(Symbol *symbol, const std::vector<Type*> &actual_type, Context &context) {
+	int minDis = 0x7fffffff;
+	Symbol *ans = NULL;
+	while (symbol) {
+		int nowDis = 0;
+		std::vector<Type*>::const_iterator it = actual_type.begin();
+		Function *func;
+		if (symbol->type == Symbol::FUNCTION)
+			func = symbol->data.function.function;
+		else if (symbol->type == Symbol::STATIC_FUNCTION)
+			func = symbol->data.static_function.function;
+		else
+			throw CompileException("Shouldn't reach here");
+		Function::arg_iterator it2 = func->arg_begin();
+		while (it != actual_type.end() && it2 != func->arg_end()) {
+			int dis = Type::distance(*it, it2->first, context);
+			if (dis < 0)
+				break;
+			nowDis += dis;
+			it++, it2++;
+		}
+		if (it == actual_type.end() && it2 == func->arg_end() && nowDis < minDis) {
+			minDis = nowDis;
+			ans = symbol;
+		}
+		if (symbol->type == Symbol::FUNCTION)
+			symbol = symbol->data.function.next;
+		else if (symbol->type == Symbol::STATIC_FUNCTION)
+			symbol = symbol->data.static_function.next;
+	}
+	return ans;
 }

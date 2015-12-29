@@ -1,5 +1,7 @@
 #entry Test::Main
 
+using System::IO;
+
 module Test
 begin
 	interface IA
@@ -36,6 +38,7 @@ begin
 			print(a);
 			a = new B;
 			print(a);
+			IO::writeln("");
 			return 0;
 		end;
 	end;

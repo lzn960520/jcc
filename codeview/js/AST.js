@@ -21,6 +21,26 @@ var AST;
 			return null;
 		}
 	}
+	function LiteralFloat(data, parent) {
+		this.parent = parent;
+		this.name = data.val.toString();
+		this.getChildren = function() {
+			return null;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
+	function LiteralDouble(data, parent) {
+		this.parent = parent;
+		this.name = data.val.toString();
+		this.getChildren = function() {
+			return null;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
 	function LiteralBool(data, parent) {
 		this.parent = parent;
 		this.name = data.val.toString();
@@ -111,6 +131,30 @@ var AST;
 		this.parent = parent;
 		this.name = "while";
 		var children = [ AST(data.test, this), AST(data.body, this) ];
+		this.getChildren = function() {
+			return children;
+		}
+		this.getTips = function() {
+			return null;
+		}
+	}
+	function ForStatement(data, parent) {
+		this.parent = parent;
+		this.name = "for";
+		var children = [];
+		if (data.vars)
+			children.push(AST(data.vars, this));
+		else
+			children.push(AST({name:"dummy",content:"no vars"}, this));
+		if (data.test)
+			children.push(AST(data.test, this));
+		else
+			children.push(AST({name:"dummy",content:"no test"}, this));
+		if (data.inc)
+			children.push(AST(data.inc, this));
+		else
+			children.push(AST({name:"dummy",content:"no increment"}, this));
+		children.push(AST(data.body, this));
 		this.getChildren = function() {
 			return children;
 		}
@@ -453,7 +497,10 @@ var AST;
 		"member_access": MemberAccess,
 		"member_var": MemberVariableDefination,
 		"literal_bool": LiteralBool,
-		"interface": Interface
+		"interface": Interface,
+		"literal_float": LiteralFloat,
+		"literal_double": LiteralDouble,
+		"for_statement": ForStatement
 	};
 	AST = function(data, parent) {
 		if (!parent)

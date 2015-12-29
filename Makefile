@@ -83,6 +83,7 @@ vars:
 	@echo "DEPS=" $(DEPS)
 	@echo "OBJS=" $(OBJS)
 	@echo "JASCAL_LIB=" $(JASCAL_LIB)
+	@echo "TESTS=" $(TESTS)
 	
 deps: $(DEPS)
 

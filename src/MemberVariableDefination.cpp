@@ -25,22 +25,20 @@ Json::Value MemberVariableDefination::json() {
 void MemberVariableDefination::gen(Context &context) {
 	if (qualifier->isStatic())
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
-			llvm::Value *old = cls->symbols.find(it->first->getName())->data.identifier.value;
+			llvm::Value *old = cls->findSymbol(it->first->getName())->data.identifier.value;
 			llvm::Value *_new = new llvm::GlobalVariable(context.getModule(), vars->getType()->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, vars->getType()->getDefault(context));
 			old->replaceAllUsesWith(_new);
 			((llvm::GlobalVariable *) old)->eraseFromParent();
-			cls->symbols.find(it->first->getName())->data.identifier.value = _new;
+			cls->findSymbol(it->first->getName())->data.identifier.value = _new;
 			_new->setName(cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName());
 		}
 }
 
 void MemberVariableDefination::genStruct(Context &context) {
 	if (!qualifier->isStatic())
-		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++) {
-			cls->members.push_back(vars->getType()->getType(context));
-			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->getType(), cls->members.size() - 1));
-		}
+		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
+			cls->addMember(vars->getType()->getType(context), new Symbol(it->first->getName(), qualifier, vars->getType(), (size_t) 0));
 	else
 		for (VariableDefination::iterator it = vars->begin(); it != vars->end(); it++)
-			cls->symbols.add(new Symbol(it->first->getName(), qualifier, vars->getType(), new llvm::GlobalVariable(context.getModule(), vars->getType()->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, NULL, cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
+			cls->addStaticMember(new Symbol(it->first->getName(), qualifier, vars->getType(), new llvm::GlobalVariable(context.getModule(), vars->getType()->getType(context), qualifier->isConst(), llvm::GlobalVariable::ExternalLinkage, NULL, cls->getMangleName() + "S" + itos(it->first->getName().length()) + it->first->getName())));
 }

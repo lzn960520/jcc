@@ -32,8 +32,6 @@ class Class : public StructNode {
 	std::map<size_t, std::vector<llvm::Function*> > vtableEntry;
 	std::map<size_t, llvm::GlobalVariable*> vtables;
 	llvm::Function *constructor;
-	friend class Function;
-	friend class MemberVariableDefination;
 	friend class Type;
 protected:
 	Context::SymbolContext symbols;
@@ -41,8 +39,6 @@ protected:
 	llvm::Type *llvmType;
 	std::vector<llvm::Type*> vtableType;
 	llvm::StructType *vtableLLVMType;
-	virtual void addFunction(const std::string &signature, llvm::Function *function);
-	virtual void addFunctionStruct(const std::string &signature, Symbol *symbol);
 public:
 	Class(Identifier *identifier, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
 	Class(Identifier *identifier, Identifier *extends, std::list<Identifier*> *implements, std::list<MemberNode*> *definations);
@@ -61,6 +57,12 @@ public:
 	llvm::GlobalVariable *getVtable(Interface *interface);
 	static bool isA(Class *a, Class *b);
 	friend std::ostream& operator << (std::ostream &os, const Class &cls);
+	static int distance(Class *from, Class *to);
+	bool isImplemented(Class *interface) const;
+	void addMember(llvm::Type *llvmType, Symbol *symbol);
+	void addStaticMember(Symbol *symbol);
+	virtual void addFunction(const std::string &signature, llvm::Function *function);
+	virtual void addFunctionStruct(const std::string &signature, Symbol *symbol);
 };
 
 inline std::ostream& operator << (std::ostream &os, const Class &cls) {
